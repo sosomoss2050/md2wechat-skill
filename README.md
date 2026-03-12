@@ -2,6 +2,8 @@
 
 <div align="center">
 
+<img src="assets/md2wechat_logo.gif" alt="md2wechat" width="320" />
+
 **用 Markdown 写公众号文章，像发朋友圈一样简单**
 
 [![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?logo=go)](https://golang.org)
@@ -22,7 +24,7 @@
 
 ---
 
-> ### 🎉 API 服务重磅升级 - 内测招募
+> ### 🎉 API 服务重磅升级
 > **YouMind 内置主题，全新分类系统，重塑内容创作体验**
 >
 > md2wechat API 服务即将迎来重大升级，带来 **YouMind 内置主题库**和**全新主题分类**：
@@ -32,11 +34,7 @@
 >
 > 📚 **主题预览**: [https://md2wechat.app/theme-gallery](https://md2wechat.app/theme-gallery)
 >
-> 🔥 **目前处于内测阶段，诚邀自动化 Agent 创作者参与测试！**
->
-> - 🎯 **适合对象**：Agent 开发者、自动化内容创作者、API 集成者
-> - 🎁 **内测福利**：优先体验新功能，影响产品方向
-> - 📩 **参与方式**：扫描底部公众号二维码联系，备注「API内测」
+> 📩 **如需咨询，扫描底部公众号二维码联系，备注「API内测」**
 
 ---
 
