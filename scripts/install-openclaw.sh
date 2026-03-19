@@ -10,7 +10,14 @@
 set -euo pipefail
 
 REPO="geekjourneyx/md2wechat-skill"
-VERSION="${MD2WECHAT_VERSION:-latest}"
+VERSION="${MD2WECHAT_VERSION:-}"
+if [[ -z "$VERSION" ]]; then
+    if [[ -n "${MD2WECHAT_VERSION_DEFAULT:-}" ]]; then
+        VERSION="${MD2WECHAT_VERSION_DEFAULT}"
+    else
+        VERSION="latest"
+    fi
+fi
 RELEASE_BASE_URL="${MD2WECHAT_RELEASE_BASE_URL:-}"
 SKILL_NAME="md2wechat"
 SKILL_ARCHIVE="md2wechat-openclaw-skill.tar.gz"

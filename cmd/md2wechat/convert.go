@@ -179,6 +179,10 @@ func runConvert(cmd *cobra.Command, args []string) error {
 		zap.String("theme", result.Theme),
 		zap.Int("image_count", len(output.Artifact.Assets)))
 
+	if convertOutput != "" {
+		outputHTML(output.Artifact.HTML, convertOutput, false)
+	}
+
 	if jsonOutput {
 		responseSuccessWith(codeConvertCompleted, "Conversion completed", map[string]any{
 			"mode":        string(result.Mode),
@@ -202,7 +206,7 @@ func runConvert(cmd *cobra.Command, args []string) error {
 	}
 
 	// 输出 HTML
-	outputHTML(output.Artifact.HTML, convertOutput, convertPreview)
+	outputHTML(output.Artifact.HTML, "", convertPreview)
 
 	return nil
 }

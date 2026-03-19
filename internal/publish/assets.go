@@ -58,8 +58,11 @@ func (p *AssetPipeline) Process(input *ProcessInput) (*ProcessOutput, error) {
 
 		switch asset.Kind {
 		case AssetKindLocal:
-			localPath := asset.Source
-			if !filepath.IsAbs(localPath) {
+			localPath := asset.ResolvedSource
+			if localPath == "" {
+				localPath = asset.Source
+			}
+			if !filepath.IsAbs(localPath) && input.MarkdownDir != "" {
 				localPath = filepath.Join(input.MarkdownDir, localPath)
 			}
 			uploadResult, err = p.processor.UploadLocalImage(localPath)

@@ -76,9 +76,18 @@ jobs:
           build darwin arm64 md2wechat-darwin-arm64
           build windows amd64 md2wechat-windows-amd64.exe
 
-          cp scripts/install.sh "${bundle_dir}/install.sh"
-          cp scripts/install.ps1 "${bundle_dir}/install.ps1"
-          cp scripts/install-openclaw.sh "${bundle_dir}/install-openclaw.sh"
+          {
+            printf 'export MD2WECHAT_VERSION_DEFAULT=%q\n' "${VERSION}"
+            cat scripts/install.sh
+          } > "${bundle_dir}/install.sh"
+          {
+            printf '$env:MD2WECHAT_VERSION_DEFAULT = "%s"\n' "${VERSION}"
+            cat scripts/install.ps1
+          } > "${bundle_dir}/install.ps1"
+          {
+            printf 'export MD2WECHAT_VERSION_DEFAULT=%q\n' "${VERSION}"
+            cat scripts/install-openclaw.sh
+          } > "${bundle_dir}/install-openclaw.sh"
           mkdir -p "${bundle_dir}/skills"
           cp -r skills/md2wechat "${bundle_dir}/skills/md2wechat"
           tar -czf "${bundle_dir}/md2wechat-openclaw-skill.tar.gz" -C "${bundle_dir}" skills/md2wechat

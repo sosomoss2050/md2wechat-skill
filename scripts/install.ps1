@@ -8,7 +8,13 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
 $repo = "geekjourneyx/md2wechat-skill"
-$version = if ($env:MD2WECHAT_VERSION) { $env:MD2WECHAT_VERSION } else { "latest" }
+$version = if ($env:MD2WECHAT_VERSION) {
+    $env:MD2WECHAT_VERSION
+} elseif ($env:MD2WECHAT_VERSION_DEFAULT) {
+    $env:MD2WECHAT_VERSION_DEFAULT
+} else {
+    "latest"
+}
 $releaseBaseUrl = $env:MD2WECHAT_RELEASE_BASE_URL
 if (-not $releaseBaseUrl) {
     if ($version -eq "latest") {

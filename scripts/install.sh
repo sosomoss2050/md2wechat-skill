@@ -6,7 +6,14 @@
 set -euo pipefail
 
 REPO="geekjourneyx/md2wechat-skill"
-VERSION="${MD2WECHAT_VERSION:-latest}"
+VERSION="${MD2WECHAT_VERSION:-}"
+if [ -z "$VERSION" ]; then
+    if [ -n "${MD2WECHAT_VERSION_DEFAULT:-}" ]; then
+        VERSION="${MD2WECHAT_VERSION_DEFAULT}"
+    else
+        VERSION="latest"
+    fi
+fi
 INSTALL_DIR="${MD2WECHAT_INSTALL_DIR:-$HOME/.local/bin}"
 
 echo "========================================"
@@ -136,10 +143,10 @@ else
     echo "请根据你的 shell 执行以下命令："
 
     # 检测 shell
-    if [ -n "$ZSH_VERSION" ]; then
+    if [ -n "${ZSH_VERSION:-}" ]; then
         echo "  echo 'export PATH=\"\$HOME/.local/bin:\$PATH\"' >> ~/.zshrc"
         echo "  source ~/.zshrc"
-    elif [ -n "$BASH_VERSION" ]; then
+    elif [ -n "${BASH_VERSION:-}" ]; then
         echo "  echo 'export PATH=\"\$HOME/.local/bin:\$PATH\"' >> ~/.bashrc"
         echo "  source ~/.bashrc"
     else

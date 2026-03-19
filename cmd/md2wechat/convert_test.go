@@ -524,3 +524,81 @@ func TestRunConvertOutputsStableJSONEnvelopeWhenRequested(t *testing.T) {
 		t.Fatalf("unexpected data payload: %#v", data)
 	}
 }
+
+func TestRunConvertJSONStillWritesOutputFileWhenRequested(t *testing.T) {
+	oldCfg, oldLog := cfg, log
+	oldMode, oldTheme, oldAPIKey := convertMode, convertTheme, convertAPIKey
+	oldFontSize, oldBackground := convertFontSize, convertBackgroundType
+	oldCustomPrompt, oldOutput := convertCustomPrompt, convertOutput
+	oldPreview, oldUpload, oldDraft := convertPreview, convertUpload, convertDraft
+	oldSaveDraft, oldCover := convertSaveDraft, convertCoverImage
+	oldNewConverter := newMarkdownConverter
+	oldJSON := jsonOutput
+	t.Cleanup(func() {
+		cfg, log = oldCfg, oldLog
+		convertMode, convertTheme, convertAPIKey = oldMode, oldTheme, oldAPIKey
+		convertFontSize, convertBackgroundType = oldFontSize, oldBackground
+		convertCustomPrompt, convertOutput = oldCustomPrompt, oldOutput
+		convertPreview, convertUpload, convertDraft = oldPreview, oldUpload, oldDraft
+		convertSaveDraft, convertCoverImage = oldSaveDraft, oldCover
+		newMarkdownConverter = oldNewConverter
+		jsonOutput = oldJSON
+	})
+
+	cfg = &config.Config{MD2WechatAPIKey: "api-key"}
+	log = zap.NewNop()
+	jsonOutput = true
+	convertMode = "api"
+	convertTheme = "default"
+	convertAPIKey = ""
+	convertFontSize = "medium"
+	convertBackgroundType = "default"
+	convertCustomPrompt = ""
+	convertPreview = false
+	convertUpload = false
+	convertDraft = false
+	convertSaveDraft = ""
+	convertCoverImage = ""
+
+	dir := t.TempDir()
+	markdownPath := filepath.Join(dir, "article.md")
+	outputPath := filepath.Join(dir, "article.html")
+	convertOutput = outputPath
+	if err := os.WriteFile(markdownPath, []byte("# 标题\n\n正文"), 0600); err != nil {
+		t.Fatalf("write markdown: %v", err)
+	}
+
+	newMarkdownConverter = func() converter.Converter {
+		return &fakeConverter{
+			result: &converter.ConvertResult{
+				Success: true,
+				Mode:    converter.ModeAPI,
+				Theme:   "default",
+				HTML:    "<p>正文</p>",
+			},
+		}
+	}
+
+	stdout := captureStdout(t, func() {
+		if err := runConvert(nil, []string{markdownPath}); err != nil {
+			t.Fatalf("runConvert() error = %v", err)
+		}
+	})
+
+	data, err := os.ReadFile(outputPath)
+	if err != nil {
+		t.Fatalf("read output file: %v", err)
+	}
+	if string(data) != "<p>正文</p>" {
+		t.Fatalf("output file content = %q", string(data))
+	}
+
+	var response map[string]any
+	if err := json.Unmarshal(stdout, &response); err != nil {
+		t.Fatalf("unmarshal response: %v\n%s", err, stdout)
+	}
+	payload, _ := response["data"].(map[string]any)
+	if payload["output_file"] != outputPath {
+		t.Fatalf("output_file = %#v, want %q", payload["output_file"], outputPath)
+	}
+}

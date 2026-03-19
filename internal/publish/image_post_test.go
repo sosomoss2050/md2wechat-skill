@@ -147,3 +147,38 @@ func TestImagePostServiceCreateUploadsAssetsAndDispatchesArtifact(t *testing.T) 
 		t.Fatalf("artifact assets = %#v", artifact.Assets)
 	}
 }
+
+func TestImagePostServiceCreateUsesResolvedMarkdownAssetPaths(t *testing.T) {
+	dir := t.TempDir()
+	mdDir := filepath.Join(dir, "posts")
+	if err := os.MkdirAll(filepath.Join(mdDir, "images"), 0755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	mdPath := filepath.Join(mdDir, "article.md")
+	imagePath := filepath.Join(mdDir, "images", "a.png")
+	if err := os.WriteFile(mdPath, []byte("![x](images/a.png)\n"), 0600); err != nil {
+		t.Fatalf("write markdown: %v", err)
+	}
+	if err := os.WriteFile(imagePath, []byte("img"), 0600); err != nil {
+		t.Fatalf("write image: %v", err)
+	}
+
+	assets := &fakeAssetProcessor{
+		localResults: map[string]*image.UploadResult{
+			imagePath: {MediaID: "img-1", WechatURL: "https://wechat.local/image"},
+		},
+	}
+	creator := &fakeImagePostCreator{}
+	svc := NewImagePostService(assets, creator)
+
+	if _, err := svc.CreateImagePost(&ImagePostInput{
+		Title:        "Title",
+		FromMarkdown: mdPath,
+	}); err != nil {
+		t.Fatalf("CreateImagePost() error = %v", err)
+	}
+
+	if len(assets.localCalls) != 1 || assets.localCalls[0] != imagePath {
+		t.Fatalf("local calls = %#v, want %q", assets.localCalls, imagePath)
+	}
+}
