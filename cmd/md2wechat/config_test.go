@@ -98,7 +98,7 @@ func TestConfigShowYAMLOutput(t *testing.T) {
 	})
 
 	output := string(stdout)
-	if !strings.Contains(output, "wechat:") || strings.Contains(output, "\"success\"") {
+	if !strings.Contains(output, "wechat:") || !strings.Contains(output, "md2wechat_base_url: https://www.md2wechat.cn") || strings.Contains(output, "\"success\"") {
 		t.Fatalf("unexpected yaml output: %s", output)
 	}
 }
@@ -166,5 +166,40 @@ func TestConfigInitJSONEnvelopeSuppressesHumanStderr(t *testing.T) {
 	}
 	if _, err := os.Stat(outputFile); err != nil {
 		t.Fatalf("expected config file to be created: %v", err)
+	}
+}
+
+func TestConfigInitWritesSampleAPIBaseURLAndImageSettings(t *testing.T) {
+	oldJSON := jsonOutput
+	t.Cleanup(func() {
+		jsonOutput = oldJSON
+	})
+
+	jsonOutput = true
+	outputFile := filepath.Join(t.TempDir(), "config.yaml")
+
+	captureStdout(t, func() {
+		configCmd.SetArgs([]string{"init", outputFile})
+		if err := configCmd.Execute(); err != nil {
+			t.Fatalf("configCmd.Execute() error = %v", err)
+		}
+	})
+
+	data, err := os.ReadFile(outputFile)
+	if err != nil {
+		t.Fatalf("read config file: %v", err)
+	}
+
+	content := string(data)
+	expectedSnippets := []string{
+		"md2wechat_base_url: https://www.md2wechat.cn",
+		"image_provider: openai",
+		"image_model: dall-e-3",
+		"image_size: 1024x1024",
+	}
+	for _, snippet := range expectedSnippets {
+		if !strings.Contains(content, snippet) {
+			t.Fatalf("expected generated config to contain %q, got:\n%s", snippet, content)
+		}
 	}
 }

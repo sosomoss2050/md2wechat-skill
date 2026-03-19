@@ -24,6 +24,31 @@ bash skills/md2wechat/scripts/run.sh convert article.md --mode ai --theme autumn
 bash skills/md2wechat/scripts/run.sh convert article.md --draft --cover cover.jpg
 ```
 
+### Config Location
+
+Before asking the user to edit configuration, check these in order:
+
+1. `~/.config/md2wechat/config.yaml` (default and recommended)
+2. Environment variables such as `MD2WECHAT_BASE_URL`
+3. Project-local `md2wechat.yaml` / `md2wechat.yml` / `md2wechat.json`
+
+If the user asks how to switch the API domain, change:
+
+- `api.md2wechat_base_url` in the config file, or
+- `MD2WECHAT_BASE_URL` in the environment
+
+Default API domain:
+
+```text
+https://www.md2wechat.cn
+```
+
+Backup domain:
+
+```text
+https://md2wechat.app
+```
+
 ### Natural Language Image Generation
 
 You can also ask me to generate images using natural language:

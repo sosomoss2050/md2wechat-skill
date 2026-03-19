@@ -295,7 +295,7 @@ md2wechat create_draft draft.json
 ```bash
 # 1. 首次使用，初始化配置
 md2wechat config init
-# 编辑 md2wechat.yaml，填入微信 AppID 和 Secret
+# 编辑 ~/.config/md2wechat/config.yaml，填入微信 AppID、Secret 和 API Key
 
 # 2. 验证配置
 md2wechat config validate

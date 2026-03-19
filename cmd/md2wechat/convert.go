@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/geekjourneyx/md2wechat-skill/internal/converter"
 	"github.com/geekjourneyx/md2wechat-skill/internal/draft"
@@ -222,6 +223,8 @@ func handleAIResult(result *converter.ConvertResult, markdownFile string) error 
 		zap.Int("image_count", len(images)),
 		zap.Int("prompt_length", len(prompt)))
 
+	promptOutputPath := resolveAIPromptOutputPath(convertOutput)
+
 	// 输出 AI 请求信息
 	response := map[string]any{
 		"markdown_file": markdownFile,
@@ -229,18 +232,37 @@ func handleAIResult(result *converter.ConvertResult, markdownFile string) error 
 		"action":        "ai_request",
 		"prompt":        prompt,
 		"images":        images,
+		"prompt_file":   promptOutputPath,
+	}
+	if convertOutput != "" {
+		response["requested_output_file"] = convertOutput
 	}
 
 	responseActionRequiredWith(codeConvertAIRequestReady, "Convert AI request prepared", response)
 
-	if convertOutput != "" {
-		// 同时保存原始 markdown 到输出文件，方便用户使用
-		if err := os.WriteFile(convertOutput, []byte(prompt), 0644); err != nil {
+	if promptOutputPath != "" {
+		if err := os.WriteFile(promptOutputPath, []byte(prompt), 0644); err != nil {
 			log.Warn("failed to save prompt", zap.Error(err))
+		} else {
+			log.Info("ai prompt saved", zap.String("file", promptOutputPath))
 		}
 	}
 
 	return nil
+}
+
+func resolveAIPromptOutputPath(outputPath string) string {
+	if outputPath == "" {
+		return ""
+	}
+
+	ext := strings.ToLower(filepath.Ext(outputPath))
+	switch ext {
+	case ".html", ".htm":
+		return strings.TrimSuffix(outputPath, ext) + ".prompt.txt"
+	default:
+		return outputPath
+	}
 }
 
 func validateConvertConfig() error {

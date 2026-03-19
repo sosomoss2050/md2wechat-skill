@@ -170,17 +170,22 @@ func initConfigFile(outputFile string) error {
 
 	// 创建示例配置
 	cfg := &config.Config{
-		WechatAppID:        "your_wechat_appid",
-		WechatSecret:       "your_wechat_secret",
-		MD2WechatAPIKey:    "your_md2wechat_api_key",
-		ImageAPIKey:        "your_image_api_key",
-		ImageAPIBase:       "https://api.openai.com/v1",
-		DefaultConvertMode: "api",
-		DefaultTheme:       "default",
-		CompressImages:     true,
-		MaxImageWidth:      1920,
-		MaxImageSize:       5 * 1024 * 1024,
-		HTTPTimeout:        30,
+		WechatAppID:           "your_wechat_appid",
+		WechatSecret:          "your_wechat_secret",
+		MD2WechatAPIKey:       "your_md2wechat_api_key",
+		MD2WechatBaseURL:      "https://www.md2wechat.cn",
+		ImageProvider:         "openai",
+		ImageAPIKey:           "your_image_api_key",
+		ImageAPIBase:          "https://api.openai.com/v1",
+		ImageModel:            "dall-e-3",
+		ImageSize:             "1024x1024",
+		DefaultConvertMode:    "api",
+		DefaultTheme:          "default",
+		DefaultBackgroundType: "default",
+		CompressImages:        true,
+		MaxImageWidth:         1920,
+		MaxImageSize:          5 * 1024 * 1024,
+		HTTPTimeout:           30,
 	}
 
 	if err := config.SaveConfig(outputFile, cfg); err != nil {
@@ -209,10 +214,15 @@ func printYAMLConfig(cfg *config.Config, maskSecret bool) {
 
 	fmt.Println("api:")
 	fmt.Printf("  md2wechat_key: %s\n", maskAPIKey(cfg.MD2WechatAPIKey, maskSecret))
+	fmt.Printf("  md2wechat_base_url: %s\n", cfg.MD2WechatBaseURL)
 	fmt.Printf("  image_key: %s\n", maskAPIKey(cfg.ImageAPIKey, maskSecret))
+	fmt.Printf("  image_provider: %s\n", cfg.ImageProvider)
 	fmt.Printf("  image_base_url: %s\n", cfg.ImageAPIBase)
+	fmt.Printf("  image_model: %s\n", cfg.ImageModel)
+	fmt.Printf("  image_size: %s\n", cfg.ImageSize)
 	fmt.Printf("  convert_mode: %s\n", cfg.DefaultConvertMode)
 	fmt.Printf("  default_theme: %s\n", cfg.DefaultTheme)
+	fmt.Printf("  background_type: %s\n", cfg.DefaultBackgroundType)
 	fmt.Printf("  http_timeout: %d\n\n", cfg.HTTPTimeout)
 
 	fmt.Println("image:")

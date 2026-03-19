@@ -140,7 +140,7 @@ func normalizeImagePostInput(input *ImagePostInput) (*ImagePostSource, error) {
 	}
 
 	if input.FromMarkdown != "" {
-		extracted, err := ExtractLocalAssetsFromMarkdown(input.FromMarkdown)
+		extracted, err := ExtractAssetsFromMarkdown(input.FromMarkdown)
 		if err != nil {
 			return nil, err
 		}
@@ -166,8 +166,8 @@ func normalizeImagePostInput(input *ImagePostInput) (*ImagePostSource, error) {
 	}, nil
 }
 
-// ExtractLocalAssetsFromMarkdown resolves local images from a markdown file into publish assets.
-func ExtractLocalAssetsFromMarkdown(mdFile string) ([]AssetRef, error) {
+// ExtractAssetsFromMarkdown resolves markdown images from a markdown file into publish assets.
+func ExtractAssetsFromMarkdown(mdFile string) ([]AssetRef, error) {
 	content, err := os.ReadFile(mdFile)
 	if err != nil {
 		return nil, err
@@ -176,21 +176,29 @@ func ExtractLocalAssetsFromMarkdown(mdFile string) ([]AssetRef, error) {
 	mdDir := filepath.Dir(mdFile)
 	assets := make([]AssetRef, 0)
 	for _, img := range converter.ParseMarkdownImages(string(content)) {
-		if img.Type != converter.ImageTypeLocal {
+		asset := AssetRef{
+			Index:  len(assets),
+			Source: img.Original,
+		}
+
+		switch img.Type {
+		case converter.ImageTypeLocal:
+			resolved := img.Original
+			if !filepath.IsAbs(resolved) {
+				resolved = filepath.Join(mdDir, img.Original)
+			}
+			asset.Kind = AssetKindLocal
+			asset.ResolvedSource = resolved
+		case converter.ImageTypeOnline:
+			asset.Kind = AssetKindRemote
+		case converter.ImageTypeAI:
+			asset.Kind = AssetKindAI
+			asset.Prompt = img.AIPrompt
+		default:
 			continue
 		}
 
-		resolved := img.Original
-		if !filepath.IsAbs(resolved) {
-			resolved = filepath.Join(mdDir, img.Original)
-		}
-
-		assets = append(assets, AssetRef{
-			Index:          len(assets),
-			Kind:           AssetKindLocal,
-			Source:         img.Original,
-			ResolvedSource: resolved,
-		})
+		assets = append(assets, asset)
 	}
 
 	return assets, nil

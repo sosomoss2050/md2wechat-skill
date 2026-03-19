@@ -790,6 +790,18 @@ md2wechat convert article.md --mode ai --theme autumn-warm
 ~/.config/md2wechat/config.yaml    # 全局配置（推荐）
 ```
 
+生成示例配置：
+
+```bash
+md2wechat config init
+```
+
+查看当前实际生效配置：
+
+```bash
+md2wechat config show --format json
+```
+
 ### 配置项说明
 
 ```yaml
@@ -801,6 +813,7 @@ wechat:
 # API 配置
 api:
   md2wechat_key: "md2wechat.cn 的 API Key"  # API 模式需要
+  md2wechat_base_url: "https://www.md2wechat.cn"  # 可改成 https://md2wechat.app
   convert_mode: "api"                       # 默认模式：api 或 ai
   default_theme: "default"                  # 默认主题
   http_timeout: 30                          # 超时时间（秒）
@@ -811,6 +824,17 @@ image:
   max_width: 1920         # 最大宽度
   max_size_mb: 5          # 最大文件大小（MB）
 ```
+
+如果你不知道 API 域名在哪里改，就改这里：
+
+- 配置文件：`api.md2wechat_base_url`
+- 环境变量：`MD2WECHAT_BASE_URL`
+
+更完整的保姆级说明见：
+
+- [配置指南](docs/CONFIG.md)
+- [示例配置](docs/examples/config.yaml.example)
+- [真实烟雾测试记录](docs/SMOKE.md)
 
 ---
 

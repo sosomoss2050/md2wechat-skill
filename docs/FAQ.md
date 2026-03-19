@@ -122,19 +122,22 @@ export WECHAT_SECRET="your_secret_here"
 
 ```bash
 # 1. 检查配置文件位置
-md2wechat config show
+md2wechat config show --format json
 
 # 2. 验证配置文件格式
-cat md2wechat.yaml
+cat ~/.config/md2wechat/config.yaml
 
 # 3. 重新初始化配置
 md2wechat config init
 ```
 
 **支持的配置文件位置**：
-- `./md2wechat.yaml`（当前目录，优先级最高）
+- `~/.config/md2wechat/config.yaml`（推荐，全局默认）
 - `~/.md2wechat.yaml`
-- `~/.config/md2wechat/config.yaml`
+- `~/.md2wechat.yml`
+- `./md2wechat.yaml`
+- `./md2wechat.yml`
+- `./md2wechat.json`
 
 ---
 

@@ -30,7 +30,7 @@ func (f *fakeImagePostCreator) CreateImagePost(artifact ImagePostArtifact) (*Ima
 	}, nil
 }
 
-func TestExtractLocalAssetsFromMarkdownUsesSharedParser(t *testing.T) {
+func TestExtractAssetsFromMarkdownUsesSharedParser(t *testing.T) {
 	dir := t.TempDir()
 	mdPath := filepath.Join(dir, "article.md")
 	content := []byte(`
@@ -45,9 +45,9 @@ func TestExtractLocalAssetsFromMarkdownUsesSharedParser(t *testing.T) {
 		t.Fatalf("write markdown: %v", err)
 	}
 
-	got, err := ExtractLocalAssetsFromMarkdown(mdPath)
+	got, err := ExtractAssetsFromMarkdown(mdPath)
 	if err != nil {
-		t.Fatalf("ExtractLocalAssetsFromMarkdown() error = %v", err)
+		t.Fatalf("ExtractAssetsFromMarkdown() error = %v", err)
 	}
 
 	want := []AssetRef{
@@ -55,11 +55,12 @@ func TestExtractLocalAssetsFromMarkdownUsesSharedParser(t *testing.T) {
 		{Index: 1, Kind: AssetKindLocal, Source: "images/b.png", ResolvedSource: filepath.Join(dir, "images/b.png")},
 		{Index: 2, Kind: AssetKindLocal, Source: "../c.png", ResolvedSource: filepath.Join(dir, "../c.png")},
 		{Index: 3, Kind: AssetKindLocal, Source: "/tmp/d.png", ResolvedSource: "/tmp/d.png"},
-		{Index: 4, Kind: AssetKindLocal, Source: "images/my cat.png", ResolvedSource: filepath.Join(dir, "images/my cat.png")},
+		{Index: 4, Kind: AssetKindRemote, Source: "https://example.com/e.png"},
+		{Index: 5, Kind: AssetKindLocal, Source: "images/my cat.png", ResolvedSource: filepath.Join(dir, "images/my cat.png")},
 	}
 
 	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("ExtractLocalAssetsFromMarkdown() = %#v, want %#v", got, want)
+		t.Fatalf("ExtractAssetsFromMarkdown() = %#v, want %#v", got, want)
 	}
 }
 

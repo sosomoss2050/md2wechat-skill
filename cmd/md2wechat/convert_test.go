@@ -409,12 +409,15 @@ func TestRunConvertImageFailureBlocksDraftCreation(t *testing.T) {
 func TestHandleAIResultUsesStableJSONEnvelopeWhenRequested(t *testing.T) {
 	oldLog := log
 	oldJSON := jsonOutput
+	oldOutput := convertOutput
 	t.Cleanup(func() {
 		log = oldLog
 		jsonOutput = oldJSON
+		convertOutput = oldOutput
 	})
 	log = zap.NewNop()
 	jsonOutput = true
+	convertOutput = ""
 
 	result := &converter.ConvertResult{
 		Error: "AI_MODE_REQUEST:prompt body",
@@ -445,6 +448,57 @@ func TestHandleAIResultUsesStableJSONEnvelopeWhenRequested(t *testing.T) {
 	}
 	if data["prompt"] != "prompt body" {
 		t.Fatalf("prompt = %#v", data["prompt"])
+	}
+}
+
+func TestHandleAIResultWritesPromptToPromptFileInsteadOfHTML(t *testing.T) {
+	oldLog := log
+	oldJSON := jsonOutput
+	oldOutput := convertOutput
+	t.Cleanup(func() {
+		log = oldLog
+		jsonOutput = oldJSON
+		convertOutput = oldOutput
+	})
+	log = zap.NewNop()
+	jsonOutput = true
+
+	dir := t.TempDir()
+	convertOutput = filepath.Join(dir, "result.html")
+	result := &converter.ConvertResult{
+		Error:  "AI_MODE_REQUEST:prompt body",
+		Images: []converter.ImageRef{{Index: 0, Original: "./a.png"}},
+	}
+
+	stdout := captureStdout(t, func() {
+		if err := handleAIResult(result, "article.md"); err != nil {
+			t.Fatalf("handleAIResult() error = %v", err)
+		}
+	})
+
+	if _, err := os.Stat(convertOutput); !os.IsNotExist(err) {
+		t.Fatalf("expected no html output file, got err=%v", err)
+	}
+
+	promptPath := filepath.Join(dir, "result.prompt.txt")
+	data, err := os.ReadFile(promptPath)
+	if err != nil {
+		t.Fatalf("read prompt file: %v", err)
+	}
+	if string(data) != "prompt body" {
+		t.Fatalf("prompt file = %q", data)
+	}
+
+	var response map[string]any
+	if err := json.Unmarshal(stdout, &response); err != nil {
+		t.Fatalf("unmarshal response: %v\n%s", err, stdout)
+	}
+	payload, _ := response["data"].(map[string]any)
+	if payload["prompt_file"] != promptPath {
+		t.Fatalf("prompt_file = %#v, want %q", payload["prompt_file"], promptPath)
+	}
+	if payload["requested_output_file"] != convertOutput {
+		t.Fatalf("requested_output_file = %#v, want %q", payload["requested_output_file"], convertOutput)
 	}
 }
 

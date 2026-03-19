@@ -34,10 +34,31 @@ md2wechat version --json
 md2wechat config init
 ```
 
+默认配置文件位置：
+
+```text
+~/.config/md2wechat/config.yaml
+```
+
 如果你要创建微信草稿，至少需要配置：
 
 - `wechat.appid`
 - `wechat.secret`
+- `api.md2wechat_key`
+
+如果你需要切换 API 域名，在这个文件里修改：
+
+```yaml
+api:
+  md2wechat_base_url: "https://www.md2wechat.cn"
+```
+
+备用域名可改为：
+
+```yaml
+api:
+  md2wechat_base_url: "https://md2wechat.app"
+```
 
 ### 3. 预览 Markdown
 
