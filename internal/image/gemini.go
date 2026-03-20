@@ -16,6 +16,7 @@ type GeminiProvider struct {
 	apiKey      string
 	model       string
 	aspectRatio string
+	imageSize   string
 	client      *genai.Client
 }
 
@@ -23,11 +24,11 @@ type GeminiProvider struct {
 func NewGeminiProvider(cfg *config.Config) (*GeminiProvider, error) {
 	model := cfg.ImageModel
 	if model == "" {
-		model = "gemini-3-pro-image-preview" // 默认模型
+		model = "gemini-3.1-flash-image-preview" // 默认模型
 	}
 
-	// 处理宽高比配置
-	aspectRatio := mapSizeToGeminiAspectRatio(cfg.ImageSize)
+	// 处理宽高比与分辨率配置
+	aspectRatio, imageSize := mapSizeToGeminiImageConfig(cfg.ImageSize)
 
 	// 创建 Gemini 客户端
 	ctx := context.Background()
@@ -49,6 +50,7 @@ func NewGeminiProvider(cfg *config.Config) (*GeminiProvider, error) {
 		apiKey:      cfg.ImageAPIKey,
 		model:       model,
 		aspectRatio: aspectRatio,
+		imageSize:   imageSize,
 		client:      client,
 	}, nil
 }
@@ -70,13 +72,7 @@ func (p *GeminiProvider) Generate(ctx context.Context, prompt string) (*Generate
 		},
 	}
 
-	// 配置生成参数
-	config := &genai.GenerateContentConfig{
-		ResponseModalities: []string{"TEXT", "IMAGE"},
-	}
-
-	// 如果有宽高比配置，添加到配置中
-	// 注意：Gemini API 可能通过不同方式支持宽高比，这里先用基础配置
+	config := p.buildGenerateConfig()
 
 	// 调用 Gemini API
 	resp, err := p.client.Models.GenerateContent(ctx, p.model, contents, config)
@@ -95,6 +91,16 @@ func (p *GeminiProvider) Generate(ctx context.Context, prompt string) (*Generate
 		Model: p.model,
 		Size:  p.aspectRatio,
 	}, nil
+}
+
+func (p *GeminiProvider) buildGenerateConfig() *genai.GenerateContentConfig {
+	return &genai.GenerateContentConfig{
+		ResponseModalities: []string{"TEXT", "IMAGE"},
+		ImageConfig: &genai.ImageConfig{
+			AspectRatio: p.aspectRatio,
+			ImageSize:   p.imageSize,
+		},
+	}
 }
 
 // extractAndSaveImage 从响应中提取图片并保存到临时文件
@@ -221,7 +227,7 @@ func (p *GeminiProvider) handleError(err error) error {
 			Provider: p.Name(),
 			Code:     "bad_request",
 			Message:  "请求参数错误",
-			Hint:     "请检查模型名称是否正确。支持的模型: gemini-3-pro-image-preview, gemini-2.5-flash-preview-image",
+			Hint:     "请检查模型名称和 image_size 是否正确。支持的模型: gemini-3.1-flash-image-preview, gemini-3-pro-image-preview, gemini-2.5-flash-image",
 			Original: err,
 		}
 	}
@@ -231,7 +237,7 @@ func (p *GeminiProvider) handleError(err error) error {
 			Provider: p.Name(),
 			Code:     "not_found",
 			Message:  "模型不存在",
-			Hint:     "请检查模型名称是否正确: gemini-3-pro-image-preview",
+			Hint:     "请检查模型名称是否正确: gemini-3.1-flash-image-preview",
 			Original: err,
 		}
 	}
@@ -256,10 +262,10 @@ func (p *GeminiProvider) handleError(err error) error {
 	}
 }
 
-// mapSizeToGeminiAspectRatio 将尺寸配置映射到 Gemini 支持的宽高比
-func mapSizeToGeminiAspectRatio(size string) string {
+// mapSizeToGeminiImageConfig 将尺寸配置映射到 Gemini 支持的宽高比与分辨率等级
+func mapSizeToGeminiImageConfig(size string) (aspectRatio, imageSize string) {
 	if size == "" {
-		return "1:1" // 默认正方形
+		return "1:1", "1K" // 默认正方形，默认分辨率
 	}
 
 	// 如果已经是宽高比格式，直接返回
@@ -269,58 +275,64 @@ func mapSizeToGeminiAspectRatio(size string) string {
 		"4:5": true, "5:4": true, "21:9": true,
 	}
 	if validRatios[size] {
-		return size
+		return size, "1K"
 	}
 
-	// Gemini 3 Pro 官方支持的尺寸（按 1K/2K/4K 分组）
-	sizeMap := map[string]string{
+	// Gemini 官方支持的尺寸（按 1K/2K/4K 分组）
+	sizeMap := map[string]struct{ ratio, imageSize string }{
 		// 1:1 正方形
-		"1024x1024": "1:1", // 1K
-		"2048x2048": "1:1", // 2K
-		"4096x4096": "1:1", // 4K
+		"1024x1024": {"1:1", "1K"},
+		"2048x2048": {"1:1", "2K"},
+		"4096x4096": {"1:1", "4K"},
 		// 2:3 竖版
-		"848x1264":  "2:3", // 1K
-		"1696x2528": "2:3", // 2K
-		"3392x5056": "2:3", // 4K
+		"848x1264":  {"2:3", "1K"},
+		"1696x2528": {"2:3", "2K"},
+		"3392x5056": {"2:3", "4K"},
 		// 3:2 横版
-		"1264x848":  "3:2", // 1K
-		"2528x1696": "3:2", // 2K
-		"5056x3392": "3:2", // 4K
+		"1264x848":  {"3:2", "1K"},
+		"2528x1696": {"3:2", "2K"},
+		"5056x3392": {"3:2", "4K"},
 		// 3:4 竖版
-		"896x1200":  "3:4", // 1K
-		"1792x2400": "3:4", // 2K
-		"3584x4800": "3:4", // 4K
+		"896x1200":  {"3:4", "1K"},
+		"1792x2400": {"3:4", "2K"},
+		"3584x4800": {"3:4", "4K"},
 		// 4:3 横版
-		"1200x896":  "4:3", // 1K
-		"2400x1792": "4:3", // 2K
-		"4800x3584": "4:3", // 4K
+		"1200x896":  {"4:3", "1K"},
+		"2400x1792": {"4:3", "2K"},
+		"4800x3584": {"4:3", "4K"},
 		// 4:5 竖版
-		"928x1152":  "4:5", // 1K
-		"1856x2304": "4:5", // 2K
-		"3712x4608": "4:5", // 4K
+		"928x1152":  {"4:5", "1K"},
+		"1856x2304": {"4:5", "2K"},
+		"3712x4608": {"4:5", "4K"},
 		// 5:4 横版
-		"1152x928":  "5:4", // 1K
-		"2304x1856": "5:4", // 2K
-		"4608x3712": "5:4", // 4K
+		"1152x928":  {"5:4", "1K"},
+		"2304x1856": {"5:4", "2K"},
+		"4608x3712": {"5:4", "4K"},
 		// 9:16 竖版
-		"768x1376":  "9:16", // 1K
-		"1536x2752": "9:16", // 2K
-		"3072x5504": "9:16", // 4K
+		"768x1376":  {"9:16", "1K"},
+		"1536x2752": {"9:16", "2K"},
+		"3072x5504": {"9:16", "4K"},
 		// 16:9 横版
-		"1376x768":  "16:9", // 1K
-		"2752x1536": "16:9", // 2K
-		"5504x3072": "16:9", // 4K
+		"1376x768":  {"16:9", "1K"},
+		"2752x1536": {"16:9", "2K"},
+		"5504x3072": {"16:9", "4K"},
 		// 21:9 超宽横版
-		"1584x672":  "21:9", // 1K
-		"3168x1344": "21:9", // 2K
-		"6336x2688": "21:9", // 4K
+		"1584x672":  {"21:9", "1K"},
+		"3168x1344": {"21:9", "2K"},
+		"6336x2688": {"21:9", "4K"},
 	}
 
-	if ratio, ok := sizeMap[size]; ok {
-		return ratio
+	if mapped, ok := sizeMap[size]; ok {
+		return mapped.ratio, mapped.imageSize
 	}
 
-	return "1:1" // 默认
+	return "1:1", "1K" // 默认
+}
+
+// mapSizeToGeminiAspectRatio 兼容旧测试与调用方，只返回宽高比
+func mapSizeToGeminiAspectRatio(size string) string {
+	ratio, _ := mapSizeToGeminiImageConfig(size)
+	return ratio
 }
 
 // Close 关闭客户端连接
@@ -332,8 +344,10 @@ func (p *GeminiProvider) Close() error {
 // GetGeminiSupportedModels 返回 Gemini 支持的图片生成模型列表
 func GetGeminiSupportedModels() []string {
 	return []string{
-		"gemini-3-pro-image-preview",            // Gemini 3 Pro 图片预览版（推荐）
-		"gemini-2.5-flash-preview-image",        // Gemini 2.5 Flash 图片版
+		"gemini-3.1-flash-image-preview",        // Gemini 3.1 Flash 图片预览版（默认，推荐）
+		"gemini-3-pro-image-preview",            // Gemini 3 Pro 图片预览版
+		"gemini-2.5-flash-image",                // Gemini 2.5 Flash 图片版
+		"gemini-2.5-flash-preview-image",        // Gemini 2.5 Flash 图片预览版（兼容旧名）
 		"gemini-2.0-flash-exp-image-generation", // Gemini 2.0 Flash 实验版
 	}
 }

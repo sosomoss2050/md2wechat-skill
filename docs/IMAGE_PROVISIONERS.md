@@ -224,13 +224,15 @@ OpenRouter 支持三种分辨率等级（通过尺寸自动判断）：
 
 直接调用 Google Gemini API，使用官方 Go SDK，无需通过第三方平台。
 
+注意：Gemini 直连模式当前固定走官方 Go SDK backend，不读取 `api.image_base_url` / `IMAGE_API_BASE`。如果你需要可配置的中转地址，应使用其他 provider 路径，而不是 Gemini 直连。
+
 #### 配置示例
 
 ```yaml
 api:
   image_provider: "gemini"  # 或 "google"
   image_key: "AIza..."  # Google API Key
-  image_model: "gemini-3-pro-image-preview"
+  image_model: "gemini-3.1-flash-image-preview"
   image_size: "16:9"  # 支持比例格式
 ```
 
@@ -239,7 +241,7 @@ api:
 ```bash
 export IMAGE_PROVIDER="gemini"
 export IMAGE_API_KEY="AIza..."  # 或 GOOGLE_API_KEY
-export IMAGE_MODEL="gemini-3-pro-image-preview"
+export IMAGE_MODEL="gemini-3.1-flash-image-preview"
 export IMAGE_SIZE="16:9"
 ```
 
@@ -247,17 +249,19 @@ export IMAGE_SIZE="16:9"
 
 | 模型 | 说明 |
 |------|------|
-| [`gemini-3-pro-image-preview`](https://ai.google.dev/gemini-api/docs/image-generation) | Gemini 3 Pro 图片预览版（默认，推荐）|
-| `gemini-2.5-flash-preview-image` | Gemini 2.5 Flash 图片版 |
+| [`gemini-3.1-flash-image-preview`](https://ai.google.dev/gemini-api/docs/image-generation) | Gemini 3.1 Flash 图片预览版（默认，推荐）|
+| `gemini-3-pro-image-preview` | Gemini 3 Pro 图片预览版 |
+| `gemini-2.5-flash-image` | Gemini 2.5 Flash 图片版 |
+| `gemini-2.5-flash-preview-image` | Gemini 2.5 Flash 图片预览版（兼容旧名） |
 | `gemini-2.0-flash-exp-image-generation` | Gemini 2.0 Flash 实验版 |
 
 #### 支持的尺寸
 
-Gemini 支持以下宽高比，可通过配置文件或 `--size` 参数指定：
+Gemini 支持以下宽高比，可通过配置文件或 `--size` 参数指定。项目会把 `api.image_size` / `--size` 映射到 Gemini 的 `image_config.aspect_ratio` 与 `image_config.image_size`：
 
 | 比例 | 说明 |
 |------|------|
-| `1:1` | 正方形（默认）|
+| `1:1` | 正方形 |
 | `2:3` | 竖版照片 |
 | `3:2` | 横版照片 |
 | `3:4` | 标准竖版 |
@@ -268,7 +272,13 @@ Gemini 支持以下宽高比，可通过配置文件或 `--size` 参数指定：
 | `16:9` | 横版（适合封面）|
 | `21:9` | 超宽横版 |
 
-也支持 `WIDTHxHEIGHT` 格式（如 `1024x1024`），会自动映射到对应的宽高比和分辨率等级（1K/2K/4K）。
+也支持 `WIDTHxHEIGHT` 格式（如 `1024x1024`），会自动映射到对应的宽高比和分辨率等级（1K/2K/4K）。如果直接传入比例格式（如 `16:9`），项目会使用该比例，并让 Gemini 使用默认 `1K` 分辨率。
+
+补充说明：
+
+- 图片 prompt 里的 `default_aspect_ratio` 是 preset 的语义默认比例
+- `api.image_size` / `--size` 决定最终发给 Gemini 的执行尺寸
+- 如果显式传了 `--size`，它总是优先于配置文件和 preset 默认值
 
 > **完整尺寸列表**: 每个宽高比支持 1K、2K、4K 三种分辨率等级，具体尺寸请参考 [Gemini 图片生成官方文档](https://ai.google.dev/gemini-api/docs/image-generation?hl=zh-cn)。
 

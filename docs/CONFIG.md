@@ -272,7 +272,7 @@ image:
 | `api.image_provider` | 否 | 图片服务提供方 | `openai` |
 | `api.image_base_url` | 否 | 图片服务地址 | `https://api.openai.com/v1` |
 | `api.image_model` | 否 | 图片模型 | `dall-e-3` |
-| `api.image_size` | 否 | 默认图片尺寸 | `1024x1024` |
+| `api.image_size` | 否 | 默认图片执行尺寸/宽高比 | `1024x1024` |
 
 ### 图片处理配置
 
@@ -349,6 +349,14 @@ api:
   image_provider: "modelscope"
   image_base_url: "https://api-inference.modelscope.cn"
 ```
+
+补充说明：
+
+- `api.image_size` / `IMAGE_SIZE` 控制的是实际发给图片 provider 的默认执行尺寸
+- `generate_image --size ...` 会覆盖配置文件里的 `api.image_size`
+- 图片 prompt 里的 `default_aspect_ratio` 是 preset 的语义默认画幅，用于渲染 prompt 与默认视觉比例
+- 对于 Gemini / OpenRouter 这类支持比例格式的 provider，`api.image_size` 可以直接写成 `16:9`、`3:4`、`21:9`
+- `api.image_base_url` 对 OpenAI、TuZi、ModelScope、OpenRouter 生效；Gemini 直连模式当前固定走官方 Go SDK backend，不读取该配置
 
 ---
 
