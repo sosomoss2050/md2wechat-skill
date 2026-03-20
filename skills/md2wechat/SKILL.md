@@ -1,7 +1,6 @@
 ---
 name: md2wechat
 description: Convert Markdown to WeChat Official Account HTML. Supports API mode (fast) and AI mode (themed). Features writer style assistant, AI trace removal (humanizer), and draft upload.
-metadata: {"openclaw": {"emoji": "📝", "homepage": "https://github.com/geekjourneyx/md2wechat-skill", "requires": {"anyBins": ["curl", "wget"]}, "primaryEnv": "IMAGE_API_KEY"}}
 ---
 
 # MD to WeChat
@@ -61,6 +60,31 @@ Built-in assets:
 - Then check the project-local `themes/` / `writers/` directories
 - Then check `~/.config/md2wechat/themes/` / `~/.config/md2wechat/writers/`
 - Do not assume the repository directory exists on the agent host
+
+Prompt catalog:
+
+- Before guessing supported providers, themes, or prompt templates, inspect the CLI first
+- Use `capabilities --json` as the first discovery step
+- Use `providers list --json`, `themes list --json`, and `prompts list --json` before picking resources
+- Prompt overrides use: `MD2WECHAT_PROMPTS_DIR` → project-local `prompts/` → `~/.config/md2wechat/prompts/` → bundled prompts
+- Do not assume prompt YAML files exist on disk outside these locations
+- Treat CLI discovery output as the source of truth; use repository references only as workflow help or style examples
+
+Recommended discovery flow:
+
+```bash
+bash skills/md2wechat/scripts/run.sh capabilities --json
+bash skills/md2wechat/scripts/run.sh providers list --json
+bash skills/md2wechat/scripts/run.sh themes list --json
+bash skills/md2wechat/scripts/run.sh prompts list --json
+```
+
+When a task depends on a specific template, inspect it first:
+
+```bash
+bash skills/md2wechat/scripts/run.sh prompts show cover-default --kind image --json
+bash skills/md2wechat/scripts/run.sh prompts render cover-default --kind image --var article_title='Example' --json
+```
 
 ### Natural Language Image Generation
 
@@ -164,6 +188,16 @@ I will:
 
 Users can add custom styles in `writers/` directory. See `writers/README.md` for details.
 
+### Discovery-first Rule
+
+When working as an Agent:
+
+1. Check `capabilities --json` before assuming a feature exists
+2. Check `providers list --json` before selecting an image provider
+3. Check `themes list --json` before selecting a theme
+4. Check `prompts list --json` before selecting or rendering a prompt template
+5. Only fall back to repository references when the CLI discovery output is insufficient
+
 ## Workflow Checklist
 
 Copy this checklist to track progress:
@@ -211,7 +245,15 @@ Read the markdown file and extract:
 | **API** | Fast (seconds) | Clean, standard | Quick publishing, technical content |
 | **AI** | Slower (10-30s) | Beautiful themed | Important articles, brand content |
 
+Before picking a theme, inspect the live CLI result:
+
+```bash
+bash skills/md2wechat/scripts/run.sh themes list --json
+```
+
 ### AI Themes
+
+These are common built-in examples, not the source of truth:
 
 | Theme | Description | Best For |
 |-------|-------------|----------|
@@ -221,6 +263,8 @@ Read the markdown file and extract:
 | **custom** | Use custom prompt | Brand customization |
 
 ### API Themes (Fast)
+
+These are representative examples. The authoritative list is `themes list --json`.
 
 | Theme | Description | Best For |
 |-------|-------------|----------|
@@ -238,7 +282,7 @@ Read the markdown file and extract:
 
 **Default**: Use `API mode` if user doesn't specify.
 
-Read detailed style prompts from [references/themes.md](references/themes.md)
+Read [references/themes.md](references/themes.md) for visual intent and prompt examples only. Do not treat it as the authoritative theme inventory.
 
 ---
 
