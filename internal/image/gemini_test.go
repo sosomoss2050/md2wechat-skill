@@ -2,7 +2,40 @@ package image
 
 import (
 	"testing"
+
+	"github.com/geekjourneyx/md2wechat-skill/internal/config"
 )
+
+func TestMapSizeToGeminiImageConfig(t *testing.T) {
+	tests := []struct {
+		input     string
+		wantRatio string
+		wantSize  string
+	}{
+		{"", "1:1", "1K"},
+		{"16:9", "16:9", "1K"},
+		{"21:9", "21:9", "1K"},
+		{"1024x1024", "1:1", "1K"},
+		{"2048x2048", "1:1", "2K"},
+		{"4096x4096", "1:1", "4K"},
+		{"1376x768", "16:9", "1K"},
+		{"2752x1536", "16:9", "2K"},
+		{"5504x3072", "16:9", "4K"},
+		{"1584x672", "21:9", "1K"},
+		{"3168x1344", "21:9", "2K"},
+		{"6336x2688", "21:9", "4K"},
+		{"unknown", "1:1", "1K"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			gotRatio, gotSize := mapSizeToGeminiImageConfig(tt.input)
+			if gotRatio != tt.wantRatio || gotSize != tt.wantSize {
+				t.Errorf("mapSizeToGeminiImageConfig(%q) = (%q, %q), want (%q, %q)", tt.input, gotRatio, gotSize, tt.wantRatio, tt.wantSize)
+			}
+		})
+	}
+}
 
 func TestMapSizeToGeminiAspectRatio(t *testing.T) {
 	tests := []struct {
@@ -20,7 +53,7 @@ func TestMapSizeToGeminiAspectRatio(t *testing.T) {
 		{"4:5", "4:5"},
 		{"5:4", "5:4"},
 		{"21:9", "21:9"},
-		// Gemini 3 Pro 官方尺寸映射（1K）
+		// Gemini 官方尺寸映射（1K）
 		{"1024x1024", "1:1"}, // 1K
 		{"848x1264", "2:3"},  // 1K
 		{"1264x848", "3:2"},  // 1K
@@ -77,13 +110,31 @@ func TestGetGeminiSupportedModels(t *testing.T) {
 	// 检查默认模型在列表中
 	found := false
 	for _, m := range models {
-		if m == "gemini-3-pro-image-preview" {
+		if m == "gemini-3.1-flash-image-preview" {
 			found = true
 			break
 		}
 	}
 	if !found {
-		t.Error("Default model gemini-3-pro-image-preview not in supported list")
+		t.Error("Default model gemini-3.1-flash-image-preview not in supported list")
+	}
+}
+
+func TestNewGeminiProviderDefaultsToGemini31FlashImagePreview(t *testing.T) {
+	p, err := NewGeminiProvider(&config.Config{
+		ImageAPIKey: "test-key",
+	})
+	if err != nil {
+		t.Fatalf("NewGeminiProvider() error = %v", err)
+	}
+	if p.model != "gemini-3.1-flash-image-preview" {
+		t.Fatalf("model = %q", p.model)
+	}
+	if p.aspectRatio != "1:1" {
+		t.Fatalf("aspectRatio = %q", p.aspectRatio)
+	}
+	if p.imageSize != "1K" {
+		t.Fatalf("imageSize = %q", p.imageSize)
 	}
 }
 
@@ -118,10 +169,28 @@ func TestGeminiProviderName(t *testing.T) {
 	// 注意：实际创建需要有效的 API Key
 	p := &GeminiProvider{
 		apiKey: "test-key",
-		model:  "gemini-3-pro-image-preview",
+		model:  "gemini-3.1-flash-image-preview",
 	}
 
 	if p.Name() != "Gemini" {
 		t.Errorf("Name() = %v, want Gemini", p.Name())
+	}
+}
+
+func TestGeminiBuildGenerateConfigIncludesImageConfig(t *testing.T) {
+	p := &GeminiProvider{
+		aspectRatio: "21:9",
+		imageSize:   "2K",
+	}
+
+	cfg := p.buildGenerateConfig()
+	if cfg == nil || cfg.ImageConfig == nil {
+		t.Fatal("expected image config")
+	}
+	if cfg.ImageConfig.AspectRatio != "21:9" {
+		t.Fatalf("AspectRatio = %q", cfg.ImageConfig.AspectRatio)
+	}
+	if cfg.ImageConfig.ImageSize != "2K" {
+		t.Fatalf("ImageSize = %q", cfg.ImageConfig.ImageSize)
 	}
 }

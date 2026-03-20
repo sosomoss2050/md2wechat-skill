@@ -3,9 +3,11 @@ package wechat
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
+	"net"
 	"net/http"
 	neturl "net/url"
 	"os"
@@ -23,19 +25,39 @@ import (
 	"go.uber.org/zap"
 )
 
+var (
+	downloadLookupIP      = net.LookupIP
+	newDownloadHTTPClient = func() *http.Client {
+		return &http.Client{
+			Timeout: 60 * time.Second,
+			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+				if len(via) >= 5 {
+					return errors.New("stopped after 5 redirects")
+				}
+				return validateRemoteDownloadURL(req.URL)
+			},
+		}
+	}
+)
+
 // Service 微信服务
 type Service struct {
-	cfg *config.Config
-	log *zap.Logger
-	wc  *wechat.Wechat
+	cfg                *config.Config
+	log                *zap.Logger
+	wc                 *wechat.Wechat
+	httpClient         *http.Client
+	sleep              func(time.Duration)
+	uploadMaterialFunc func(string) (*UploadMaterialResult, error)
 }
 
 // NewService 创建微信服务
 func NewService(cfg *config.Config, log *zap.Logger) *Service {
 	return &Service{
-		cfg: cfg,
-		log: log,
-		wc:  wechat.NewWechat(),
+		cfg:        cfg,
+		log:        log,
+		wc:         wechat.NewWechat(),
+		httpClient: &http.Client{Timeout: 60 * time.Second},
+		sleep:      time.Sleep,
 	}
 }
 
@@ -60,6 +82,10 @@ type UploadMaterialResult struct {
 
 // UploadMaterial 上传素材到微信
 func (s *Service) UploadMaterial(filePath string) (*UploadMaterialResult, error) {
+	if s.uploadMaterialFunc != nil {
+		return s.uploadMaterialFunc(filePath)
+	}
+
 	startTime := time.Now()
 	oa := s.getOfficialAccount()
 	mat := oa.GetMaterial()
@@ -109,24 +135,34 @@ func (s *Service) CreateDraft(articles []*draft.Article) (*CreateDraftResult, er
 		zap.String("media_id", maskMediaID(mediaID)),
 		zap.Duration("duration", duration))
 
-	// 构造草稿 URL
-	draftURL := fmt.Sprintf("https://mp.weixin.qq.com/cgi-bin/appmsg?t=media/appmsg_edit_v2&action=edit&createType=0&token=")
-
 	return &CreateDraftResult{
-		MediaID:  mediaID,
-		DraftURL: draftURL,
+		MediaID: mediaID,
 	}, nil
 }
 
 // UploadMaterialFromBytes 从字节数据上传素材
 func (s *Service) UploadMaterialFromBytes(data []byte, filename string) (*UploadMaterialResult, error) {
-	// 创建临时文件
-	tmpDir := os.TempDir()
-	tmpPath := filepath.Join(tmpDir, "md2wechat_"+filename)
-	if err := os.WriteFile(tmpPath, data, 0644); err != nil {
+	ext := filepath.Ext(filepath.Base(filename))
+	if ext == "." {
+		ext = ""
+	}
+
+	tmpFile, err := os.CreateTemp("", "md2wechat-upload-*"+ext)
+	if err != nil {
+		return nil, fmt.Errorf("create temp file: %w", err)
+	}
+	tmpPath := tmpFile.Name()
+	defer func() {
+		_ = os.Remove(tmpPath)
+	}()
+
+	if _, err := tmpFile.Write(data); err != nil {
+		_ = tmpFile.Close()
 		return nil, fmt.Errorf("write temp file: %w", err)
 	}
-	defer os.Remove(tmpPath)
+	if err := tmpFile.Close(); err != nil {
+		return nil, fmt.Errorf("write temp file: %w", err)
+	}
 
 	return s.UploadMaterial(tmpPath)
 }
@@ -169,7 +205,7 @@ func (s *Service) UploadMaterialWithRetry(filePath string, maxRetries int) (*Upl
 		}
 		lastErr = err
 		if i < maxRetries-1 {
-			time.Sleep(time.Second)
+			s.getSleepFunc()(time.Second)
 		}
 	}
 	return nil, lastErr
@@ -189,68 +225,147 @@ func DownloadFile(urlOrPath string) (string, error) {
 
 	// HTTP URL - 下载文件
 	url := urlOrPath
+	parsedURL, err := neturl.Parse(url)
+	if err != nil {
+		return "", fmt.Errorf("parse download url: %w", err)
+	}
+	if err := validateRemoteDownloadURL(parsedURL); err != nil {
+		return "", err
+	}
 
 	// 创建 HTTP 客户端
-	client := &http.Client{
-		Timeout: 60 * time.Second,
-	}
+	client := newDownloadHTTPClient()
 
 	// 发起请求
 	resp, err := client.Get(url)
 	if err != nil {
 		return "", fmt.Errorf("download file: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("download failed with status: %d", resp.StatusCode)
 	}
 
-	// 创建临时文件
-	tmpDir := os.TempDir()
 	// 从 URL 路径中提取扩展名，排除查询参数
 	ext := ".jpg" // 默认扩展名
-	if parsedURL, err := neturl.Parse(url); err == nil {
-		if pathExt := filepath.Ext(parsedURL.Path); pathExt != "" {
-			ext = pathExt
-		}
+	if pathExt := filepath.Ext(parsedURL.Path); pathExt != "" {
+		ext = pathExt
 	}
-	tmpPath := filepath.Join(tmpDir, "md2wechat_download_"+ext)
-	tmpFile, err := os.Create(tmpPath)
+	tmpFile, err := os.CreateTemp("", "md2wechat-download-*"+ext)
 	if err != nil {
 		return "", fmt.Errorf("create temp file: %w", err)
 	}
-	defer tmpFile.Close()
+	tmpPath := tmpFile.Name()
 
 	// 写入文件
 	if _, err := io.Copy(tmpFile, resp.Body); err != nil {
-		os.Remove(tmpPath)
+		_ = tmpFile.Close()
+		_ = os.Remove(tmpPath)
 		return "", fmt.Errorf("write file: %w", err)
+	}
+	if err := tmpFile.Close(); err != nil {
+		_ = os.Remove(tmpPath)
+		return "", fmt.Errorf("close temp file: %w", err)
 	}
 
 	return tmpPath, nil
+}
+
+func validateRemoteDownloadURL(parsedURL *neturl.URL) error {
+	if parsedURL == nil {
+		return fmt.Errorf("invalid download url")
+	}
+	if parsedURL.Scheme != "http" && parsedURL.Scheme != "https" {
+		return fmt.Errorf("unsupported download scheme: %s", parsedURL.Scheme)
+	}
+
+	host := parsedURL.Hostname()
+	if host == "" {
+		return fmt.Errorf("download url missing host")
+	}
+	if err := validateDownloadPort(parsedURL.Port()); err != nil {
+		return err
+	}
+	if err := validateDownloadHost(host); err != nil {
+		return err
+	}
+	return nil
+}
+
+func validateDownloadPort(port string) error {
+	if port == "" || port == "80" || port == "443" {
+		return nil
+	}
+	return fmt.Errorf("download url uses disallowed port: %s", port)
+}
+
+func validateDownloadHost(host string) error {
+	lowerHost := strings.ToLower(strings.TrimSpace(host))
+	if lowerHost == "" {
+		return fmt.Errorf("download url missing host")
+	}
+	if lowerHost == "localhost" || strings.HasSuffix(lowerHost, ".localhost") {
+		return fmt.Errorf("download host is not allowed: %s", host)
+	}
+
+	if ip := net.ParseIP(lowerHost); ip != nil {
+		if err := validateDownloadIP(ip); err != nil {
+			return fmt.Errorf("download host is not allowed: %w", err)
+		}
+		return nil
+	}
+
+	ips, err := downloadLookupIP(host)
+	if err != nil {
+		return fmt.Errorf("resolve download host %s: %w", host, err)
+	}
+	if len(ips) == 0 {
+		return fmt.Errorf("resolve download host %s: no addresses found", host)
+	}
+	for _, ip := range ips {
+		if err := validateDownloadIP(ip); err != nil {
+			return fmt.Errorf("download host is not allowed: %w", err)
+		}
+	}
+	return nil
+}
+
+func validateDownloadIP(ip net.IP) error {
+	if ip == nil {
+		return fmt.Errorf("invalid ip")
+	}
+	if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsMulticast() || ip.IsUnspecified() {
+		return fmt.Errorf("ip %s is private or local", ip.String())
+	}
+	return nil
 }
 
 // CreateMultipartFormData 创建 multipart 表单数据
 func CreateMultipartFormData(fieldName, filename string, data []byte) (string, *bytes.Buffer, string) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
+	boundary := writer.Boundary()
 
 	part, err := writer.CreateFormFile(fieldName, filename)
 	if err != nil {
-		writer.Close()
+		_ = writer.Close()
 		return "", nil, ""
 	}
 
 	if _, err := part.Write(data); err != nil {
-		writer.Close()
+		_ = writer.Close()
 		return "", nil, ""
 	}
 
 	contentType := writer.FormDataContentType()
-	writer.Close()
+	if err := writer.Close(); err != nil {
+		return "", nil, ""
+	}
 
-	return contentType, body, filename
+	return contentType, body, boundary
 }
 
 // JSONMarshal 自定义 JSON 序列化
@@ -310,12 +425,19 @@ func (s *Service) CreateNewspicDraft(articles []NewspicArticle) (*CreateDraftRes
 
 	// 调用微信 API
 	apiURL := fmt.Sprintf("https://api.weixin.qq.com/cgi-bin/draft/add?access_token=%s", accessToken)
+	httpReq, err := http.NewRequest(http.MethodPost, apiURL, bytes.NewReader(reqBody))
+	if err != nil {
+		return nil, fmt.Errorf("build request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
 
-	httpResp, err := http.Post(apiURL, "application/json", bytes.NewReader(reqBody))
+	httpResp, err := s.getHTTPClient().Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("call wechat api: %w", err)
 	}
-	defer httpResp.Body.Close()
+	defer func() {
+		_ = httpResp.Body.Close()
+	}()
 
 	// 解析响应
 	respBody, err := io.ReadAll(httpResp.Body)
@@ -342,7 +464,20 @@ func (s *Service) CreateNewspicDraft(articles []NewspicArticle) (*CreateDraftRes
 		zap.Duration("duration", duration))
 
 	return &CreateDraftResult{
-		MediaID:  resp.MediaID,
-		DraftURL: fmt.Sprintf("https://mp.weixin.qq.com/cgi-bin/appmsg?t=media/appmsg_edit_v2&action=edit&createType=0&token="),
+		MediaID: resp.MediaID,
 	}, nil
+}
+
+func (s *Service) getSleepFunc() func(time.Duration) {
+	if s != nil && s.sleep != nil {
+		return s.sleep
+	}
+	return time.Sleep
+}
+
+func (s *Service) getHTTPClient() *http.Client {
+	if s != nil && s.httpClient != nil {
+		return s.httpClient
+	}
+	return &http.Client{Timeout: 60 * time.Second}
 }

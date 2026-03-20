@@ -4,14 +4,19 @@ on:
   push:
     tags:
       - 'v*.*.*'
-  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  release:
+  quality-gates:
+    uses: ./.github/workflows/quality-gates.yml
+
+  build-release:
+    needs: quality-gates
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.value }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -19,59 +24,198 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version-file: go.mod
           cache: true
 
       - name: Download dependencies
         run: go mod download
 
-      - name: Run tests
-        run: go test -v ./...
-
-      - name: Build all platforms
+      - name: Read release version
+        id: version
         run: |
-          mkdir -p bin
+          if [ ! -f VERSION ]; then
+            echo "VERSION file is required for release builds" >&2
+            exit 1
+          fi
 
-          echo "Building for Linux amd64..."
-          GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o bin/md2wechat-linux-amd64 ./cmd/md2wechat
-          echo "✓ Linux amd64"
+          version="$(tr -d '[:space:]' < VERSION)"
+          if [ -z "$version" ]; then
+            echo "VERSION file is empty" >&2
+            exit 1
+          fi
 
-          echo "Building for Linux arm64..."
-          GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o bin/md2wechat-linux-arm64 ./cmd/md2wechat
-          echo "✓ Linux arm64"
+          if [ "${GITHUB_REF_NAME}" != "v${version}" ]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match VERSION ${version}" >&2
+            exit 1
+          fi
 
-          echo "Building for macOS amd64..."
-          GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o bin/md2wechat-darwin-amd64 ./cmd/md2wechat
-          echo "✓ macOS amd64"
+          echo "value=${version}" >> "${GITHUB_OUTPUT}"
 
-          echo "Building for macOS arm64..."
-          GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o bin/md2wechat-darwin-arm64 ./cmd/md2wechat
-          echo "✓ macOS arm64"
-
-          echo "Building for Windows amd64..."
-          GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o bin/md2wechat-windows-amd64.exe ./cmd/md2wechat
-          echo "✓ Windows amd64"
-
-          chmod +x bin/*-linux* bin/*-darwin* 2>/dev/null || true
-
-      - name: Show binary sizes
-        run: ls -lh bin/
-
-      - name: Generate checksums
+      - name: Build release bundle
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
         run: |
-          cd bin
-          sha256sum * | tee checksums.txt
+          bundle_dir="release-bundle"
+          mkdir -p "$bundle_dir"
+
+          LDFLAGS="-s -w -X github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat.Version=${VERSION}"
+
+          build() {
+            os="$1"
+            arch="$2"
+            output="$3"
+
+            echo "Building ${output} for ${os}/${arch}..."
+            GOOS="${os}" GOARCH="${arch}" go build -trimpath -ldflags="${LDFLAGS}" -o "${bundle_dir}/${output}" ./cmd/md2wechat
+            echo "✓ ${output}"
+          }
+
+          build linux amd64 md2wechat-linux-amd64
+          build linux arm64 md2wechat-linux-arm64
+          build darwin amd64 md2wechat-darwin-amd64
+          build darwin arm64 md2wechat-darwin-arm64
+          build windows amd64 md2wechat-windows-amd64.exe
+
+          {
+            printf 'export MD2WECHAT_VERSION_DEFAULT=%q\n' "${VERSION}"
+            cat scripts/install.sh
+          } > "${bundle_dir}/install.sh"
+          {
+            printf '$env:MD2WECHAT_VERSION_DEFAULT = "%s"\n' "${VERSION}"
+            cat scripts/install.ps1
+          } > "${bundle_dir}/install.ps1"
+          {
+            printf 'export MD2WECHAT_VERSION_DEFAULT=%q\n' "${VERSION}"
+            cat scripts/install-openclaw.sh
+          } > "${bundle_dir}/install-openclaw.sh"
+          mkdir -p "${bundle_dir}/openclaw-skill/skills/md2wechat"
+          cp -r platforms/openclaw/md2wechat/. "${bundle_dir}/openclaw-skill/skills/md2wechat/"
+          tar -czf "${bundle_dir}/md2wechat-openclaw-skill.tar.gz" -C "${bundle_dir}/openclaw-skill" skills/md2wechat
+          rm -rf "${bundle_dir}/openclaw-skill"
+          chmod +x "${bundle_dir}/install.sh" "${bundle_dir}/md2wechat-linux-amd64" "${bundle_dir}/md2wechat-linux-arm64" "${bundle_dir}/md2wechat-darwin-amd64" "${bundle_dir}/md2wechat-darwin-arm64" 2>/dev/null || true
+
+          (
+            cd "$bundle_dir"
+            sha256sum * | tee checksums.txt
+          )
+
+      - name: Upload release bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: md2wechat-release-${{ steps.version.outputs.value }}
+          path: release-bundle
+          if-no-files-found: error
+          retention-days: 1
+
+  smoke-release:
+    needs: build-release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download release bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: md2wechat-release-${{ needs.build-release.outputs.version }}
+          path: release-artifact
+
+      - name: Smoke release binary
+        env:
+          VERSION: ${{ needs.build-release.outputs.version }}
+        run: |
+          bundle_dir="${GITHUB_WORKSPACE}/release-artifact/release-bundle"
+          binary="${bundle_dir}/md2wechat-linux-amd64"
+
+          chmod +x "$binary"
+          output="$("$binary" version --json)"
+          printf '%s\n' "$output"
+          echo "$output" | grep -q "\"version\": \"${VERSION}\""
+
+      - name: Smoke shell installer against same artifact
+        env:
+          VERSION: ${{ needs.build-release.outputs.version }}
+        run: |
+          bundle_dir="${GITHUB_WORKSPACE}/release-artifact/release-bundle"
+          install_dir="$(mktemp -d)"
+
+          MD2WECHAT_VERSION="$VERSION" \
+          MD2WECHAT_RELEASE_BASE_URL="file://${bundle_dir}" \
+          MD2WECHAT_INSTALL_DIR="$install_dir" \
+          bash "${bundle_dir}/install.sh"
+
+          "${install_dir}/md2wechat" version --json | grep -q "\"version\": \"${VERSION}\""
+
+      - name: Smoke OpenClaw installer against same artifact
+        env:
+          VERSION: ${{ needs.build-release.outputs.version }}
+        run: |
+          bundle_dir="${GITHUB_WORKSPACE}/release-artifact/release-bundle"
+          home_dir="$(mktemp -d)"
+
+          mkdir -p "${home_dir}/.openclaw"
+
+          HOME="${home_dir}" \
+          MD2WECHAT_VERSION="$VERSION" \
+          MD2WECHAT_RELEASE_BASE_URL="file://${bundle_dir}" \
+          MD2WECHAT_NONINTERACTIVE=1 \
+          bash "${bundle_dir}/install-openclaw.sh"
+
+          test -f "${home_dir}/.openclaw/skills/md2wechat/SKILL.md"
+          test -x "${home_dir}/.openclaw/skills/md2wechat/scripts/run.sh"
+          test -x "${home_dir}/.openclaw/tools/md2wechat/md2wechat"
+          HOME="${home_dir}" "${home_dir}/.openclaw/skills/md2wechat/scripts/run.sh" version --json | grep -q "\"version\": \"${VERSION}\""
+
+      - name: Smoke PowerShell installer against same artifact
+        env:
+          VERSION: ${{ needs.build-release.outputs.version }}
+        shell: pwsh
+        run: |
+          $bundleDir = Join-Path $env:GITHUB_WORKSPACE 'release-artifact/release-bundle'
+          $installDir = Join-Path $env:RUNNER_TEMP 'md2wechat-install-ps1'
+
+          $env:MD2WECHAT_VERSION = $env:VERSION
+          $env:MD2WECHAT_RELEASE_BASE_URL = "file://$bundleDir"
+          $env:MD2WECHAT_INSTALL_DIR = $installDir
+          $env:MD2WECHAT_NONINTERACTIVE = '1'
+          $env:MD2WECHAT_NO_PATH_UPDATE = '1'
+
+          & (Join-Path $bundleDir 'install.ps1')
+
+          $versionOutput = & (Join-Path $installDir 'md2wechat.exe') version --json
+          $versionOutput
+          if ($versionOutput -notmatch '"version":\s*"' + [regex]::Escape($env:VERSION) + '"') {
+            throw "installed PowerShell binary version mismatch"
+          }
+
+  release:
+    needs:
+      - build-release
+      - smoke-release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download release bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: md2wechat-release-${{ needs.build-release.outputs.version }}
+          path: release-artifact
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: v${{ needs.build-release.outputs.version }}
+          name: v${{ needs.build-release.outputs.version }}
           files: |
-            bin/md2wechat-linux-amd64
-            bin/md2wechat-linux-arm64
-            bin/md2wechat-darwin-amd64
-            bin/md2wechat-darwin-arm64
-            bin/md2wechat-windows-amd64.exe
-            bin/checksums.txt
+            release-artifact/release-bundle/md2wechat-linux-amd64
+            release-artifact/release-bundle/md2wechat-linux-arm64
+            release-artifact/release-bundle/md2wechat-darwin-amd64
+            release-artifact/release-bundle/md2wechat-darwin-arm64
+            release-artifact/release-bundle/md2wechat-windows-amd64.exe
+            release-artifact/release-bundle/install.sh
+            release-artifact/release-bundle/install.ps1
+            release-artifact/release-bundle/install-openclaw.sh
+            release-artifact/release-bundle/md2wechat-openclaw-skill.tar.gz
+            release-artifact/release-bundle/checksums.txt
           draft: false
           prerelease: false
           generate_release_notes: true

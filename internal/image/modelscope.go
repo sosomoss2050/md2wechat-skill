@@ -157,7 +157,9 @@ func (p *ModelScopeProvider) createTask(ctx context.Context, prompt string) (str
 			Original: err,
 		}
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	// 处理错误响应
 	if resp.StatusCode != http.StatusOK {
@@ -259,7 +261,9 @@ func (p *ModelScopeProvider) getTaskStatus(ctx context.Context, taskID string) (
 			Original: err,
 		}
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return "", "", p.handleErrorResponse(resp)

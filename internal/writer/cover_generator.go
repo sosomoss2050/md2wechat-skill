@@ -116,12 +116,12 @@ func (cg *CoverGenerator) extractView(content string) string {
 // determineMood 确定情绪基调
 func (cg *CoverGenerator) determineMood(content string) string {
 	moods := map[string][]string{
-		"inspirational":   {"激励", "启发", "成长", "突破", "成功", "梦想"},
-		"mysterious":      {"秘密", "隐藏", "未知", "探索", "谜团"},
-		"protective":      {"保护", "防御", "安全", "避免", "防范"},
-		"breakthrough":    {"突破", "改变", "转型", "升级", "革新"},
-		"contemplative":   {"思考", "反思", "观察", "理解", "洞察"},
-		"rebellious":      {"反叛", "挑战", "质疑", "不循规蹈矩", "打破"},
+		"inspirational": {"激励", "启发", "成长", "突破", "成功", "梦想"},
+		"mysterious":    {"秘密", "隐藏", "未知", "探索", "谜团"},
+		"protective":    {"保护", "防御", "安全", "避免", "防范"},
+		"breakthrough":  {"突破", "改变", "转型", "升级", "革新"},
+		"contemplative": {"思考", "反思", "观察", "理解", "洞察"},
+		"rebellious":    {"反叛", "挑战", "质疑", "不循规蹈矩", "打破"},
 	}
 
 	content = strings.ToLower(content)
@@ -173,11 +173,11 @@ func (cg *CoverGenerator) GetCoverStyleInfo(styleName string) (*CoverStyleInfo, 
 	}
 
 	return &CoverStyleInfo{
-		Style:        style.CoverStyle,
-		Mood:         style.CoverMood,
-		ColorScheme:  style.CoverColorScheme,
-		AspectRatio:  "16:9",
-		Orientation:  "horizontal",
+		Style:       style.CoverStyle,
+		Mood:        style.CoverMood,
+		ColorScheme: style.CoverColorScheme,
+		AspectRatio: "16:9",
+		Orientation: "horizontal",
 	}, nil
 }
 

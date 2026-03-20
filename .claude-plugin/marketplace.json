@@ -1,17 +1,17 @@
 {
   "name": "md2wechat-tools",
   "owner": {
-    "name": "geekjourney",
-    "email": "skrphper@gmail.com"
+    "name": "geekjourneyx",
+    "email": "zlisreallyli@outlook.com"
   },
   "plugins": [
     {
       "name": "md2wechat",
       "source": "./",
       "description": "Convert Markdown articles to WeChat Official Account formatted HTML with styled CSS. Supports API mode for quick conversion and AI mode for beautiful themed layouts (autumn-warm, spring-fresh, ocean-calm). Optionally upload to draft box.",
-      "version": "1.11.0",
+      "version": "2.0.0",
       "author": {
-        "name": "geekjourney"
+        "name": "geekjourneyx"
       },
       "homepage": "https://github.com/geekjourneyx/md2wechat-skill",
       "repository": "https://github.com/geekjourneyx/md2wechat-skill",

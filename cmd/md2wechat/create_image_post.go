@@ -3,13 +3,18 @@ package main
 import (
 	"bufio"
 	"encoding/json"
-	"fmt"
 	"os"
 	"strings"
 
 	"github.com/geekjourneyx/md2wechat-skill/internal/draft"
+	"github.com/geekjourneyx/md2wechat-skill/internal/publish"
 	"github.com/spf13/cobra"
 )
+
+type imagePostService interface {
+	PreviewImagePost(input *publish.ImagePostInput) (*publish.ImagePostPreview, error)
+	CreateImagePost(input *publish.ImagePostInput) (*publish.ImagePostResult, error)
+}
 
 var (
 	imagePostTitle       string
@@ -20,6 +25,11 @@ var (
 	imagePostFansOnly    bool
 	imagePostDryRun      bool
 	imagePostOutput      string
+
+	newImagePostService = func() imagePostService {
+		return publish.NewImagePostService(newRuntimeImageProcessor(), draft.NewImagePostCreator(cfg, log))
+	}
+	isTerminalFn = isTerminal
 )
 
 var createImagePostCmd = &cobra.Command{
@@ -47,97 +57,98 @@ Examples:
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		return initConfig()
 	},
-	Run: func(cmd *cobra.Command, args []string) {
-		// 构造请求
-		req := &draft.ImagePostRequest{
-			Title:       imagePostTitle,
-			Content:     imagePostContent,
-			OpenComment: imagePostOpenComment,
-			FansOnly:    imagePostFansOnly,
-		}
-
-		// 处理图片列表
-		if imagePostImages != "" {
-			for _, img := range strings.Split(imagePostImages, ",") {
-				img = strings.TrimSpace(img)
-				if img != "" {
-					req.Images = append(req.Images, img)
-				}
-			}
-		}
-
-		// 从 Markdown 提取图片
-		if imagePostFromMD != "" {
-			req.FromMarkdown = imagePostFromMD
-		}
-
-		// 从 stdin 读取描述内容
-		if imagePostContent == "" && !isTerminal() {
-			scanner := bufio.NewScanner(os.Stdin)
-			var lines []string
-			for scanner.Scan() {
-				lines = append(lines, scanner.Text())
-			}
-			if len(lines) > 0 {
-				req.Content = strings.Join(lines, "\n")
-			}
-		}
-
-		// 验证
-		if req.Title == "" {
-			responseError(fmt.Errorf("--title is required"))
-			return
-		}
-
-		if len(req.Images) == 0 && req.FromMarkdown == "" {
-			responseError(fmt.Errorf("--images or --from-markdown is required"))
-			return
-		}
-
-		svc := draft.NewService(cfg, log)
-
-		// Dry-run 模式
-		if imagePostDryRun {
-			preview, err := svc.GetImagePostPreview(req)
-			if err != nil {
-				responseError(err)
-				return
-			}
-
-			// 保存到文件
-			if imagePostOutput != "" {
-				data, _ := json.MarshalIndent(preview, "", "  ")
-				if err := os.WriteFile(imagePostOutput, data, 0644); err != nil {
-					responseError(err)
-					return
-				}
-			}
-
-			responseSuccess(map[string]any{
-				"mode":    "dry-run",
-				"preview": preview,
-			})
-			return
-		}
-
-		// 创建小绿书
-		result, err := svc.CreateImagePost(req)
+	RunE: func(cmd *cobra.Command, args []string) error {
+		response, err := runCreateImagePost()
 		if err != nil {
-			responseError(err)
-			return
+			return err
+		}
+		if imagePostDryRun {
+			responseSuccessWith(codeImagePostPreviewReady, "Image post preview prepared", response)
+			return nil
+		}
+		responseSuccessWith(codeImagePostCreated, "Image post created successfully", response)
+		return nil
+	},
+}
+
+func runCreateImagePost() (any, error) {
+	req := &publish.ImagePostInput{
+		Title:       imagePostTitle,
+		Content:     imagePostContent,
+		OpenComment: imagePostOpenComment,
+		FansOnly:    imagePostFansOnly,
+	}
+
+	if imagePostImages != "" {
+		for _, img := range strings.Split(imagePostImages, ",") {
+			img = strings.TrimSpace(img)
+			if img != "" {
+				req.Images = append(req.Images, img)
+			}
+		}
+	}
+
+	if imagePostFromMD != "" {
+		req.FromMarkdown = imagePostFromMD
+	}
+
+	if imagePostContent == "" && !isTerminalFn() {
+		scanner := bufio.NewScanner(os.Stdin)
+		var lines []string
+		for scanner.Scan() {
+			lines = append(lines, scanner.Text())
+		}
+		if len(lines) > 0 {
+			req.Content = strings.Join(lines, "\n")
+		}
+	}
+
+	if req.Title == "" {
+		return nil, newCLIError(codeImagePostInvalid, "--title is required")
+	}
+
+	if len(req.Images) == 0 && req.FromMarkdown == "" {
+		return nil, newCLIError(codeImagePostInvalid, "--images or --from-markdown is required")
+	}
+
+	svc := newImagePostService()
+
+	if imagePostDryRun {
+		preview, err := svc.PreviewImagePost(req)
+		if err != nil {
+			return nil, wrapCLIError(codeImagePostPreviewFailed, err, err.Error())
 		}
 
-		// 保存结果到文件
 		if imagePostOutput != "" {
-			data, _ := json.MarshalIndent(result, "", "  ")
+			data, _ := json.MarshalIndent(preview, "", "  ")
 			if err := os.WriteFile(imagePostOutput, data, 0644); err != nil {
-				responseError(err)
-				return
+				return nil, wrapCLIError(codeImagePostPreviewFailed, err, err.Error())
 			}
 		}
 
-		responseSuccess(result)
-	},
+		return map[string]any{
+			"mode":    "dry-run",
+			"preview": preview,
+		}, nil
+	}
+
+	if err := cfg.ValidateForWeChat(); err != nil {
+		return nil, wrapCLIError(codeConfigInvalid, err, err.Error())
+	}
+
+	result, err := svc.CreateImagePost(req)
+	if err != nil {
+		return nil, wrapCLIError(codeImagePostCreateFailed, err, err.Error())
+	}
+
+	if imagePostOutput != "" {
+		data, _ := json.MarshalIndent(result, "", "  ")
+		if err := os.WriteFile(imagePostOutput, data, 0644); err != nil {
+			return nil, wrapCLIError(codeImagePostCreateFailed, err, err.Error())
+		}
+	}
+
+	return result, nil
 }
 
 // isTerminal 检查 stdin 是否是终端

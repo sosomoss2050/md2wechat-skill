@@ -1,22 +1,65 @@
 #!/usr/bin/env bash
 #
-# md2wechat OpenClaw Skill Installer (Simplified)
-#
-# Just copies skill files to ~/.openclaw/skills/md2wechat
-# For ClawHub users: clawhub install md2wechat
+# md2wechat OpenClaw Skill Installer
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/geekjourneyx/md2wechat-skill/main/scripts/install-openclaw.sh | bash
+#   export MD2WECHAT_RELEASE_BASE_URL=https://github.com/geekjourneyx/md2wechat-skill/releases/download/vX.Y.Z
+#   curl -fsSL "${MD2WECHAT_RELEASE_BASE_URL}/install-openclaw.sh" | bash
 #
 
-set -e
+set -euo pipefail
 
 REPO="geekjourneyx/md2wechat-skill"
+VERSION="${MD2WECHAT_VERSION:-}"
+if [[ -z "$VERSION" ]]; then
+    if [[ -n "${MD2WECHAT_VERSION_DEFAULT:-}" ]]; then
+        VERSION="${MD2WECHAT_VERSION_DEFAULT}"
+    fi
+fi
+RELEASE_BASE_URL="${MD2WECHAT_RELEASE_BASE_URL:-}"
 SKILL_NAME="md2wechat"
-INSTALL_DIR="${HOME}/.openclaw/skills/${SKILL_NAME}"
-GITHUB_ARCHIVE="https://github.com/${REPO}/archive/refs/heads/main.tar.gz"
+SKILL_ARCHIVE="md2wechat-openclaw-skill.tar.gz"
+INSTALL_DIR="${MD2WECHAT_OPENCLAW_INSTALL_DIR:-${HOME}/.openclaw/skills/${SKILL_NAME}}"
+RUNTIME_DIR="${MD2WECHAT_OPENCLAW_RUNTIME_DIR:-${HOME}/.openclaw/tools/${SKILL_NAME}}"
+NON_INTERACTIVE="${MD2WECHAT_NONINTERACTIVE:-}"
 
-# Colors
+if [[ -z "$RELEASE_BASE_URL" ]]; then
+    [[ -n "$VERSION" ]] || error "必须提供 MD2WECHAT_VERSION 或使用固定版本 release 安装器 / MD2WECHAT_VERSION is required unless a fixed-version installer injected it"
+    RELEASE_BASE_URL="https://github.com/${REPO}/releases/download/v${VERSION}"
+fi
+
+CHECKSUMS_URL="${RELEASE_BASE_URL}/checksums.txt"
+ARCHIVE_URL="${RELEASE_BASE_URL}/${SKILL_ARCHIVE}"
+
+detect_binary() {
+    local os arch
+    os="$(uname -s)"
+    arch="$(uname -m)"
+
+    if [[ "$os" == "Darwin" ]]; then
+        if [[ "$arch" == "arm64" ]]; then
+            printf 'md2wechat-darwin-arm64\n'
+        else
+            printf 'md2wechat-darwin-amd64\n'
+        fi
+        return 0
+    fi
+
+    if [[ "$os" == "Linux" ]]; then
+        if [[ "$arch" == "aarch64" || "$arch" == "arm64" ]]; then
+            printf 'md2wechat-linux-arm64\n'
+        else
+            printf 'md2wechat-linux-amd64\n'
+        fi
+        return 0
+    fi
+
+    error "不支持的系统 / Unsupported platform: ${os} ${arch}"
+}
+
+RUNTIME_BINARY="$(detect_binary)"
+RUNTIME_URL="${RELEASE_BASE_URL}/${RUNTIME_BINARY}"
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
@@ -28,78 +71,135 @@ success() { printf "${GREEN}✓${NC} %s\n" "$1"; }
 warn()    { printf "${YELLOW}⚠${NC} %s\n" "$1"; }
 error()   { printf "${RED}✗${NC} %s\n" "$1" >&2; exit 1; }
 
-# Header
+confirm_or_continue() {
+    prompt="$1"
+    if [[ -n "$NON_INTERACTIVE" || -n "${CI:-}" ]]; then
+        return 0
+    fi
+    read -p "$prompt [y/N] " -n 1 -r
+    printf "\n"
+    [[ $REPLY =~ ^[Yy]$ ]]
+}
+
+download_file() {
+    url="$1"
+    output="$2"
+    case "$url" in
+        file://*)
+            cp "${url#file://}" "$output"
+            ;;
+        *)
+            if command -v curl >/dev/null 2>&1; then
+                curl -fsSL "$url" -o "$output"
+            elif command -v wget >/dev/null 2>&1; then
+                wget -q "$url" -O "$output"
+            else
+                error "需要 curl 或 wget / Need curl or wget"
+            fi
+            ;;
+    esac
+}
+
+verify_checksum() {
+    checksums_file="$1"
+    archive_file="$2"
+    archive_name="$3"
+
+    if command -v sha256sum >/dev/null 2>&1; then
+        (cd "$(dirname "$archive_file")" && sha256sum -c "$checksums_file" --ignore-missing --status)
+    elif command -v shasum >/dev/null 2>&1; then
+        expected="$(awk -v file="$archive_name" '$2 == file { print $1 }' "$checksums_file")"
+        [[ -n "$expected" ]] || error "checksums.txt 中未找到 ${archive_name} 的校验值"
+        actual="$(shasum -a 256 "$archive_file" | awk '{print $1}')"
+        [[ "$expected" == "$actual" ]]
+    else
+        error "需要 sha256sum 或 shasum 来验证安装包完整性"
+    fi
+}
+
 printf "\n"
 printf "${BLUE}========================================${NC}\n"
 printf "${BLUE}   md2wechat OpenClaw Skill Installer${NC}\n"
 printf "${BLUE}========================================${NC}\n"
 printf "\n"
 
-# Check for ClawHub first
-if command -v clawhub &>/dev/null; then
+if command -v clawhub >/dev/null 2>&1; then
     info "检测到 clawhub CLI / ClawHub CLI detected"
     printf "\n"
     printf "推荐使用 ClawHub 安装 / Recommend using ClawHub:\n"
     printf "  ${GREEN}clawhub install md2wechat${NC}\n"
     printf "\n"
-    read -p "继续手动安装？/ Continue manual install? [y/N] " -n 1 -r
-    printf "\n"
-    [[ ! $REPLY =~ ^[Yy]$ ]] && exit 0
+    if ! confirm_or_continue "继续手动安装？/ Continue manual install?"; then
+        exit 0
+    fi
 fi
 
-# Check prerequisites
-command -v curl &>/dev/null || command -v wget &>/dev/null || \
-    error "需要 curl 或 wget / Need curl or wget"
-
-# Check if OpenClaw is installed (optional warning)
 if [[ ! -d "${HOME}/.openclaw" ]]; then
     warn "未检测到 OpenClaw 安装 / OpenClaw not detected"
     info "请先安装 OpenClaw: https://openclaw.ai/"
     info "Install OpenClaw first: https://openclaw.ai/"
     printf "\n"
-    read -p "仍要继续安装技能？/ Continue installing skill anyway? [y/N] " -n 1 -r
-    printf "\n"
-    [[ ! $REPLY =~ ^[Yy]$ ]] && exit 0
+    if ! confirm_or_continue "仍要继续安装技能？/ Continue installing skill anyway?"; then
+        exit 0
+    fi
 fi
 
-# Handle existing installation
 if [[ -d "$INSTALL_DIR" ]]; then
     warn "已存在安装 / Existing installation: $INSTALL_DIR"
-    read -p "覆盖？/ Overwrite? [y/N] " -n 1 -r
-    printf "\n"
-    [[ ! $REPLY =~ ^[Yy]$ ]] && exit 0
+    if ! confirm_or_continue "覆盖？/ Overwrite?"; then
+        exit 0
+    fi
     rm -rf "$INSTALL_DIR"
 fi
 
-# Download and extract
-info "下载技能文件 / Downloading skill files..."
-
-TEMP_DIR=$(mktemp -d)
-ARCHIVE="${TEMP_DIR}/repo.tar.gz"
-
-if command -v curl &>/dev/null; then
-    curl -fsSL "$GITHUB_ARCHIVE" -o "$ARCHIVE"
-else
-    wget -q "$GITHUB_ARCHIVE" -O "$ARCHIVE"
+if [[ -d "$RUNTIME_DIR" ]]; then
+    warn "已存在运行时 / Existing runtime: $RUNTIME_DIR"
+    if ! confirm_or_continue "覆盖运行时？/ Overwrite runtime?"; then
+        exit 0
+    fi
+    rm -rf "$RUNTIME_DIR"
 fi
 
-tar -xzf "$ARCHIVE" -C "$TEMP_DIR"
+TMP_DIR="$(mktemp -d)"
+cleanup() {
+    rm -rf "$TMP_DIR"
+}
+trap cleanup EXIT
 
-# Find extracted directory
-EXTRACTED=$(find "$TEMP_DIR" -maxdepth 1 -type d -name "md2wechat-skill-*" | head -n 1)
-[[ -z "$EXTRACTED" ]] && error "下载失败 / Download failed"
+ARCHIVE_PATH="${TMP_DIR}/${SKILL_ARCHIVE}"
+RUNTIME_PATH="${TMP_DIR}/${RUNTIME_BINARY}"
+CHECKSUMS_FILE="${TMP_DIR}/checksums.txt"
 
-# Install
+info "下载技能文件 / Downloading release assets..."
+info "技能包 / Skill bundle: ${ARCHIVE_URL}"
+info "运行时 / Runtime: ${RUNTIME_URL}"
+info "校验文件 / Checksums: ${CHECKSUMS_URL}"
+
+download_file "$ARCHIVE_URL" "$ARCHIVE_PATH"
+download_file "$RUNTIME_URL" "$RUNTIME_PATH"
+download_file "$CHECKSUMS_URL" "$CHECKSUMS_FILE"
+
+info "正在验证 SHA-256 校验值 / Verifying SHA-256 checksum..."
+if ! verify_checksum "$CHECKSUMS_FILE" "$ARCHIVE_PATH" "$SKILL_ARCHIVE"; then
+    error "校验失败：下载文件与发布校验值不匹配 / Checksum verification failed"
+fi
+if ! verify_checksum "$CHECKSUMS_FILE" "$RUNTIME_PATH" "$RUNTIME_BINARY"; then
+    error "运行时校验失败：下载文件与发布校验值不匹配 / Runtime checksum verification failed"
+fi
+
 mkdir -p "$INSTALL_DIR"
-cp -r "${EXTRACTED}/skills/md2wechat/"* "$INSTALL_DIR/"
-chmod +x "${INSTALL_DIR}/scripts/"*.sh 2>/dev/null || true
+mkdir -p "$RUNTIME_DIR"
+tar -xzf "$ARCHIVE_PATH" -C "$TMP_DIR"
 
-# Cleanup
-rm -rf "$TEMP_DIR"
+EXTRACTED_DIR="${TMP_DIR}/skills/md2wechat"
+[[ -d "$EXTRACTED_DIR" ]] || error "技能包结构无效 / Invalid skill bundle layout"
+
+cp -r "${EXTRACTED_DIR}/"* "$INSTALL_DIR/"
+chmod +x "${INSTALL_DIR}/scripts/"*.sh 2>/dev/null || true
+install -m 0755 "$RUNTIME_PATH" "${RUNTIME_DIR}/md2wechat"
 
 success "安装完成 / Installation complete!"
 
-# Show configuration instructions
 printf "\n"
 printf "${BLUE}========================================${NC}\n"
 printf "${BLUE}   配置说明 / Configuration${NC}\n"
@@ -109,7 +209,6 @@ printf "\n"
 CONFIG_FILE="${HOME}/.openclaw/openclaw.json"
 
 if [[ -f "$CONFIG_FILE" ]]; then
-    # Existing config - show merge instructions
     printf "${YELLOW}检测到已有配置文件 / Existing config found${NC}\n"
     printf "\n"
     printf "请在 ${GREEN}~/.openclaw/openclaw.json${NC} 的 skills.entries 中添加:\n"
@@ -126,28 +225,7 @@ if [[ -f "$CONFIG_FILE" ]]; then
 }
 EOF
     printf "${NC}\n"
-    printf "\n"
-    printf "示例（合并后）/ Example (after merge):\n"
-    printf "${BLUE}"
-    cat << 'EOF'
-{
-  "skills": {
-    "entries": {
-      "existing-skill": { ... },
-      "md2wechat": {
-        "enabled": true,
-        "env": {
-          "WECHAT_APPID": "your-appid",
-          "WECHAT_SECRET": "your-secret"
-        }
-      }
-    }
-  }
-}
-EOF
-    printf "${NC}\n"
 else
-    # No existing config - show full structure
     printf "创建配置文件 / Create config file:\n"
     printf "${GREEN}~/.openclaw/openclaw.json${NC}\n"
     printf "\n"
@@ -174,9 +252,12 @@ printf "\n"
 printf "${YELLOW}注意 / Note:${NC}\n"
 printf "  • WECHAT_APPID/SECRET 仅草稿上传需要，预览转换可不配置\n"
 printf "  • 图片生成需额外配置 IMAGE_API_KEY\n"
+printf "  • OpenClaw 安装器会一并安装并校验 md2wechat runtime\n"
+printf "  • 推荐始终使用固定版本 release 资产，不要使用 main/raw 作为安装入口\n"
 printf "\n"
 printf "安装路径 / Installed to: ${GREEN}%s${NC}\n" "$INSTALL_DIR"
-printf "文档 / Documentation: https://github.com/${REPO}#readme\n"
+printf "运行时 / Runtime installed to: ${GREEN}%s${NC}\n" "${RUNTIME_DIR}/md2wechat"
+printf "文档 / Documentation: https://github.com/${REPO}/blob/main/docs/OPENCLAW.md\n"
 printf "OpenClaw 官网 / OpenClaw: https://openclaw.ai/\n"
 printf "ClawHub 技能市场 / ClawHub: https://clawhub.ai/\n"
 printf "\n"

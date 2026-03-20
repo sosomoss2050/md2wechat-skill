@@ -6,21 +6,58 @@ import (
 	"os"
 
 	"github.com/geekjourneyx/md2wechat-skill/internal/config"
-	"github.com/geekjourneyx/md2wechat-skill/internal/wechat"
 	"go.uber.org/zap"
 )
 
+// DownloadFunc downloads a remote asset into a local temporary file.
+type DownloadFunc func(string) (string, error)
+
+// UploadFunc uploads a local file to the target backend.
+type UploadFunc func(string) (*UploadResult, error)
+
+// Option customizes a Processor.
+type Option func(*Processor)
+
+// WithDownloadFunc injects the download dependency used by remote assets.
+func WithDownloadFunc(fn DownloadFunc) Option {
+	return func(p *Processor) {
+		p.downloadFile = fn
+	}
+}
+
+// WithUploadFunc injects the upload dependency used by published assets.
+func WithUploadFunc(fn UploadFunc) Option {
+	return func(p *Processor) {
+		p.uploadMaterial = fn
+	}
+}
+
+// WithProvider injects a custom image-generation provider.
+func WithProvider(provider Provider) Option {
+	return func(p *Processor) {
+		p.provider = provider
+	}
+}
+
 // Processor 图片处理器
 type Processor struct {
-	cfg        *config.Config
-	log        *zap.Logger
-	ws         *wechat.Service
-	compressor *Compressor
-	provider   Provider
+	cfg            *config.Config
+	log            *zap.Logger
+	compressor     *Compressor
+	provider       Provider
+	downloadFile   func(string) (string, error)
+	uploadMaterial func(string) (*UploadResult, error)
 }
 
 // NewProcessor 创建图片处理器
-func NewProcessor(cfg *config.Config, log *zap.Logger) *Processor {
+func NewProcessor(cfg *config.Config, log *zap.Logger, opts ...Option) *Processor {
+	if cfg == nil {
+		cfg = &config.Config{}
+	}
+	if log == nil {
+		log = zap.NewNop()
+	}
+
 	// 创建图片生成 Provider
 	provider, err := NewProvider(cfg)
 	if err != nil {
@@ -30,13 +67,16 @@ func NewProcessor(cfg *config.Config, log *zap.Logger) *Processor {
 		}
 	}
 
-	return &Processor{
+	processor := &Processor{
 		cfg:        cfg,
 		log:        log,
-		ws:         wechat.NewService(cfg, log),
 		compressor: NewCompressor(log, cfg.MaxImageWidth, cfg.MaxImageSize),
 		provider:   provider,
 	}
+	for _, opt := range opts {
+		opt(processor)
+	}
+	return processor
 }
 
 // UploadResult 上传结果
@@ -69,13 +109,15 @@ func (p *Processor) UploadLocalImage(filePath string) (*UploadResult, error) {
 			p.log.Warn("compress failed, using original", zap.Error(err))
 		} else if compressed {
 			processedPath = compressedPath
-			defer os.Remove(compressedPath)
+			defer func() {
+				_ = os.Remove(compressedPath)
+			}()
 			p.log.Info("using compressed image", zap.String("path", processedPath))
 		}
 	}
 
 	// 上传到微信
-	result, err := p.ws.UploadMaterialWithRetry(processedPath, 3)
+	result, err := p.upload(processedPath)
 	if err != nil {
 		return nil, err
 	}
@@ -91,11 +133,13 @@ func (p *Processor) DownloadAndUpload(url string) (*UploadResult, error) {
 	p.log.Info("downloading and uploading image", zap.String("url", url))
 
 	// 下载图片
-	tmpPath, err := wechat.DownloadFile(url)
+	tmpPath, err := p.download(url)
 	if err != nil {
 		return nil, fmt.Errorf("download failed: %w", err)
 	}
-	defer os.Remove(tmpPath)
+	defer func() {
+		_ = os.Remove(tmpPath)
+	}()
 
 	// 检查格式
 	if !IsValidImageFormat(tmpPath) {
@@ -110,13 +154,15 @@ func (p *Processor) DownloadAndUpload(url string) (*UploadResult, error) {
 			p.log.Warn("compress failed, using original", zap.Error(err))
 		} else if compressed {
 			processedPath = compressedPath
-			defer os.Remove(compressedPath)
+			defer func() {
+				_ = os.Remove(compressedPath)
+			}()
 			p.log.Info("using compressed image", zap.String("path", processedPath))
 		}
 	}
 
 	// 上传到微信
-	result, err := p.ws.UploadMaterialWithRetry(processedPath, 3)
+	result, err := p.upload(processedPath)
 	if err != nil {
 		return nil, err
 	}
@@ -141,59 +187,7 @@ type GenerateAndUploadResult struct {
 func (p *Processor) GenerateAndUpload(prompt string) (*GenerateAndUploadResult, error) {
 	p.log.Info("generating image via AI", zap.String("prompt", prompt))
 
-	// 验证配置
-	if err := p.cfg.ValidateForImageGeneration(); err != nil {
-		return nil, err
-	}
-
-	// 检查 provider 是否可用
-	if p.provider == nil {
-		return nil, fmt.Errorf("图片生成服务未配置，请检查配置文件中的 api.image_provider 和 api.image_key")
-	}
-
-	// 调用图片生成 API
-	ctx := context.Background()
-	result, err := p.provider.Generate(ctx, prompt)
-	if err != nil {
-		return nil, fmt.Errorf("generate image: %w", err)
-	}
-	p.log.Info("image generated",
-		zap.String("url", result.URL),
-		zap.String("provider", result.Model),
-		zap.String("size", result.Size))
-
-	// 下载生成的图片
-	tmpPath, err := wechat.DownloadFile(result.URL)
-	if err != nil {
-		return nil, fmt.Errorf("download generated image: %w", err)
-	}
-	defer os.Remove(tmpPath)
-
-	// 压缩（如果需要）
-	processedPath := tmpPath
-	if p.cfg.CompressImages {
-		compressedPath, compressed, err := p.compressor.CompressImage(tmpPath)
-		if err != nil {
-			p.log.Warn("compress failed, using original", zap.Error(err))
-		} else if compressed {
-			processedPath = compressedPath
-			defer os.Remove(compressedPath)
-			p.log.Info("using compressed image", zap.String("path", processedPath))
-		}
-	}
-
-	// 上传到微信
-	uploadResult, err := p.ws.UploadMaterialWithRetry(processedPath, 3)
-	if err != nil {
-		return nil, err
-	}
-
-	return &GenerateAndUploadResult{
-		Prompt:      prompt,
-		OriginalURL: result.URL,
-		MediaID:     uploadResult.MediaID,
-		WechatURL:   uploadResult.WechatURL,
-	}, nil
+	return p.generateAndUploadWithProvider(prompt, p.provider)
 }
 
 // GenerateAndUploadWithSize AI 生成指定尺寸的图片并上传
@@ -202,30 +196,31 @@ func (p *Processor) GenerateAndUploadWithSize(prompt string, size string) (*Gene
 		zap.String("prompt", prompt),
 		zap.String("size", size))
 
-	// 验证配置
 	if err := p.cfg.ValidateForImageGeneration(); err != nil {
 		return nil, err
 	}
 
-	// 检查 provider 是否可用
-	if p.provider == nil {
-		return nil, fmt.Errorf("图片生成服务未配置，请检查配置文件中的 api.image_provider 和 api.image_key")
-	}
+	cfgCopy := *p.cfg
+	cfgCopy.ImageSize = size
 
-	// 创建一个临时配置副本，覆盖尺寸
-	originalSize := p.cfg.ImageSize
-	p.cfg.ImageSize = size
-	defer func() { p.cfg.ImageSize = originalSize }()
-
-	// 重新创建 provider 以使用新尺寸
-	newProvider, err := NewProvider(p.cfg)
+	newProvider, err := NewProvider(&cfgCopy)
 	if err != nil {
 		return nil, fmt.Errorf("create provider with size: %w", err)
 	}
 
-	// 调用图片生成 API
+	return p.generateAndUploadWithProvider(prompt, newProvider)
+}
+
+func (p *Processor) generateAndUploadWithProvider(prompt string, provider Provider) (*GenerateAndUploadResult, error) {
+	if err := p.cfg.ValidateForImageGeneration(); err != nil {
+		return nil, err
+	}
+	if provider == nil {
+		return nil, fmt.Errorf("图片生成服务未配置，请检查配置文件中的 api.image_provider 和 api.image_key")
+	}
+
 	ctx := context.Background()
-	result, err := newProvider.Generate(ctx, prompt)
+	result, err := provider.Generate(ctx, prompt)
 	if err != nil {
 		return nil, fmt.Errorf("generate image: %w", err)
 	}
@@ -235,14 +230,30 @@ func (p *Processor) GenerateAndUploadWithSize(prompt string, size string) (*Gene
 		zap.String("size", result.Size))
 
 	// 下载生成的图片
-	tmpPath, err := wechat.DownloadFile(result.URL)
+	tmpPath, err := p.download(result.URL)
 	if err != nil {
 		return nil, fmt.Errorf("download generated image: %w", err)
 	}
-	defer os.Remove(tmpPath)
+	defer func() {
+		_ = os.Remove(tmpPath)
+	}()
+
+	processedPath := tmpPath
+	if p.cfg.CompressImages {
+		compressedPath, compressed, err := p.compressor.CompressImage(tmpPath)
+		if err != nil {
+			p.log.Warn("compress failed, using original", zap.Error(err))
+		} else if compressed {
+			processedPath = compressedPath
+			defer func() {
+				_ = os.Remove(compressedPath)
+			}()
+			p.log.Info("using compressed image", zap.String("path", processedPath))
+		}
+	}
 
 	// 上传到微信
-	uploadResult, err := p.ws.UploadMaterialWithRetry(tmpPath, 3)
+	uploadResult, err := p.upload(processedPath)
 	if err != nil {
 		return nil, err
 	}
@@ -268,4 +279,18 @@ func (p *Processor) CompressImage(filePath string) (string, bool, error) {
 // SetCompressQuality 设置压缩质量
 func (p *Processor) SetCompressQuality(quality int) {
 	p.compressor.SetQuality(quality)
+}
+
+func (p *Processor) download(url string) (string, error) {
+	if p.downloadFile != nil {
+		return p.downloadFile(url)
+	}
+	return "", fmt.Errorf("download helper is not configured")
+}
+
+func (p *Processor) upload(filePath string) (*UploadResult, error) {
+	if p.uploadMaterial != nil {
+		return p.uploadMaterial(filePath)
+	}
+	return nil, fmt.Errorf("upload helper is not configured")
 }

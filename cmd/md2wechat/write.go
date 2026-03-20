@@ -41,10 +41,8 @@ Examples:
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		return initConfig()
 	},
-	Run: func(cmd *cobra.Command, args []string) {
-		if err := runWrite(cmd, args); err != nil {
-			responseError(err)
-		}
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return runWrite(cmd, args)
 	},
 }
 
@@ -95,7 +93,7 @@ func runWrite(cmd *cobra.Command, args []string) error {
 		// 从文件读取
 		content, err := os.ReadFile(args[0])
 		if err != nil {
-			return fmt.Errorf("读取文件: %w", err)
+			return wrapCLIError(codeWriteReadFailed, err, fmt.Sprintf("读取文件: %v", err))
 		}
 		input = string(content)
 
@@ -126,7 +124,7 @@ func runListStyles() error {
 	result := asst.ListStyles()
 
 	if !result.Success {
-		return fmt.Errorf("%s", result.Error)
+		return newCLIError(codeWriteFailed, result.Error)
 	}
 
 	if writeStyleDetail {
@@ -169,7 +167,7 @@ func runInteractiveWrite() error {
 	fmt.Print("请输入你的观点或内容 (Ctrl+D 结束):\n")
 	input := readMultiline()
 	if strings.TrimSpace(input) == "" {
-		return fmt.Errorf("输入不能为空")
+		return newCLIError(codeWriteInputInvalid, "输入不能为空")
 	}
 
 	// 构建请求
@@ -186,11 +184,10 @@ func runInteractiveWrite() error {
 	if result.IsAIRequest {
 		// AI 模式：返回提示词
 		output := map[string]interface{}{
-			"success": true,
-			"mode":    "ai",
-			"action":  "ai_write_request",
-			"style":   result.Style.Name,
-			"prompt":  result.Prompt,
+			"mode":   "ai",
+			"action": "ai_write_request",
+			"style":  result.Style.Name,
+			"prompt": result.Prompt,
 		}
 
 		// 如果启用了 humanizer，添加 humanizer 提示词
@@ -222,18 +219,18 @@ func runInteractiveWrite() error {
 			}
 		}
 
-		printJSON(output)
+		responseActionRequiredWith(codeWriteAIRequestReady, "AI write request prepared", output)
 		return nil
 	}
 
 	if !result.Success {
-		return fmt.Errorf("%s", result.Error)
+		return newCLIError(codeWriteFailed, result.Error)
 	}
 
 	// 输出结果
 	if writeOutput != "" {
 		if err := os.WriteFile(writeOutput, []byte(result.Article), 0644); err != nil {
-			return fmt.Errorf("保存文件: %w", err)
+			return wrapCLIError(codeWriteFailed, err, fmt.Sprintf("保存文件: %v", err))
 		}
 		log.Info("article saved", zap.String("file", writeOutput))
 	} else {
@@ -265,11 +262,10 @@ func executeWrite(input string) error {
 	if result.IsAIRequest {
 		// AI 模式：返回提示词
 		output := map[string]interface{}{
-			"success": true,
-			"mode":    "ai",
-			"action":  "ai_write_request",
-			"style":   result.Style.Name,
-			"prompt":  result.Prompt,
+			"mode":   "ai",
+			"action": "ai_write_request",
+			"style":  result.Style.Name,
+			"prompt": result.Prompt,
 		}
 
 		// 如果启用了 humanizer，添加 humanizer 提示词
@@ -304,12 +300,12 @@ func executeWrite(input string) error {
 			}
 		}
 
-		printJSON(output)
+		responseActionRequiredWith(codeWriteAIRequestReady, "AI write request prepared", output)
 		return nil
 	}
 
 	if !result.Success {
-		return fmt.Errorf("%s", result.Error)
+		return newCLIError(codeWriteFailed, result.Error)
 	}
 
 	// 只生成封面
@@ -320,7 +316,7 @@ func executeWrite(input string) error {
 	// 输出文章
 	if writeOutput != "" {
 		if err := os.WriteFile(writeOutput, []byte(result.Article), 0644); err != nil {
-			return fmt.Errorf("保存文件: %w", err)
+			return wrapCLIError(codeWriteFailed, err, fmt.Sprintf("保存文件: %v", err))
 		}
 		log.Info("article saved", zap.String("file", writeOutput))
 	} else {
@@ -352,7 +348,7 @@ func generateCover(asst *writer.Assistant, req *writer.WriteRequest) error {
 
 	result, err := coverGen.GeneratePrompt(coverReq)
 	if err != nil {
-		return fmt.Errorf("生成封面提示词: %w", err)
+		return wrapCLIError(codeWriteFailed, err, fmt.Sprintf("生成封面提示词: %v", err))
 	}
 
 	fmt.Println("\n=== 封面提示词 ===")
@@ -369,7 +365,9 @@ func generateCover(asst *writer.Assistant, req *writer.WriteRequest) error {
 // readLine 读取一行输入
 func readLine() string {
 	var line string
-	fmt.Scanln(&line)
+	if _, err := fmt.Scanln(&line); err != nil {
+		return ""
+	}
 	return strings.TrimSpace(line)
 }
 

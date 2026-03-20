@@ -77,6 +77,10 @@ sudo mv md2wechat /usr/local/bin/
 
 **解决步骤**：
 
+更完整的新手版说明见：
+
+- [微信凭证与 IP 白名单指南](WECHAT-CREDENTIALS.md)
+
 1. **获取微信凭证**
    - 打开 https://developers.weixin.qq.com/platform
    - 登录后选择公众号 → 开发接口管理
@@ -89,7 +93,7 @@ sudo mv md2wechat /usr/local/bin/
    ```
 
 3. **编辑配置文件**
-   - 用记事本打开 `md2wechat.yaml`
+   - 用记事本打开 `~/.config/md2wechat/config.yaml`
    - 填入你的 AppID 和 Secret
    - 保存
 
@@ -102,11 +106,22 @@ sudo mv md2wechat /usr/local/bin/
 
 ### ❓ 配置文件在哪？
 
-配置文件会在你运行 `md2wechat config init` 的目录下创建。
+默认配置文件会创建在：
+
+```text
+~/.config/md2wechat/config.yaml
+```
 
 **查找配置文件**：
-- Windows：当前文件夹，如 `C:\Users\你的用户名\md2wechat.yaml`
-- Mac/Linux：当前文件夹，如 `~/md2wechat.yaml`
+- `~/.config/md2wechat/config.yaml`（推荐，全局配置）
+- `~/.md2wechat.yaml`
+- `./md2wechat.yaml`
+
+你也可以运行下面的命令确认当前实际生效的是哪个配置文件：
+
+```bash
+md2wechat config show --format json
+```
 
 ---
 

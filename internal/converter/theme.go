@@ -4,15 +4,19 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
+	"github.com/geekjourneyx/md2wechat-skill/internal/assets"
 	"gopkg.in/yaml.v3"
 )
+
+const themesDirEnvVar = "MD2WECHAT_THEMES_DIR"
 
 // Theme 主题定义
 type Theme struct {
 	Name        string            `yaml:"name"`
-	Type        string            `yaml:"type"`         // "api" | "ai"
+	Type        string            `yaml:"type"` // "api" | "ai"
 	Description string            `yaml:"description"`
 	Version     string            `yaml:"version"`
 	StyleInfo   ThemeStyleInfo    `yaml:"style_info,omitempty"`
@@ -42,33 +46,13 @@ func NewThemeManager() *ThemeManager {
 
 // LoadThemes 从 YAML 文件加载主题
 func (tm *ThemeManager) LoadThemes() error {
-	// 获取主题目录
-	themeDir := tm.getThemeDir()
-
-	// 遍历主题目录
-	entries, err := os.ReadDir(themeDir)
-	if err != nil {
-		// 如果主题目录不存在，返回空（不是错误）
-		if os.IsNotExist(err) {
-			return nil
-		}
-		return fmt.Errorf("read theme directory: %w", err)
+	if err := tm.loadBuiltinThemes(); err != nil {
+		return fmt.Errorf("load builtin themes: %w", err)
 	}
 
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-
-		// 只处理 .yaml 文件
-		if !strings.HasSuffix(entry.Name(), ".yaml") && !strings.HasSuffix(entry.Name(), ".yml") {
-			continue
-		}
-
-		// 加载主题文件
-		themePath := filepath.Join(themeDir, entry.Name())
-		if err := tm.loadThemeFromFile(themePath); err != nil {
-			return fmt.Errorf("load theme from %s: %w", themePath, err)
+	for _, themeDir := range tm.getThemeDirs() {
+		if err := tm.loadThemesFromDir(themeDir); err != nil {
+			return err
 		}
 	}
 
@@ -82,6 +66,10 @@ func (tm *ThemeManager) loadThemeFromFile(path string) error {
 		return err
 	}
 
+	return tm.loadThemeData(data)
+}
+
+func (tm *ThemeManager) loadThemeData(data []byte) error {
 	var theme Theme
 	if err := yaml.Unmarshal(data, &theme); err != nil {
 		return fmt.Errorf("parse yaml: %w", err)
@@ -104,22 +92,73 @@ func (tm *ThemeManager) loadThemeFromFile(path string) error {
 	return nil
 }
 
-// getThemeDir 获取主题目录
-func (tm *ThemeManager) getThemeDir() string {
-	// 优先使用项目根目录的 themes/ 文件夹
-	if _, err := os.Stat("themes"); err == nil {
-		return "themes"
+func (tm *ThemeManager) loadThemesFromDir(themeDir string) error {
+	entries, err := os.ReadDir(themeDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("read theme directory %s: %w", themeDir, err)
 	}
 
-	// 其次使用用户主目录
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		if !strings.HasSuffix(entry.Name(), ".yaml") && !strings.HasSuffix(entry.Name(), ".yml") {
+			continue
+		}
+		themePath := filepath.Join(themeDir, entry.Name())
+		if err := tm.loadThemeFromFile(themePath); err != nil {
+			return fmt.Errorf("load theme from %s: %w", themePath, err)
+		}
+	}
+
+	return nil
+}
+
+func (tm *ThemeManager) loadBuiltinThemes() error {
+	names, err := assets.ListBuiltinThemes()
+	if err != nil {
+		return err
+	}
+
+	for _, name := range names {
+		data, err := assets.ReadBuiltinTheme(name)
+		if err != nil {
+			return fmt.Errorf("read builtin theme %s: %w", name, err)
+		}
+		if err := tm.loadThemeData(data); err != nil {
+			return fmt.Errorf("load builtin theme %s: %w", name, err)
+		}
+	}
+
+	return nil
+}
+
+// getThemeDirs 获取主题目录，优先级高的目录排在前面，由后加载覆盖内置资产
+func (tm *ThemeManager) getThemeDirs() []string {
+	dirs := make([]string, 0, 3)
+	add := func(dir string) {
+		dir = strings.TrimSpace(dir)
+		if dir == "" {
+			return
+		}
+		for _, existing := range dirs {
+			if existing == dir {
+				return
+			}
+		}
+		dirs = append(dirs, dir)
+	}
+
+	add(os.Getenv(themesDirEnvVar))
+	add("themes")
+
 	homeDir, _ := os.UserHomeDir()
-	userThemeDir := filepath.Join(homeDir, ".config", "md2wechat", "themes")
-	if _, err := os.Stat(userThemeDir); err == nil {
-		return userThemeDir
-	}
+	add(filepath.Join(homeDir, ".config", "md2wechat", "themes"))
 
-	// 最后使用当前目录
-	return "themes"
+	return dirs
 }
 
 // LoadTheme 加载单个主题（支持自定义路径）
@@ -149,7 +188,22 @@ func (tm *ThemeManager) ListThemes() []string {
 	for name := range tm.themes {
 		names = append(names, name)
 	}
+	sort.Strings(names)
 	return names
+}
+
+func (tm *ThemeManager) ListThemeDefinitions() []Theme {
+	themes := make([]Theme, 0, len(tm.themes))
+	for _, theme := range tm.themes {
+		themes = append(themes, theme)
+	}
+	sort.Slice(themes, func(i, j int) bool {
+		if themes[i].Type == themes[j].Type {
+			return themes[i].Name < themes[j].Name
+		}
+		return themes[i].Type < themes[j].Type
+	})
+	return themes
 }
 
 // ListAIThemes 列出所有 AI 主题

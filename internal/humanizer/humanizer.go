@@ -5,7 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
+
+	"github.com/geekjourneyx/md2wechat-skill/internal/action"
 )
 
 // Humanizer 去痕处理器
@@ -19,13 +22,15 @@ func NewHumanizer() *Humanizer {
 // Humanize 执行去痕处理
 // 这个方法构建 AI 请求，由外部（Claude）执行实际处理
 func (h *Humanizer) Humanize(req *HumanizeRequest) *HumanizeResult {
-	result := &HumanizeResult{}
-
 	// 验证输入
 	if strings.TrimSpace(req.Content) == "" {
-		result.Success = false
-		result.Error = "输入内容为空"
-		return result
+		return &HumanizeResult{
+			Status:    action.StatusFailed,
+			Action:    HumanizeActionAIRequest,
+			Retryable: false,
+			Success:   false,
+			Error:     "输入内容为空",
+		}
 	}
 
 	// 设置默认强度
@@ -33,24 +38,20 @@ func (h *Humanizer) Humanize(req *HumanizeRequest) *HumanizeResult {
 		req.Intensity = IntensityMedium
 	}
 
-	// 返回 AI 请求格式（由 Claude Code 执行）
-	result.Success = true
-	result.Content = "" // 将由 Claude 填充
-
-	// 在实际使用中，这里会调用 Claude API
-	// 但在 Claude Code 环境中，返回提示词让 Claude 处理
-	return result
+	return h.buildAIRequestResult(req)
 }
 
 // HumanizeWithResult 直接处理并返回结果（用于 CLI 独立使用）
 func (h *Humanizer) HumanizeWithResult(req *HumanizeRequest) *HumanizeResult {
-	result := &HumanizeResult{}
-
 	// 验证输入
 	if strings.TrimSpace(req.Content) == "" {
-		result.Success = false
-		result.Error = "输入内容为空"
-		return result
+		return &HumanizeResult{
+			Status:    action.StatusFailed,
+			Action:    HumanizeActionAIRequest,
+			Retryable: false,
+			Success:   false,
+			Error:     "输入内容为空",
+		}
 	}
 
 	// 设置默认强度
@@ -58,13 +59,7 @@ func (h *Humanizer) HumanizeWithResult(req *HumanizeRequest) *HumanizeResult {
 		req.Intensity = IntensityMedium
 	}
 
-	// 构建 AI 请求并返回提示词
-	// 注意：实际的处理需要外部调用 Claude
-	result.Success = false
-	result.Error = "需要外部 AI 处理，请使用 AI 模式"
-	result.Content = req.Content // 返回原文
-
-	return result
+	return h.buildAIRequestResult(req)
 }
 
 // BuildAIRequestForAI 构建供 AI 使用的请求
@@ -76,7 +71,10 @@ func (h *Humanizer) BuildAIRequestForAI(req *HumanizeRequest) string {
 // ParseAIResponse 解析 AI 返回的结果
 func (h *Humanizer) ParseAIResponse(aiResponse string, req *HumanizeRequest) *HumanizeResult {
 	result := &HumanizeResult{
-		Success: true,
+		Success:   true,
+		Status:    action.StatusCompleted,
+		Action:    HumanizeActionCompleted,
+		Retryable: false,
 	}
 
 	// 尝试解析结构化输出
@@ -87,6 +85,9 @@ func (h *Humanizer) ParseAIResponse(aiResponse string, req *HumanizeRequest) *Hu
 		result.Changes = parsed.Changes
 		result.Score = parsed.Score
 		result.Success = true
+		result.Action = HumanizeActionCompleted
+		result.Status = action.StatusCompleted
+		result.Retryable = false
 		return result
 	}
 
@@ -95,6 +96,9 @@ func (h *Humanizer) ParseAIResponse(aiResponse string, req *HumanizeRequest) *Hu
 	if content != "" {
 		result.Content = content
 		result.Success = true
+		result.Action = HumanizeActionCompleted
+		result.Status = action.StatusCompleted
+		result.Retryable = false
 		return result
 	}
 
@@ -102,7 +106,20 @@ func (h *Humanizer) ParseAIResponse(aiResponse string, req *HumanizeRequest) *Hu
 	result.Success = false
 	result.Content = req.Content
 	result.Error = "无法解析 AI 返回结果，已返回原始文本"
+	result.Status = action.StatusFailed
+	result.Action = HumanizeActionCompleted
+	result.Retryable = false
 	return result
+}
+
+func (h *Humanizer) buildAIRequestResult(req *HumanizeRequest) *HumanizeResult {
+	return &HumanizeResult{
+		Success:   true,
+		Status:    action.StatusActionRequired,
+		Action:    HumanizeActionAIRequest,
+		Retryable: false,
+		Prompt:    BuildPrompt(req),
+	}
 }
 
 // parseStructuredResponse 解析结构化响应
@@ -149,15 +166,15 @@ func (h *Humanizer) extractContent(response string) string {
 
 	for _, line := range lines {
 		if strings.HasPrefix(line, "# 人性化后的文本") ||
-		   strings.HasPrefix(line, "# 处理结果") ||
-		   strings.HasPrefix(line, "# Result") {
+			strings.HasPrefix(line, "# 处理结果") ||
+			strings.HasPrefix(line, "# Result") {
 			inContent = true
 			continue
 		}
 		if strings.HasPrefix(line, "# 修改说明") ||
-		   strings.HasPrefix(line, "# 质量评分") ||
-		   strings.HasPrefix(line, "# Changes") ||
-		   strings.HasPrefix(line, "# Score") {
+			strings.HasPrefix(line, "# 质量评分") ||
+			strings.HasPrefix(line, "# Changes") ||
+			strings.HasPrefix(line, "# Score") {
 			break
 		}
 		if inContent || (!strings.HasPrefix(line, "#") && line != "") {
@@ -183,8 +200,8 @@ func (h *Humanizer) extractSection(response, sectionStart, sectionEnd1, sectionE
 		}
 		if inSection {
 			if (sectionEnd1 != "" && strings.HasPrefix(line, sectionEnd1)) ||
-			   (sectionEnd2 != "" && strings.HasPrefix(line, sectionEnd2)) ||
-			   strings.HasPrefix(line, "# ") {
+				(sectionEnd2 != "" && strings.HasPrefix(line, sectionEnd2)) ||
+				strings.HasPrefix(line, "# ") {
 				break
 			}
 			resultLines = append(resultLines, line)
@@ -242,8 +259,10 @@ func (h *Humanizer) extractScore(response string) *Score {
 				re := regexp.MustCompile(`(\d+)`)
 				matches := re.FindStringSubmatch(valueStr)
 				if len(matches) > 1 {
-					var value int
-					fmt.Sscanf(matches[1], "%d", &value)
+					value, err := strconv.Atoi(matches[1])
+					if err != nil {
+						continue
+					}
 
 					switch strings.ToLower(dimension) {
 					case "直接性":
@@ -335,8 +354,8 @@ func (h *Humanizer) BuildConvertRequest(content string, settings map[string]inte
 	}
 
 	return &AIConvertRequest{
-		Content:  content,
-		Prompt:   BuildPrompt(req),
+		Content: content,
+		Prompt:  BuildPrompt(req),
 		Settings: HumanizeSettings{
 			Intensity:     req.Intensity,
 			FocusOn:       req.FocusOn,

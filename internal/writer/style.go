@@ -7,8 +7,11 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/geekjourneyx/md2wechat-skill/internal/assets"
 	"gopkg.in/yaml.v3"
 )
+
+const writersDirEnvVar = "MD2WECHAT_WRITERS_DIR"
 
 // StyleManager 风格管理器
 type StyleManager struct {
@@ -26,33 +29,15 @@ func NewStyleManager() *StyleManager {
 
 // LoadStyles 加载所有风格配置
 func (sm *StyleManager) LoadStyles() error {
-	sm.writersDir = sm.getWritersDir()
+	sm.styles = make(map[string]*WriterStyle)
 
-	// 检查目录是否存在
-	if _, err := os.Stat(sm.writersDir); os.IsNotExist(err) {
-		// 目录不存在，不是错误，只是没有风格
-		return nil
+	if err := sm.loadBuiltinStyles(); err != nil {
+		return fmt.Errorf("加载内置 writers: %w", err)
 	}
 
-	entries, err := os.ReadDir(sm.writersDir)
-	if err != nil {
-		return fmt.Errorf("读取 writers 目录: %w", err)
-	}
-
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-
-		name := entry.Name()
-		if !strings.HasSuffix(name, ".yaml") && !strings.HasSuffix(name, ".yml") {
-			continue
-		}
-
-		stylePath := filepath.Join(sm.writersDir, name)
-		if err := sm.loadStyle(stylePath); err != nil {
-			// 记录错误但继续加载其他风格
-			continue
+	for _, dir := range sm.getWriterDirs() {
+		if err := sm.loadStylesFromDir(dir); err != nil {
+			return err
 		}
 	}
 
@@ -67,6 +52,10 @@ func (sm *StyleManager) loadStyle(path string) error {
 		return fmt.Errorf("读取文件: %w", err)
 	}
 
+	return sm.loadStyleData(data)
+}
+
+func (sm *StyleManager) loadStyleData(data []byte) error {
 	var style WriterStyle
 	if err := yaml.Unmarshal(data, &style); err != nil {
 		return fmt.Errorf("解析 YAML: %w", err)
@@ -93,27 +82,72 @@ func (sm *StyleManager) loadStyle(path string) error {
 	return nil
 }
 
-// getWritersDir 获取 writers 目录路径
-func (sm *StyleManager) getWritersDir() string {
-	// 优先级顺序：
-	// 1. 当前目录的 writers/
-	// 2. 用户配置目录 ~/.config/md2wechat/writers/
-	// 3. 用户主目录 ~/.md2wechat-writers/
-
-	paths := []string{
-		"writers",
-		filepath.Join(os.Getenv("HOME"), ".config", "md2wechat", "writers"),
-		filepath.Join(os.Getenv("HOME"), ".md2wechat-writers"),
+func (sm *StyleManager) loadBuiltinStyles() error {
+	names, err := assets.ListBuiltinWriters()
+	if err != nil {
+		return err
 	}
 
-	for _, path := range paths {
-		if _, err := os.Stat(path); err == nil {
-			return path
+	for _, name := range names {
+		data, err := assets.ReadBuiltinWriter(name)
+		if err != nil {
+			return fmt.Errorf("读取内置 writer %s: %w", name, err)
+		}
+		if err := sm.loadStyleData(data); err != nil {
+			return fmt.Errorf("加载内置 writer %s: %w", name, err)
 		}
 	}
 
-	// 都不存在，返回默认路径（会在 LoadStyles 时处理）
-	return "writers"
+	return nil
+}
+
+func (sm *StyleManager) loadStylesFromDir(dir string) error {
+	if dir == "" {
+		return nil
+	}
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("读取 writers 目录 %s: %w", dir, err)
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		name := entry.Name()
+		if !strings.HasSuffix(name, ".yaml") && !strings.HasSuffix(name, ".yml") {
+			continue
+		}
+
+		stylePath := filepath.Join(dir, name)
+		if err := sm.loadStyle(stylePath); err != nil {
+			// 记录错误但继续加载其他风格
+			continue
+		}
+	}
+
+	return nil
+}
+
+// getWriterDirs 获取 writers 目录路径，按优先级从低到高返回，后加载者覆盖前加载者。
+func (sm *StyleManager) getWriterDirs() []string {
+	homeDir, _ := os.UserHomeDir()
+	dirs := []string{
+		filepath.Join(homeDir, ".md2wechat-writers"),
+		filepath.Join(homeDir, ".config", "md2wechat", "writers"),
+		"writers",
+	}
+
+	if explicitDir := strings.TrimSpace(os.Getenv(writersDirEnvVar)); explicitDir != "" {
+		dirs = append(dirs, explicitDir)
+	}
+
+	return dirs
 }
 
 // GetStyle 获取风格
@@ -141,10 +175,10 @@ func (sm *StyleManager) mapToEnglishName(name string) string {
 	// 名称映射表
 	nameMap := map[string]string{
 		// Dan Koe 别名
-		"dan-koe":   "dan-koe",
-		"dankoe":    "dan-koe",
-		"dan":       "dan-koe",
-		"koe":       "dan-koe",
+		"dan-koe": "dan-koe",
+		"dankoe":  "dan-koe",
+		"dan":     "dan-koe",
+		"koe":     "dan-koe",
 		// 未来可以添加更多映射
 	}
 
@@ -172,7 +206,7 @@ func (sm *StyleManager) mapToEnglishName(name string) string {
 func (sm *StyleManager) ListStyles() []StyleSummary {
 	// 确保已加载
 	if !sm.initialized {
-		sm.LoadStyles()
+		_ = sm.LoadStyles()
 	}
 
 	result := make([]StyleSummary, 0, len(sm.styles))
@@ -192,7 +226,7 @@ func (sm *StyleManager) ListStyles() []StyleSummary {
 func (sm *StyleManager) ListStyleNames() []string {
 	// 确保已加载
 	if !sm.initialized {
-		sm.LoadStyles()
+		_ = sm.LoadStyles()
 	}
 
 	names := make([]string, 0, len(sm.styles))
@@ -205,7 +239,25 @@ func (sm *StyleManager) ListStyleNames() []string {
 // GetWritersDir 获取 writers 目录路径（公开方法）
 func (sm *StyleManager) GetWritersDir() string {
 	if sm.writersDir == "" {
-		sm.writersDir = sm.getWritersDir()
+		if explicitDir := strings.TrimSpace(os.Getenv(writersDirEnvVar)); explicitDir != "" {
+			sm.writersDir = explicitDir
+			return sm.writersDir
+		}
+
+		// 优先返回最接近用户可编辑的目录
+		paths := []string{
+			"writers",
+			filepath.Join(os.Getenv("HOME"), ".config", "md2wechat", "writers"),
+			filepath.Join(os.Getenv("HOME"), ".md2wechat-writers"),
+		}
+		for _, path := range paths {
+			if _, err := os.Stat(path); err == nil {
+				sm.writersDir = path
+				return sm.writersDir
+			}
+		}
+
+		sm.writersDir = "writers"
 	}
 	return sm.writersDir
 }
@@ -220,7 +272,7 @@ func (sm *StyleManager) ReloadStyles() error {
 // GetStyleCount 获取风格数量
 func (sm *StyleManager) GetStyleCount() int {
 	if !sm.initialized {
-		sm.LoadStyles()
+		_ = sm.LoadStyles()
 	}
 	return len(sm.styles)
 }
@@ -249,7 +301,7 @@ func (sm *StyleManager) ValidateStyle(style *WriterStyle) error {
 
 // CreateStyleDirectory 创建 writers 目录
 func (sm *StyleManager) CreateStyleDirectory() error {
-	dir := sm.getWritersDir()
+	dir := sm.GetWritersDir()
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return fmt.Errorf("创建目录: %w", err)
 	}
@@ -278,7 +330,7 @@ func (sm *StyleManager) ExportStyle(style *WriterStyle, destPath string) error {
 func (sm *StyleManager) GetStyleByCategory(category string) []StyleSummary {
 	// 确保已加载
 	if !sm.initialized {
-		sm.LoadStyles()
+		_ = sm.LoadStyles()
 	}
 
 	result := []StyleSummary{}
@@ -300,7 +352,7 @@ func (sm *StyleManager) GetStyleByCategory(category string) []StyleSummary {
 func (sm *StyleManager) ListCategories() []string {
 	// 确保已加载
 	if !sm.initialized {
-		sm.LoadStyles()
+		_ = sm.LoadStyles()
 	}
 
 	categoryMap := make(map[string]bool)

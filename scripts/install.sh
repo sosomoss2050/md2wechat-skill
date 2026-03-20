@@ -1,9 +1,20 @@
 #!/bin/bash
 # md2wechat 自动安装脚本
 # 适用于：macOS / Linux
-# 使用方法：curl -fsSL https://raw.githubusercontent.com/geekjourneyx/md2wechat-skill/main/scripts/install.sh | bash
+# 使用方法：curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/vX.Y.Z/install.sh | bash
 
-set -e
+set -euo pipefail
+
+REPO="geekjourneyx/md2wechat-skill"
+VERSION="${MD2WECHAT_VERSION:-}"
+if [ -z "$VERSION" ]; then
+    if [ -n "${MD2WECHAT_VERSION_DEFAULT:-}" ]; then
+        VERSION="${MD2WECHAT_VERSION_DEFAULT}"
+    else
+        VERSION="latest"
+    fi
+fi
+INSTALL_DIR="${MD2WECHAT_INSTALL_DIR:-$HOME/.local/bin}"
 
 echo "========================================"
 echo "   md2wechat 安装向导"
@@ -38,22 +49,83 @@ echo "将下载: $BINARY"
 echo ""
 
 # 确定安装目录
-INSTALL_DIR="$HOME/.local/bin"
 mkdir -p "$INSTALL_DIR"
+
+TMP_DIR="$(mktemp -d)"
+cleanup() {
+    rm -rf "$TMP_DIR"
+}
+trap cleanup EXIT
+
+download_file() {
+    url="$1"
+    output="$2"
+    case "$url" in
+        file://*)
+            cp "${url#file://}" "$output"
+            ;;
+        *)
+            if command -v curl >/dev/null 2>&1; then
+        curl -fsSL "$url" -o "$output"
+            elif command -v wget >/dev/null 2>&1; then
+        wget -q "$url" -O "$output"
+            else
+                echo "❌ 需要 curl 或 wget 来下载文件"
+                exit 1
+            fi
+            ;;
+    esac
+}
+
+verify_checksum() {
+    checksums_file="$1"
+    binary_file="$2"
+    binary_name="$3"
+
+    if command -v sha256sum >/dev/null 2>&1; then
+        (cd "$(dirname "$binary_file")" && sha256sum -c "$checksums_file" --ignore-missing --status)
+    elif command -v shasum >/dev/null 2>&1; then
+        expected="$(awk -v file="$binary_name" '$2 == file { print $1 }' "$checksums_file")"
+        if [ -z "$expected" ]; then
+            echo "❌ checksums.txt 中未找到 $binary_name 的校验值"
+            exit 1
+        fi
+        actual="$(shasum -a 256 "$binary_file" | awk '{print $1}')"
+        [ "$expected" = "$actual" ]
+    else
+        echo "❌ 需要 sha256sum 或 shasum 来验证安装包完整性"
+        exit 1
+    fi
+}
 
 # 下载
 echo "正在下载..."
-DOWNLOAD_URL="https://github.com/geekjourneyx/md2wechat-skill/releases/latest/download/$BINARY"
+RELEASE_BASE_URL="${MD2WECHAT_RELEASE_BASE_URL:-}"
+if [ -z "$RELEASE_BASE_URL" ]; then
+    if [ "$VERSION" = "latest" ]; then
+        RELEASE_BASE_URL="https://github.com/${REPO}/releases/latest/download"
+    else
+        RELEASE_BASE_URL="https://github.com/${REPO}/releases/download/v${VERSION}"
+    fi
+fi
+DOWNLOAD_URL="${RELEASE_BASE_URL}/${BINARY}"
+CHECKSUMS_URL="${RELEASE_BASE_URL}/checksums.txt"
 echo "下载地址: $DOWNLOAD_URL"
+echo "校验文件: $CHECKSUMS_URL"
 
-if command -v curl >/dev/null 2>&1; then
-    curl -fsSL "$DOWNLOAD_URL" -o "$INSTALL_DIR/md2wechat"
-elif command -v wget >/dev/null 2>&1; then
-    wget -q "$DOWNLOAD_URL" -O "$INSTALL_DIR/md2wechat"
-else
-    echo "❌ 需要 curl 或 wget 来下载文件"
+DOWNLOADED_BINARY="$TMP_DIR/$BINARY"
+CHECKSUMS_FILE="$TMP_DIR/checksums.txt"
+
+download_file "$DOWNLOAD_URL" "$DOWNLOADED_BINARY"
+download_file "$CHECKSUMS_URL" "$CHECKSUMS_FILE"
+
+echo "正在验证 SHA-256 校验值..."
+if ! verify_checksum "$CHECKSUMS_FILE" "$DOWNLOADED_BINARY" "$BINARY"; then
+    echo "❌ 校验失败：下载文件与发布校验值不匹配"
     exit 1
 fi
+
+install -m 0755 "$DOWNLOADED_BINARY" "$INSTALL_DIR/md2wechat"
 
 # 添加执行权限
 chmod +x "$INSTALL_DIR/md2wechat"
@@ -71,10 +143,10 @@ else
     echo "请根据你的 shell 执行以下命令："
 
     # 检测 shell
-    if [ -n "$ZSH_VERSION" ]; then
+    if [ -n "${ZSH_VERSION:-}" ]; then
         echo "  echo 'export PATH=\"\$HOME/.local/bin:\$PATH\"' >> ~/.zshrc"
         echo "  source ~/.zshrc"
-    elif [ -n "$BASH_VERSION" ]; then
+    elif [ -n "${BASH_VERSION:-}" ]; then
         echo "  echo 'export PATH=\"\$HOME/.local/bin:\$PATH\"' >> ~/.bashrc"
         echo "  source ~/.bashrc"
     else

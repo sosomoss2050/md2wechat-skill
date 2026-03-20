@@ -1,8 +1,19 @@
 # 微信公众号主题风格指南
 
+> 本文档用于提供视觉风格示例和提示词参考。
+>
+> 不要把这里的主题数量、名称清单或参数表当成运行时真相源。对 Agent 和自动化脚本，始终先执行：
+>
+> ```bash
+> md2wechat themes list --json
+> md2wechat themes show <name> --json
+> ```
+>
+> 当前项目的能力发现主路径见仓库文档 `docs/DISCOVERY.md`。
+
 ## 主题概览
 
-本项目支持多种主题风格，涵盖 AI 生成模式和 API 模式。
+本项目支持多种主题风格，涵盖 AI 生成模式和 API 模式。下面内容主要用于帮助理解视觉方向，不负责声明运行时完整能力面。
 
 ### AI 模式主题（推荐）
 
@@ -15,7 +26,7 @@
 
 ### API 模式主题
 
-**v2 API 现已支持 38 个精美主题！**
+以下 API 主题分组和示例主要用于帮助理解命名风格与设计语言。
 
 #### 主题预览
 📚 **完整主题预览**: [https://md2wechat.app/theme-gallery](https://md2wechat.app/theme-gallery)
@@ -31,7 +42,7 @@
 | **chinese** | `--theme chinese` | 古典雅致，书卷气息 | 文化文章 |
 | **cyber** | `--theme cyber` | 未来科技，霓虹光影 | 前沿科技 |
 
-#### v2.0 新增主题（32 个）
+#### 主题系列示例
 
 **Minimal 系列** - 干净克制，纯色文字无装饰
 
@@ -109,7 +120,7 @@ md2wechat convert article.md --theme elegant-gold --preview
 md2wechat convert article.md --theme minimal-blue --draft --cover cover.jpg
 ```
 
-> 💡 **提示**: v2.0 新主题需要配置 `md2wechat_base_url: https://md2wechat.app`
+> 💡 **提示**: 某些 API 主题或主题能力可能依赖特定 API 域名与服务能力，先检查当前配置与 `themes list --json` 的实际输出。
 
 ### 背景类型选择 🆕
 

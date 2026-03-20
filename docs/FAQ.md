@@ -1,158 +1,211 @@
-# 常见问题 (FAQ)
+# 常见问题（FAQ）
 
-本文档收集了用户最常遇到的问题和解决方案。
+这份 FAQ 只回答一件事：**新手最常卡在哪里，最快怎么排掉。**
+
+如果你是第一次接触 `md2wechat`，推荐先看这些文档：
+
+- [安装指南](INSTALL.md)
+- [配置指南](CONFIG.md)
+- [微信凭证与 IP 白名单指南](WECHAT-CREDENTIALS.md)
+- [真实烟雾测试记录](SMOKE.md)
+
+---
 
 ## 目录
 
-- [安装问题](#安装问题)
-- [配置问题](#配置问题)
-- [转换问题](#转换问题)
-- [图片问题](#图片问题)
-- [微信 API 问题](#微信-api-问题)
-- [高级问题](#高级问题)
+- [安装与启动](#安装与启动)
+- [配置与默认行为](#配置与默认行为)
+- [转换与排版](#转换与排版)
+- [图片与素材](#图片与素材)
+- [微信与草稿](#微信与草稿)
+- [Agent 与自动化](#agent-与自动化)
+- [调试与求助](#调试与求助)
 
 ---
 
-## 安装问题
+## 安装与启动
 
-### Q1: 提示 "command not found: md2wechat"
+### Q1：提示 `command not found: md2wechat`
 
-**原因**：二进制文件不在 PATH 中
+**原因**：程序没有在 `PATH` 里。
 
-**解决方案 A**：添加到 PATH
+**先做这两步：**
 
 ```bash
-# 临时添加
+command -v md2wechat
+md2wechat --help
+```
+
+如果 `command -v` 没输出，说明系统找不到二进制。
+
+**解决方案 A：重新用安装脚本安装**
+
+```bash
+export MD2WECHAT_RELEASE_BASE_URL=https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.0
+curl -fsSL "${MD2WECHAT_RELEASE_BASE_URL}/install.sh" | bash
+```
+
+**解决方案 B：把二进制目录加到 PATH**
+
+```bash
 export PATH=$PATH:/usr/local/bin
-
-# 永久添加（添加到 ~/.bashrc）
-echo 'export PATH=$PATH:/usr/local/bin' >> ~/.bashrc
-source ~/.bashrc
 ```
 
-**解决方案 B**：使用完整路径
-
-```bash
-/usr/local/bin/md2wechat --help
-```
+如果你不确定装到了哪里，优先重新走安装脚本，不要手猜路径。
 
 ---
 
-### Q2: Go 安装失败 "go: module not found"
+### Q2：OpenClaw / Claude Code 装了 skill，但命令还是跑不起来
 
-**原因**：网络问题或模块路径错误
+先区分两种路径：
 
-**解决方案**：
+- `skills/md2wechat/`：给 Claude Code / Codex / OpenCode 的 coding-agent skill
+- `platforms/openclaw/md2wechat/`：给 OpenClaw / ClawHub 的专用 skill
 
-```bash
-# 1. 设置 Go 代理（中国大陆用户）
-export GOPROXY=https://goproxy.cn,direct
+**OpenClaw 路径**还需要安装 runtime，不是只把 `SKILL.md` 放进去就够了。优先看：
 
-# 2. 清理缓存
-go clean -modcache
+- [OPENCLAW.md](OPENCLAW.md)
 
-# 3. 重新安装
-go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@latest
-```
+**Claude Code / Codex 路径**如果只是二进制没装好，skill 也无法替你凭空执行 CLI。
 
 ---
 
-### Q3: macOS 提示 "无法打开，因为无法验证开发者"
+### Q3：macOS 提示“无法打开，因为无法验证开发者”
 
-**原因**：macOS 安全限制
+这是 macOS 的安全提示，不是 `md2wechat` 特有问题。
 
-**解决方案**：
+可尝试：
 
 ```bash
-# 允许任何来源的的应用（系统偏好设置 > 安全性与隐私）
-# 或使用命令行
 sudo xattr -cr /Applications/md2wechat
 ```
 
+或者在系统设置里手动允许打开。
+
 ---
 
-## 配置问题
+## 配置与默认行为
 
-### Q4: 提示 "WECHAT_APPID is required"
+### Q4：配置文件到底在哪？
 
-**原因**：未配置微信公众号凭证
+主路径是：
 
-**解决方案 A**：使用配置文件
+```text
+~/.config/md2wechat/config.yaml
+```
+
+先执行：
 
 ```bash
 md2wechat config init
-# 编辑生成的 md2wechat.yaml，填入：
-# wechat:
-#   appid: "your_appid"
-#   secret: "your_secret"
+md2wechat config show --format json
 ```
 
-**解决方案 B**：使用环境变量
+第二个命令会直接告诉你当前实际生效的是哪份配置。
 
-```bash
-export WECHAT_APPID="wx1234567890abcdef"
-export WECHAT_SECRET="your_secret_here"
-```
+更完整说明见：
 
-**如何获取 AppID 和 Secret**：
-
-1. 访问 **[微信开发者平台](https://developers.weixin.qq.com/platform)**
-
-   > 注：开发接口管理已于 2025 年 12 月迁移至微信开发者平台
-
-2. 登录后，选择你的公众号（如果没有，请先注册）
-
-3. 进入 **「开发接口管理」**
-
-4. 在「开发者ID」区域可以看到：
-   - **开发者ID(AppID)**：直接复制即可
-   - **开发者密码(AppSecret)**：点击「重置」按钮获取
-
-   > **警告**：AppSecret 非常重要，请妥善保管，不要泄露给他人！
-
-5. 复制这两个值到配置文件或环境变量中
+- [CONFIG.md](CONFIG.md)
 
 ---
 
-### Q5: 配置文件不生效
+### Q5：提示 `WECHAT_APPID is required`
 
-**原因**：配置文件位置或格式错误
+**原因**：你还没配置微信凭证，或者当前生效的配置文件里没有它们。
 
-**解决方案**：
+最稳做法：
 
 ```bash
-# 1. 检查配置文件位置
-md2wechat config show
-
-# 2. 验证配置文件格式
-cat md2wechat.yaml
-
-# 3. 重新初始化配置
 md2wechat config init
 ```
 
-**支持的配置文件位置**：
-- `./md2wechat.yaml`（当前目录，优先级最高）
-- `~/.md2wechat.yaml`
-- `~/.config/md2wechat/config.yaml`
+然后编辑：
+
+```yaml
+wechat:
+  appid: "你的公众号 AppID"
+  secret: "你的公众号 AppSecret"
+```
+
+再执行：
+
+```bash
+md2wechat config validate
+md2wechat config show --format json
+```
+
+如果你不知道去哪里拿 AppID / AppSecret，直接看：
+
+- [微信凭证与 IP 白名单指南](WECHAT-CREDENTIALS.md)
 
 ---
 
-### Q6: API 模式提示需要 API Key
+### Q6：我没传 `--mode`，默认到底走 API 还是 AI？
 
-**原因**：API 模式需要 [md2wechat.cn](https://md2wechat.cn) 的 API Key
+**默认一定是 API。**
 
-**解决方案 A**：获取 API Key
+也就是：
 
-1. 访问 [md2wechat.cn](https://md2wechat.cn)
-2. 注册账号并获取 API Key
-3. 配置：
+```bash
+md2wechat convert article.md
+```
+
+当前等价于：
+
+```bash
+md2wechat convert article.md --mode api
+```
+
+只有你显式传：
+
+```bash
+md2wechat convert article.md --mode ai
+```
+
+才会进入 AI 模式。
+
+---
+
+### Q7：我改了配置，但感觉没生效
+
+最常见原因有 3 个：
+
+1. 你改的不是当前生效的配置文件
+2. 环境变量覆盖了配置文件
+3. 你以为 `api.convert_mode` 会覆盖 `convert` 默认行为
+
+先执行：
+
+```bash
+md2wechat config show --format json
+```
+
+重点看：
+
+- `config_file`
+- `md2wechat_base_url`
+- `image_provider`
+- `default_convert_mode`
+
+注意：
+
+- `api.convert_mode` / `CONVERT_MODE` 当前不会覆盖“`convert` 不传 `--mode` 默认是 API”这个行为
+
+---
+
+### Q8：API 模式提示需要 API Key
+
+API 模式需要 `md2wechat` 排版服务的 API Key。
+
+如果你没配 API Key，有两条路：
+
+**方案 A：配置 API Key**
 
 ```bash
 export MD2WECHAT_API_KEY="your_key"
 ```
 
-**解决方案 B**：使用 AI 模式（不需要 md2wechat API Key）
+**方案 B：显式改走 AI 模式**
 
 ```bash
 md2wechat convert article.md --mode ai --theme autumn-warm
@@ -160,401 +213,375 @@ md2wechat convert article.md --mode ai --theme autumn-warm
 
 ---
 
-## 转换问题
+## 转换与排版
 
-### Q7: 转换结果为空或乱码
+### Q9：AI 模式为什么没有直接产出最终 HTML？
 
-**可能原因 1**：Markdown 文件编码问题
+这是当前 CLI 的设计，不是异常。
 
-**解决方案**：
+当前 `convert --mode ai` 的语义是：
 
-```bash
-# 检查文件编码
-file article.md
+- 生成 AI request / prompt
+- 返回 `status=action_required`
+- 写出 `*.prompt.txt`
 
-# 转换为 UTF-8
-iconv -f GBK -t UTF-8 article.md > article-utf8.md
-```
+它不是“本地自动完成 HTML 排版”的完全闭环。
 
-**可能原因 2**：Markdown 格式错误
-
-**解决方案**：使用 Markdown 检查工具
-
-```bash
-# 安装 markdownlint
-npm install -g markdownlint-cli
-
-# 检查文件
-markdownlint article.md
-```
-
----
-
-### Q8: AI 模式转换失败
-
-**原因**：AI API Key 未配置或无效
-
-**解决方案**：
-
-```bash
-# 1. 设置 Claude API Key
-export IMAGE_API_KEY="your_claude_api_key"
-
-# 2. 验证
-md2wechat config validate
-
-# 3. 重试
-md2wechat convert article.md --mode ai
-```
-
----
-
-### Q9: HTML 样式在微信中显示不正常
-
-**原因**：微信编辑器会过滤部分 CSS
-
-**解决方案**：
-
-1. **使用 API 模式**（更稳定）
+如果你要稳定、直接的 HTML 结果，优先用：
 
 ```bash
 md2wechat convert article.md --mode api
 ```
 
-2. **检查是否使用了内联样式**
+如果你想理解当前 AI 模式的真实行为，先看：
 
-微信只支持内联 style 属性，不支持 `<style>` 标签。
-
-3. **尝试简化 Markdown**
-
-```markdown
-<!-- 避免复杂嵌套 -->
-## 简单标题
-
-这是段落内容。
-
-> 这是引用
-```
+- [SMOKE.md](SMOKE.md)
 
 ---
 
-## 图片问题
+### Q10：转换结果为空、乱码或者很奇怪
 
-### Q10: 图片上传失败 "upload material failed"
+优先排查两件事：
 
-**可能原因 1**：图片格式不支持
+1. 文件编码不是 UTF-8
+2. Markdown 内容本身有结构问题
 
-**解决方案**：
-
-```bash
-# 支持的格式：jpg, png, gif, bmp, webp
-# 转换图片格式
-convert input.tiff output.jpg
-```
-
-**可能原因 2**：图片太大
-
-**解决方案**：
+先试：
 
 ```bash
-# 程序会自动压缩，但可以先手动压缩
-# 配置压缩参数
-# md2wechat.yaml:
-image:
-  compress: true
-  max_width: 1920
-  max_size_mb: 5
+file article.md
 ```
 
-**可能原因 3**：微信 API 频率限制
-
-**解决方案**：等待几分钟后重试
+如果不是 UTF-8，可转码：
 
 ```bash
-# 分批上传图片
-md2wechat upload_image image1.jpg
-sleep 5
-md2wechat upload_image image2.jpg
+iconv -f GBK -t UTF-8 article.md > article-utf8.md
 ```
+
+如果仍异常，再检查 Markdown 本身。
 
 ---
 
-### Q11: AI 生成图片失败
+### Q11：我想知道当前支持哪些主题、provider、prompt，不想靠文档猜
 
-**原因**：图片生成 API Key 未配置或额度不足
-
-**解决方案**：
+直接用发现命令，不要猜：
 
 ```bash
-# 1. 设置 API Key
-export IMAGE_API_KEY="your_openai_or_claude_key"
-
-# 2. 验证
-md2wechat generate_image "test prompt"
-
-# 3. 检查 API 额度
-# 登录对应的 API 提供商查看剩余额度
+md2wechat capabilities --json
+md2wechat providers list --json
+md2wechat themes list --json
+md2wechat prompts list --json
+md2wechat prompts list --kind image --archetype cover --json
+md2wechat prompts list --kind image --tag editorial --json
 ```
+
+看具体资源：
+
+```bash
+md2wechat providers show openrouter --json
+md2wechat themes show autumn-warm --json
+md2wechat prompts show cover-default --kind image --json
+```
+
+完整说明见：
+
+- [DISCOVERY.md](DISCOVERY.md)
+
+如果你不想自己写图片 prompt，可以直接用内置 preset：
+
+```bash
+md2wechat generate_cover --article article.md
+md2wechat generate_infographic --article article.md --preset infographic-comparison
+md2wechat generate_infographic --article article.md --preset infographic-dark-ticket-cn --aspect 21:9
+md2wechat generate_infographic --article article.md --preset infographic-handdrawn-sketchnote
+md2wechat generate_infographic --article article.md --preset infographic-apple-keynote-premium
+md2wechat generate_infographic --article article.md --preset infographic-victorian-engraving-banner --aspect 21:9
+```
+
+如需只在本次调用切换模型，可直接加 `--model`：
+
+```bash
+md2wechat generate_cover --article article.md --model gemini-3-pro-image-preview
+```
+
+如果你不确定某个图片 preset 更偏封面还是信息图，先运行：
+
+```bash
+md2wechat prompts show <preset-name> --kind image --json
+```
+
+优先看输出里的 `primary_use_case`、`compatible_use_cases` 和 `default_aspect_ratio`。有些信息图 preset 也可以兼作封面，不需要复制成两份模板。
 
 ---
 
-### Q12: 图片链接未被替换
+## 图片与素材
 
-**原因**：未使用 `--upload` 参数
+### Q12：图片上传失败 `upload material failed`
 
-**解决方案**：
+先按这个顺序排：
+
+1. 图片格式是否支持
+2. 图片是否太小或太异常
+3. 微信凭证是否有效
+4. IP 白名单是否已配置
+
+支持的常见格式：
+
+- `jpg`
+- `png`
+- `gif`
+- `bmp`
+- `webp`
+
+真实 smoke 里还发现一个现象：
+
+- 极小测试图（例如 1x1 PNG）可能被微信拒绝为 `unsupported file type`
+
+所以调试时优先用正常尺寸图片，不要用极小占位图。
+
+---
+
+### Q13：为什么图片链接没有被替换成微信素材地址？
+
+通常是因为你没走上传链。
+
+例如你需要：
 
 ```bash
-# 必须使用 --upload 参数
 md2wechat convert article.md --upload -o output.html
 ```
 
+如果你只是：
+
+```bash
+md2wechat convert article.md -o output.html
+```
+
+那它不会帮你上传图片，也不会把文内图片替换成微信素材地址。
+
 ---
 
-## 微信 API 问题
+### Q14：AI 生成图片失败
 
-### Q13: 第一次调用 API 提示 "IP 不在白名单中"
+最常见原因：
 
-**现象**：第一次调用微信 API 时，返回错误：
+1. `IMAGE_API_KEY` 没配
+2. 当前 provider 配置不完整
+3. 你选的 provider 模型或 base URL 不对
+
+先执行：
+
+```bash
+md2wechat providers list --json
+md2wechat config show --format json
 ```
+
+然后再试最小命令：
+
+```bash
+md2wechat generate_image "test prompt"
+```
+
+---
+
+## 微信与草稿
+
+### Q15：第一次调用微信接口就报 `ip not in whitelist`
+
+这是微信接口的前置限制，不是代码 bug。
+
+最常见报错类似：
+
+```text
 ip xxx.xxx.xxx.xxx not in whitelist
 ```
 
-**原因**：微信为了安全，要求服务器 IP 必须在白名单中才能调用 API。
+解决步骤：
 
-**解决方案**：
+1. 在实际执行 `md2wechat` 的机器上查公网 IP
+2. 去微信开发者平台的 `开发接口管理`
+3. 把这个公网 IP 加到 `IP 白名单`
+4. 等几分钟后再重试
 
-1. **获取你的服务器 IP 地址**
+完整新手说明见：
 
-```bash
-# 查看你的公网 IP
-curl ifconfig.me
-# 或
-curl ip.sb
-# 或
-curl ipinfo.io/ip
-```
-
-2. **添加 IP 到微信白名单**
-
-   - 访问 [微信开发者平台](https://developers.weixin.qq.com/platform)
-   - 选择你的公众号 → 开发接口管理
-   - 找到 **「IP白名单」** 区域
-   - 点击「设置」
-   - 输入你的服务器 IP 地址（多个 IP 用回车分隔）
-   - 点击「确定」保存
-
-3. **等待生效并重试**
-
-```bash
-# 白名单配置通常几分钟内生效
-# 等待 5 分钟后重试
-sleep 300
-md2wechat convert article.md --upload --draft
-```
-
-> **注意**：
-> - 如果你使用本地电脑测试，需要添加你本地网络的公网 IP
-> - 如果使用云服务器，添加云服务器的公网 IP
-> - 如果使用 GitHub Actions 等动态 IP 环境，建议使用固定 IP 的服务器
+- [微信凭证与 IP 白名单指南](WECHAT-CREDENTIALS.md)
 
 ---
 
-### Q14: 提示 "access_token expired"
+### Q16：草稿创建失败 `create draft failed`
 
-**原因**：微信 access_token 过期（通常 2 小时）
+先排这几类：
 
-**解决方案**：程序会自动刷新，如果持续失败：
+1. 公众号权限不足
+2. 白名单没配
+3. 封面图上传失败
+4. 内容包含敏感词
+
+最稳的调试顺序不是直接跑完整链，而是：
 
 ```bash
-# 1. 检查 AppID 和 Secret 是否正确
-md2wechat config show --show-secret
+md2wechat config validate
+md2wechat upload_image cover.png --json
+md2wechat test-draft --json draft.html cover.png
+```
 
-# 2. 重新配置
-md2wechat config init
+前两步都过了，再测：
+
+```bash
+md2wechat convert article.md --upload --draft --cover cover.png --json
 ```
 
 ---
 
-### Q15: 草稿创建失败 "create draft failed"
+### Q17：`access_token expired` 是不是凭证坏了？
 
-**可能原因 1**：公众号权限不足
+不一定。
 
-**解决方案**：
-- 确保公众号已认证
-- 确保有素材管理权限
-- 检查是否超过草稿数量限制
+微信的 `access_token` 本来就会过期。通常程序会自己刷新。
+如果你持续失败，再排：
 
-**可能原因 2**：内容包含敏感词
+1. `AppID` / `AppSecret` 是否真的填对
+2. 你是不是刚重置过 `AppSecret`
+3. 当前生效配置是不是你以为的那份
 
-**解决方案**：
-- 检查文章内容
-- 尝试简化内容后重试
+先看：
 
 ```bash
-# 先保存为 JSON，检查内容
-md2wechat convert article.md --save-draft draft.json
-cat draft.json
+md2wechat config show --format json
 ```
 
 ---
 
-### Q16: API 调用频率限制
+## Agent 与自动化
 
-**现象**：提示 "api freq limit"
+### Q18：Agent 应该先看哪份配置、先跑什么命令？
 
-**解决方案**：
+默认先看：
+
+```text
+~/.config/md2wechat/config.yaml
+```
+
+然后建议按这个顺序：
 
 ```bash
-# 方案 1：等待后重试
-sleep 60
-
-# 方案 2：分批处理
-for file in articles/*.md; do
-  md2wechat convert "$file" --draft
-  sleep 5
-done
+md2wechat config show --format json
+md2wechat capabilities --json
+md2wechat providers list --json
+md2wechat themes list --json
+md2wechat prompts list --json
 ```
+
+这样 Agent 才知道：
+
+- 当前配置用了哪份文件
+- 默认 provider 是什么
+- 当前有哪些 theme / prompt 真正可用
 
 ---
 
-## 高级问题
+### Q19：CI / GitHub Actions 里能直接调微信吗？
 
-### Q17: 如何在 CI/CD 中使用？
+可以，但前提是你解决了**白名单和固定出口 IP**问题。
 
-**解决方案**：使用环境变量或 Secrets
+如果你的运行环境公网 IP 会频繁变化，最容易出问题的不是配置，而是微信白名单。
 
-```yaml
-# .github/workflows/publish.yml
-name: Publish to WeChat
-on: [push]
+所以更推荐：
 
-jobs:
-  publish:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Install md2wechat
-        run: go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@latest
-      - name: Convert and publish
-        env:
-          WECHAT_APPID: ${{ secrets.WECHAT_APPID }}
-          WECHAT_SECRET: ${{ secrets.WECHAT_SECRET }}
-        run: |
-          md2wechat convert article.md --upload --draft
-```
+- 用固定公网 IP 的服务器
+- 或固定出口网关
+
+而不是直接依赖动态 IP 的 CI 环境去调用微信接口。
 
 ---
 
-### Q18: 如何自定义主题？
+## 调试与求助
 
-**解决方案**：使用 custom-prompt
+### Q20：遇到问题时，最推荐的排查顺序是什么？
+
+按这个顺序最稳：
 
 ```bash
-md2wechat convert article.md --mode ai --custom-prompt "
-请使用以下配色：
-- 主色：#e53e3e（红色）
-- 副色：#3182ce（蓝色）
-- 背景：#f7fafc（浅灰）
-- 字体：16px，行高 1.8
-
-请确保：
-1. 所有 CSS 使用内联 style
-2. 图片使用占位符 <!-- IMG:index -->
-3. 不使用外部样式表
-"
+md2wechat config validate --json
+md2wechat config show --format json
+md2wechat upload_image --json cover.png
+md2wechat test-draft --json draft.html cover.png
+md2wechat convert article.md --mode api --upload --draft --cover cover.png --json
 ```
 
----
-
-### Q19: 如何批量转换多个文件？
-
-**解决方案**：使用 Shell 脚本
+如果你还要测 AI：
 
 ```bash
-#!/bin/bash
-# batch-convert.sh
-
-for file in articles/*.md; do
-  echo "Converting $file..."
-
-  md2wechat convert "$file" \
-    --mode ai \
-    --theme autumn-warm \
-    --upload \
-    --draft
-
-  echo "Waiting 5 seconds..."
-  sleep 5
-done
+md2wechat convert article.md --mode ai --json
 ```
+
+这个顺序的好处是：
+
+- 先把配置问题排掉
+- 再把图片上传问题排掉
+- 再把草稿问题排掉
+- 最后才测完整转换链
 
 ---
 
-### Q19: 如何调试问题？
+### Q21：如何获取帮助？
 
-**解决方案**：启用详细日志
+先看文档：
 
-```bash
-# 方案 1：查看命令输出
-md2wechat convert article.md --preview 2>&1 | tee debug.log
+- [INSTALL.md](INSTALL.md)
+- [CONFIG.md](CONFIG.md)
+- [WECHAT-CREDENTIALS.md](WECHAT-CREDENTIALS.md)
+- [DISCOVERY.md](DISCOVERY.md)
+- [SMOKE.md](SMOKE.md)
 
-# 方案 2：逐步测试
-md2wechat config validate       # 1. 验证配置
-md2wechat upload_image test.jpg  # 2. 测试图片上传
-md2wechat convert test.md --preview  # 3. 测试转换
-```
-
----
-
-### Q20: 如何获取帮助？
-
-**解决方案**：
-
-1. **查看命令帮助**
+再看命令帮助：
 
 ```bash
 md2wechat --help
 md2wechat convert --help
+md2wechat create_image_post --help
 ```
 
-2. **查看文档**
-
-- [安装指南](INSTALL.md)
-- [配置指南](CONFIG.md)
-- [使用教程](USAGE.md)
-
-3. **提交 Issue**
-
-访问 [GitHub Issues](https://github.com/geekjourneyx/md2wechat-skill/issues)
+如果还解决不了，再提 Issue。
 
 ---
 
 ## 仍然无法解决？
 
-请提供以下信息：
+提 Issue 时，建议一并提供：
 
-1. **版本信息**
-   ```bash
-   md2wechat --version
-   go version
-   ```
+### 1. 版本信息
 
-2. **配置信息**
-   ```bash
-   md2wechat config show
-   ```
+```bash
+md2wechat --version
+go version
+```
 
-3. **错误信息**
-   ```bash
-   md2wechat convert article.md 2>&1
-   ```
+### 2. 当前配置摘要
 
-4. **系统信息**
-   ```bash
-   uname -a  # Linux/macOS
-   # 或
-   systeminfo  # Windows
-   ```
+```bash
+md2wechat config show --format json
+```
 
-将以上信息提交到 [GitHub Issues](https://github.com/geekjourneyx/md2wechat-skill/issues)，我们会尽快回复。
+### 3. 失败命令和完整错误输出
+
+```bash
+md2wechat convert article.md 2>&1
+```
+
+### 4. 系统信息
+
+```bash
+uname -a
+```
+
+或 Windows：
+
+```powershell
+systeminfo
+```
+
+提交到：
+
+- [GitHub Issues](https://github.com/geekjourneyx/md2wechat-skill/issues)

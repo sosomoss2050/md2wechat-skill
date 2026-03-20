@@ -14,11 +14,11 @@ import (
 
 // TuZiProvider TuZi 图片生成服务提供者
 type TuZiProvider struct {
-	apiKey    string
-	baseURL   string
-	model     string
-	size      string
-	client    *http.Client
+	apiKey  string
+	baseURL string
+	model   string
+	size    string
+	client  *http.Client
 }
 
 // NewTuZiProvider 创建 TuZi Provider
@@ -99,7 +99,9 @@ func (p *TuZiProvider) Generate(ctx context.Context, prompt string) (*GenerateRe
 			Original: err,
 		}
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	// 处理错误响应
 	if resp.StatusCode != http.StatusOK {

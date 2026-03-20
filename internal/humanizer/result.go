@@ -1,6 +1,8 @@
 // Package humanizer provides AI writing trace removal functionality
 package humanizer
 
+import "github.com/geekjourneyx/md2wechat-skill/internal/action"
+
 // HumanizeIntensity 去痕强度
 type HumanizeIntensity string
 
@@ -33,11 +35,11 @@ func (h HumanizeIntensity) Description() string {
 type FocusPattern string
 
 const (
-	PatternContent           FocusPattern = "content"            // 内容模式
-	PatternLanguage          FocusPattern = "language"           // 语言语法
-	PatternStyle             FocusPattern = "style"              // 风格模式
-	PatternFiller            FocusPattern = "filler"             // 填充词回避
-	PatternCollaboration     FocusPattern = "collaboration"      // 协作交流痕迹
+	PatternContent       FocusPattern = "content"       // 内容模式
+	PatternLanguage      FocusPattern = "language"      // 语言语法
+	PatternStyle         FocusPattern = "style"         // 风格模式
+	PatternFiller        FocusPattern = "filler"        // 填充词回避
+	PatternCollaboration FocusPattern = "collaboration" // 协作交流痕迹
 )
 
 // AllFocusPatterns 返回所有可用的聚焦模式
@@ -58,7 +60,7 @@ type HumanizeRequest struct {
 
 	// 处理控制
 	Intensity HumanizeIntensity `json:"intensity,omitempty"` // 处理强度
-	FocusOn  []FocusPattern     `json:"focus_on,omitempty"`  // 重点处理的模式分类（为空则全部）
+	FocusOn   []FocusPattern    `json:"focus_on,omitempty"`  // 重点处理的模式分类（为空则全部）
 
 	// 行为控制
 	PreserveStyle bool `json:"preserve_style,omitempty"` // 保持原有风格特征（风格优先）
@@ -72,10 +74,14 @@ type HumanizeRequest struct {
 
 // HumanizeResult 去痕结果
 type HumanizeResult struct {
-	Success bool `json:"success"`
+	Success   bool          `json:"success"`
+	Status    action.Status `json:"status,omitempty"`
+	Action    string        `json:"action,omitempty"`
+	Retryable bool          `json:"retryable,omitempty"`
 
 	// 输出
 	Content string `json:"content"` // 处理后的文本
+	Prompt  string `json:"prompt,omitempty"`
 
 	// 变更信息（可选）
 	Changes []Change `json:"changes,omitempty"` // 修改详情
@@ -84,6 +90,25 @@ type HumanizeResult struct {
 
 	// 错误信息
 	Error string `json:"error,omitempty"`
+}
+
+const (
+	HumanizeActionCompleted = action.ActionHumanize
+	HumanizeActionAIRequest = action.ActionHumanize
+)
+
+// RequiresAI 是否需要外部 AI 执行
+func (r *HumanizeResult) RequiresAI() bool {
+	if r == nil {
+		return false
+	}
+	if r.Status != "" {
+		return r.Status == action.StatusActionRequired
+	}
+	if r.Prompt != "" {
+		return true
+	}
+	return false
 }
 
 // HasChanges 是否有修改记录
@@ -107,26 +132,26 @@ type Change struct {
 
 // ChangeType 修改类型常量
 const (
-	ChangeTypeFillerPhrase     = "filler_phrase"      // 填充短语
-	ChangeTypeAIVocabulary     = "ai_vocabulary"      // AI 词汇
-	ChangeTypeFormulaic        = "formulaic_structure" // 公式化结构
-	ChangeTypeOveremphasis     = "overemphasis"       // 过度强调
-	ChangeTypeIngiAnalysis     = "ing_analysis"       // -ing 肤浅分析
-	ChangeTypeVagueAttribution = "vague_attribution"  // 模糊归因
-	ChangeTypePromotional      = "promotional"        // 宣传性语言
-	ChangeTypeDashOveruse      = "dash_overuse"       // 破折号过度
-	ChangeTypeGenericConclusion = "generic_conclusion" // 通用积极结论
-	ChangeTypeOther            = "other"              // 其他
+	ChangeTypeFillerPhrase      = "filler_phrase"       // 填充短语
+	ChangeTypeAIVocabulary      = "ai_vocabulary"       // AI 词汇
+	ChangeTypeFormulaic         = "formulaic_structure" // 公式化结构
+	ChangeTypeOveremphasis      = "overemphasis"        // 过度强调
+	ChangeTypeIngiAnalysis      = "ing_analysis"        // -ing 肤浅分析
+	ChangeTypeVagueAttribution  = "vague_attribution"   // 模糊归因
+	ChangeTypePromotional       = "promotional"         // 宣传性语言
+	ChangeTypeDashOveruse       = "dash_overuse"        // 破折号过度
+	ChangeTypeGenericConclusion = "generic_conclusion"  // 通用积极结论
+	ChangeTypeOther             = "other"               // 其他
 )
 
 // Score 质量评分（基于 humanizer-zh 的 5 维度评估）
 type Score struct {
-	Total        int `json:"total"`         // 总分 /50
-	Directness   int `json:"directness"`    // 直接性 /10
-	Rhythm       int `json:"rhythm"`        // 节奏 /10
-	Trust        int `json:"trust"`         // 信任度 /10
-	Authenticity int `json:"authenticity"`  // 真实性 /10
-	Conciseness  int `json:"conciseness"`   // 精炼度 /10
+	Total        int `json:"total"`        // 总分 /50
+	Directness   int `json:"directness"`   // 直接性 /10
+	Rhythm       int `json:"rhythm"`       // 节奏 /10
+	Trust        int `json:"trust"`        // 信任度 /10
+	Authenticity int `json:"authenticity"` // 真实性 /10
+	Conciseness  int `json:"conciseness"`  // 精炼度 /10
 }
 
 // Rating 返回评分等级
@@ -148,19 +173,19 @@ func (s *Score) Rating() string {
 
 // AIConvertRequest AI 转换请求（用于传递给 Claude）
 type AIConvertRequest struct {
-	Content  string            // 原始内容
-	Prompt   string            // 完整的提示词
-	Settings HumanizeSettings  // 处理设置
+	Content  string           // 原始内容
+	Prompt   string           // 完整的提示词
+	Settings HumanizeSettings // 处理设置
 }
 
 // HumanizeSettings 去痕设置
 type HumanizeSettings struct {
 	Intensity     HumanizeIntensity // 处理强度
-	FocusOn       []FocusPattern     // 聚焦模式
-	PreserveStyle bool               // 保持风格
-	OriginalStyle string             // 原始风格名
-	ShowChanges   bool               // 显示变更
-	IncludeScore  bool               // 包含评分
+	FocusOn       []FocusPattern    // 聚焦模式
+	PreserveStyle bool              // 保持风格
+	OriginalStyle string            // 原始风格名
+	ShowChanges   bool              // 显示变更
+	IncludeScore  bool              // 包含评分
 }
 
 // AIConvertResult AI 转换结果

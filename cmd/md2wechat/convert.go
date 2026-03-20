@@ -1,16 +1,45 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
+	"github.com/geekjourneyx/md2wechat-skill/internal/config"
 	"github.com/geekjourneyx/md2wechat-skill/internal/converter"
 	"github.com/geekjourneyx/md2wechat-skill/internal/draft"
 	"github.com/geekjourneyx/md2wechat-skill/internal/image"
+	"github.com/geekjourneyx/md2wechat-skill/internal/publish"
 	"github.com/geekjourneyx/md2wechat-skill/internal/wechat"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
+)
+
+type imageProcessor interface {
+	UploadLocalImage(filePath string) (*image.UploadResult, error)
+	DownloadAndUpload(url string) (*image.UploadResult, error)
+	GenerateAndUpload(prompt string) (*image.GenerateAndUploadResult, error)
+	GenerateAndUploadWithSize(prompt string, size string) (*image.GenerateAndUploadResult, error)
+}
+
+var (
+	newMarkdownConverter = func() converter.Converter {
+		return converter.NewConverter(cfg, log)
+	}
+	newImageProcessor = func() imageProcessor {
+		return newRuntimeImageProcessor()
+	}
+	newImageProcessorWithConfig = func(runtimeCfg *config.Config) imageProcessor {
+		return newRuntimeImageProcessorWithConfig(runtimeCfg)
+	}
+	newDraftCreator = func() publish.DraftCreator {
+		return draft.NewArtifactDraftCreator(cfg, log)
+	}
+	uploadCoverImageFn = uploadCoverImage
+	newPublishService  = func() *publish.Service {
+		return publish.NewService(log, newMarkdownConverter(), newImageProcessor(), newDraftCreator(), uploadCoverImageFn)
+	}
 )
 
 // convertCmd convert 命令
@@ -35,27 +64,25 @@ Supported themes (38 total):
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		return initConfig()
 	},
-	Run: func(cmd *cobra.Command, args []string) {
-		if err := runConvert(cmd, args); err != nil {
-			responseError(err)
-		}
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return runConvert(cmd, args)
 	},
 }
 
 // convert 命令参数
 var (
-	convertMode         string
-	convertTheme        string
-	convertAPIKey       string
-	convertFontSize     string
+	convertMode           string
+	convertTheme          string
+	convertAPIKey         string
+	convertFontSize       string
 	convertBackgroundType string
-	convertCustomPrompt string
-	convertOutput       string
-	convertPreview      bool
-	convertUpload       bool
-	convertDraft        bool
-	convertSaveDraft    string
-	convertCoverImage   string // 封面图片路径
+	convertCustomPrompt   string
+	convertOutput         string
+	convertPreview        bool
+	convertUpload         bool
+	convertDraft          bool
+	convertSaveDraft      string
+	convertCoverImage     string // 封面图片路径
 )
 
 func init() {
@@ -78,6 +105,10 @@ func init() {
 func runConvert(cmd *cobra.Command, args []string) error {
 	markdownFile := args[0]
 
+	if err := validateConvertConfig(); err != nil {
+		return err
+	}
+
 	log.Info("starting conversion",
 		zap.String("file", markdownFile),
 		zap.String("mode", convertMode),
@@ -86,63 +117,102 @@ func runConvert(cmd *cobra.Command, args []string) error {
 	// 读取 Markdown 文件
 	markdown, err := os.ReadFile(markdownFile)
 	if err != nil {
-		return fmt.Errorf("read markdown file: %w", err)
+		return wrapCLIError(codeConvertReadFailed, err, fmt.Sprintf("read markdown file: %v", err))
 	}
 
-	// 创建转换器
-	conv := converter.NewConverter(cfg, log)
-
-	// 构建转换请求
-	req := &converter.ConvertRequest{
-		Markdown:       string(markdown),
-		Mode:           converter.ConvertMode(convertMode),
-		Theme:          convertTheme,
-		APIKey:         convertAPIKey,
-		FontSize:       convertFontSize,
-		BackgroundType: convertBackgroundType,
-		CustomPrompt:   convertCustomPrompt,
+	metadata := converter.ParseArticleMetadata(string(markdown))
+	service := newPublishService()
+	input := &publish.ConvertInput{
+		Source: publish.ArticleSource{
+			Path:     markdownFile,
+			Markdown: string(markdown),
+			Metadata: publish.Metadata{
+				Title:  metadata.Title,
+				Author: metadata.Author,
+				Digest: metadata.Digest,
+			},
+		},
+		Intent: publish.PublishIntent{
+			Mode:        convertMode,
+			Preview:     convertPreview,
+			Upload:      convertUpload,
+			CreateDraft: convertDraft,
+			SaveDraft:   convertSaveDraft != "",
+		},
+		ConvertRequest: &converter.ConvertRequest{
+			Markdown:       string(markdown),
+			Mode:           converter.ConvertMode(convertMode),
+			Theme:          convertTheme,
+			APIKey:         convertAPIKey,
+			FontSize:       convertFontSize,
+			BackgroundType: convertBackgroundType,
+			CustomPrompt:   convertCustomPrompt,
+		},
+		MarkdownDir:    filepath.Dir(markdownFile),
+		OutputFile:     convertOutput,
+		SaveDraftPath:  convertSaveDraft,
+		CoverImagePath: convertCoverImage,
 	}
 
-	// 执行转换
-	result := conv.Convert(req)
+	output, err := service.Convert(input)
+	if err != nil {
+		switch e := err.(type) {
+		case *publish.DraftError:
+			return wrapCLIError(codeConvertDraftFailed, e, e.Error())
+		default:
+			switch {
+			case publish.IsAssetError(err):
+				return wrapCLIError(codeConvertImageFailed, err, err.Error())
+			case publish.IsDraftSaveError(err), publish.IsDraftCreateError(err):
+				return wrapCLIError(codeConvertDraftFailed, err, err.Error())
+			default:
+				return wrapCLIError(codeConvertFailed, err, err.Error())
+			}
+		}
+	}
+	result := output.Conversion
+	if result == nil {
+		return newCLIError(codeConvertFailed, "conversion returned no result")
+	}
 
-	if !result.Success {
-		return fmt.Errorf("conversion failed: %s", result.Error)
+	// AI 模式返回的是待外部执行的请求，不应被当作失败路径拦截
+	if convertMode == "ai" && converter.IsAIRequest(result) {
+		return handleAIResult(result, markdownFile)
 	}
 
 	log.Info("conversion completed",
 		zap.String("mode", string(result.Mode)),
 		zap.String("theme", result.Theme),
-		zap.Int("image_count", len(result.Images)))
+		zap.Int("image_count", len(output.Artifact.Assets)))
 
-	// 根据模式处理结果
-	if convertMode == "ai" && converter.IsAIRequest(result) {
-		// AI 模式需要外部处理
-		return handleAIResult(result, markdownFile)
+	if convertOutput != "" {
+		outputHTML(output.Artifact.HTML, convertOutput, false)
 	}
 
-	// 处理图片
-	if convertUpload || convertDraft {
-		if err := processImages(result); err != nil {
-			log.Warn("image processing failed", zap.Error(err))
-		}
-	}
-
-	// 输出结果
-	if convertSaveDraft != "" {
-		if err := saveDraft(result); err != nil {
-			return fmt.Errorf("save draft: %w", err)
-		}
-	}
-
-	if convertDraft {
-		if err := createWeChatDraft(result, convertCoverImage); err != nil {
-			return fmt.Errorf("create draft: %w", err)
-		}
+	if jsonOutput {
+		responseSuccessWith(codeConvertCompleted, "Conversion completed", map[string]any{
+			"mode":        string(result.Mode),
+			"theme":       result.Theme,
+			"html":        output.Artifact.HTML,
+			"image_count": len(output.Artifact.Assets),
+			"assets":      output.Artifact.Assets,
+			"output_file": output.Artifact.OutputFile,
+			"preview":     convertPreview,
+			"upload":      convertUpload,
+			"draft":       convertDraft,
+			"save_draft":  output.DraftSaved,
+			"title":       output.Artifact.Metadata.Title,
+			"author":      output.Artifact.Metadata.Author,
+			"digest":      output.Artifact.Metadata.Digest,
+			"draft_id":    output.Artifact.DraftMediaID,
+			"draft_url":   output.Artifact.DraftURL,
+			"cover_id":    output.Artifact.CoverMediaID,
+		})
+		return nil
 	}
 
 	// 输出 HTML
-	outputHTML(result.HTML, convertOutput, convertPreview)
+	outputHTML(output.Artifact.HTML, "", convertPreview)
 
 	return nil
 }
@@ -151,160 +221,73 @@ func runConvert(cmd *cobra.Command, args []string) error {
 func handleAIResult(result *converter.ConvertResult, markdownFile string) error {
 	prompt, images, ok := converter.GetAIRequestInfo(result)
 	if !ok {
-		return fmt.Errorf("invalid AI request result")
+		return newCLIError(codeConvertFailed, "invalid AI request result")
 	}
 
 	log.Info("AI mode request prepared",
 		zap.Int("image_count", len(images)),
 		zap.Int("prompt_length", len(prompt)))
 
+	promptOutputPath := resolveAIPromptOutputPath(convertOutput)
+
 	// 输出 AI 请求信息
 	response := map[string]any{
-		"success":       true,
+		"markdown_file": markdownFile,
 		"mode":          "ai",
 		"action":        "ai_request",
-		"markdown_file": markdownFile,
 		"prompt":        prompt,
 		"images":        images,
+		"prompt_file":   promptOutputPath,
 	}
-
-	printJSON(response)
-
 	if convertOutput != "" {
-		// 同时保存原始 markdown 到输出文件，方便用户使用
-		if err := os.WriteFile(convertOutput, []byte(prompt), 0644); err != nil {
+		response["requested_output_file"] = convertOutput
+	}
+
+	responseActionRequiredWith(codeConvertAIRequestReady, "Convert AI request prepared", response)
+
+	if promptOutputPath != "" {
+		if err := os.WriteFile(promptOutputPath, []byte(prompt), 0644); err != nil {
 			log.Warn("failed to save prompt", zap.Error(err))
+		} else {
+			log.Info("ai prompt saved", zap.String("file", promptOutputPath))
 		}
 	}
 
 	return nil
 }
 
-// processImages 处理图片上传
-func processImages(result *converter.ConvertResult) error {
-	if len(result.Images) == 0 {
-		log.Info("no images to process")
-		return nil
+func resolveAIPromptOutputPath(outputPath string) string {
+	if outputPath == "" {
+		return ""
 	}
 
-	processor := image.NewProcessor(cfg, log)
-
-	for i, imgRef := range result.Images {
-		log.Info("processing image",
-			zap.Int("index", i),
-			zap.String("type", string(imgRef.Type)),
-			zap.String("original", imgRef.Original))
-
-		var uploadResult *image.UploadResult
-		var err error
-
-		switch imgRef.Type {
-		case converter.ImageTypeLocal:
-			uploadResult, err = processor.UploadLocalImage(imgRef.Original)
-		case converter.ImageTypeOnline:
-			uploadResult, err = processor.DownloadAndUpload(imgRef.Original)
-		case converter.ImageTypeAI:
-			// AI 生成的图片需要先调用生成 API
-			genResult, genErr := processor.GenerateAndUpload(imgRef.AIPrompt)
-			if genErr != nil {
-				err = genErr
-			} else {
-				uploadResult = &image.UploadResult{
-					MediaID:   genResult.MediaID,
-					WechatURL: genResult.WechatURL,
-				}
-			}
-		}
-
-		if err != nil {
-			log.Warn("image upload failed",
-				zap.Int("index", i),
-				zap.Error(err))
-			continue
-		}
-
-		// 更新图片 URL
-		result.Images[i].WechatURL = uploadResult.WechatURL
-
-		log.Info("image uploaded",
-			zap.Int("index", i),
-			zap.String("media_id", maskMediaID(uploadResult.MediaID)),
-			zap.String("wechat_url", uploadResult.WechatURL))
+	ext := strings.ToLower(filepath.Ext(outputPath))
+	switch ext {
+	case ".html", ".htm":
+		return strings.TrimSuffix(outputPath, ext) + ".prompt.txt"
+	default:
+		return outputPath
 	}
-
-	// 替换 HTML 中的图片占位符
-	result.HTML = converter.ReplaceImagePlaceholders(result.HTML, result.Images)
-
-	return nil
 }
 
-// saveDraft 保存草稿 JSON 到文件
-func saveDraft(result *converter.ConvertResult) error {
-	articles := []draft.Article{
-		{
-			Title:   "Draft Article", // TODO: 从 markdown 提取标题
-			Content: result.HTML,
-		},
+func validateConvertConfig() error {
+	switch convertMode {
+	case "", "api", "ai":
+	default:
+		return newCLIError(codeConvertInvalid, fmt.Sprintf("invalid convert mode: %s", convertMode))
 	}
 
-	draftData := map[string]any{
-		"articles": articles,
-	}
-
-	jsonData, err := json.MarshalIndent(draftData, "", "  ")
-	if err != nil {
-		return fmt.Errorf("marshal draft: %w", err)
-	}
-
-	if err := os.WriteFile(convertSaveDraft, jsonData, 0644); err != nil {
-		return fmt.Errorf("write draft file: %w", err)
-	}
-
-	log.Info("draft saved", zap.String("file", convertSaveDraft))
-	return nil
-}
-
-// createWeChatDraft 创建微信草稿
-func createWeChatDraft(result *converter.ConvertResult, coverImagePath string) error {
-	svc := draft.NewService(cfg, log)
-
-	// 检查封面图片（微信要求必须有封面图）
-	if coverImagePath == "" {
-		return &DraftError{
-			Message: "创建草稿需要封面图片",
-			Hint:    "请使用 --cover 参数指定封面图片路径，例如: --cover /path/to/cover.jpg\n" +
-				"或者先上传封面图片到微信素材库: md2wechat upload_image /path/to/cover.jpg",
+	if convertMode == "api" {
+		if convertAPIKey == "" && cfg.MD2WechatAPIKey == "" {
+			return newCLIError(codeConvertInvalid, "MD2WECHAT_API_KEY is required for API mode")
 		}
 	}
 
-	// 上传封面图片到微信素材库
-	log.Info("uploading cover image", zap.String("path", coverImagePath))
-	coverMediaID, err := uploadCoverImage(coverImagePath)
-	if err != nil {
-		return fmt.Errorf("上传封面图片失败: %w", err)
+	if convertUpload || convertDraft {
+		if err := cfg.ValidateForWeChat(); err != nil {
+			return wrapCLIError(codeConfigInvalid, err, err.Error())
+		}
 	}
-	log.Info("cover image uploaded", zap.String("media_id", maskMediaID(coverMediaID)))
-
-	// 提取标题（TODO: 从 markdown frontmatter 或第一个标题获取）
-	title := "Article Title"
-
-	draftResult, err := svc.CreateDraft([]draft.Article{
-		{
-			Title:          title,
-			Content:        result.HTML,
-			Digest:         draft.GenerateDigestFromContent(result.HTML, 120),
-			ThumbMediaID:   coverMediaID,
-			ShowCoverPic:   1, // 显示封面
-		},
-	})
-
-	if err != nil {
-		return fmt.Errorf("create draft: %w", err)
-	}
-
-	log.Info("draft created",
-		zap.String("media_id", maskMediaID(draftResult.MediaID)),
-		zap.String("draft_url", draftResult.DraftURL))
 
 	return nil
 }
@@ -317,20 +300,6 @@ func uploadCoverImage(imagePath string) (string, error) {
 		return "", err
 	}
 	return result.MediaID, nil
-}
-
-// DraftError 草稿错误
-type DraftError struct {
-	Message string
-	Hint    string
-}
-
-func (e *DraftError) Error() string {
-	msg := fmt.Sprintf("草稿错误: %s", e.Message)
-	if e.Hint != "" {
-		msg += fmt.Sprintf("\n💡 提示:\n   %s", e.Hint)
-	}
-	return msg
 }
 
 // outputHTML 输出 HTML

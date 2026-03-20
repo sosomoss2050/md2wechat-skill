@@ -9,7 +9,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -22,8 +21,8 @@ type OpenRouterProvider struct {
 	apiKey      string
 	baseURL     string
 	model       string
-	aspectRatio string       // OpenRouter 使用 aspect_ratio 而非 WIDTHxHEIGHT
-	imageSize   string       // 1K/2K/4K
+	aspectRatio string // OpenRouter 使用 aspect_ratio 而非 WIDTHxHEIGHT
+	imageSize   string // 1K/2K/4K
 	client      *http.Client
 }
 
@@ -104,7 +103,9 @@ func (p *OpenRouterProvider) Generate(ctx context.Context, prompt string) (*Gene
 			Original: err,
 		}
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	// 处理错误响应
 	if resp.StatusCode != http.StatusOK {
@@ -205,8 +206,28 @@ func (p *OpenRouterProvider) parseResponseAndSave(body io.Reader) (string, error
 	}
 
 	// 保存到临时文件
-	tmpPath := filepath.Join(os.TempDir(), fmt.Sprintf("md2wechat_openrouter_%d%s", time.Now().UnixNano(), ext))
-	if err := os.WriteFile(tmpPath, imageData, 0644); err != nil {
+	tmpFile, err := os.CreateTemp("", "md2wechat-openrouter-*"+ext)
+	if err != nil {
+		return "", &GenerateError{
+			Provider: p.Name(),
+			Code:     "write_error",
+			Message:  "图片保存失败",
+			Original: err,
+		}
+	}
+	tmpPath := tmpFile.Name()
+	if _, err := tmpFile.Write(imageData); err != nil {
+		_ = tmpFile.Close()
+		_ = os.Remove(tmpPath)
+		return "", &GenerateError{
+			Provider: p.Name(),
+			Code:     "write_error",
+			Message:  "图片保存失败",
+			Original: err,
+		}
+	}
+	if err := tmpFile.Close(); err != nil {
+		_ = os.Remove(tmpPath)
 		return "", &GenerateError{
 			Provider: p.Name(),
 			Code:     "write_error",

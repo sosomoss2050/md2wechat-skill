@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/geekjourneyx/md2wechat-skill/internal/action"
 	"go.uber.org/zap"
 )
 
@@ -23,9 +24,9 @@ type APIResponse struct {
 
 // APIRequest md2wechat.cn API 请求
 type APIRequest struct {
-	Markdown      string `json:"markdown"`
-	Theme         string `json:"theme"`
-	FontSize      string `json:"fontSize,omitempty"`
+	Markdown       string `json:"markdown"`
+	Theme          string `json:"theme"`
+	FontSize       string `json:"fontSize,omitempty"`
 	BackgroundType string `json:"backgroundType,omitempty"` // default/grid/none
 }
 
@@ -57,9 +58,12 @@ func NewAPIConverterWithURL(log *zap.Logger, baseURL string) *apiConverter {
 // convertViaAPI 通过 API 执行转换
 func (c *converter) convertViaAPI(req *ConvertRequest) *ConvertResult {
 	result := &ConvertResult{
-		Mode:    ModeAPI,
-		Theme:   req.Theme,
-		Success: false,
+		Mode:      ModeAPI,
+		Theme:     req.Theme,
+		Status:    action.StatusFailed,
+		Action:    action.ActionConvert,
+		Retryable: true,
+		Success:   false,
 	}
 
 	// 获取 API 主题名
@@ -87,9 +91,9 @@ func (c *converter) convertViaAPI(req *ConvertRequest) *ConvertResult {
 
 	// 调用 API
 	html, err := apiConv.Convert(&APIRequest{
-		Markdown:      req.Markdown,
-		Theme:         apiTheme,
-		FontSize:      req.FontSize,
+		Markdown:       req.Markdown,
+		Theme:          apiTheme,
+		FontSize:       req.FontSize,
 		BackgroundType: req.BackgroundType,
 	}, req.APIKey)
 
@@ -106,6 +110,8 @@ func (c *converter) convertViaAPI(req *ConvertRequest) *ConvertResult {
 
 	result.HTML = html
 	result.Images = images
+	result.Status = action.StatusCompleted
+	result.Retryable = false
 	result.Success = true
 
 	c.log.Info("API conversion succeeded",
@@ -143,7 +149,9 @@ func (a *apiConverter) Convert(req *APIRequest, apiKey string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("send request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	// 读取响应
 	body, err := io.ReadAll(resp.Body)

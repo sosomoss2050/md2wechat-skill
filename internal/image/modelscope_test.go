@@ -2,9 +2,8 @@ package image
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
-	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -64,9 +63,113 @@ func TestNewModelScopeProviderDefaults(t *testing.T) {
 	}
 }
 
+func TestParseModelScopeSize(t *testing.T) {
+	tests := []struct {
+		name       string
+		size       string
+		wantWidth  int
+		wantHeight int
+		wantErr    string
+	}{
+		{
+			name:       "square",
+			size:       "1024x1024",
+			wantWidth:  1024,
+			wantHeight: 1024,
+		},
+		{
+			name:       "portrait",
+			size:       "1536x2048",
+			wantWidth:  1536,
+			wantHeight: 2048,
+		},
+		{
+			name:       "landscape",
+			size:       "1920x1080",
+			wantWidth:  1920,
+			wantHeight: 1080,
+		},
+		{
+			name:    "aspect ratio not supported",
+			size:    "16:9",
+			wantErr: "expected WIDTHxHEIGHT",
+		},
+		{
+			name:    "ultrawide aspect ratio not supported",
+			size:    "21:9",
+			wantErr: "expected WIDTHxHEIGHT",
+		},
+		{
+			name:    "invalid text",
+			size:    "foo",
+			wantErr: "expected WIDTHxHEIGHT",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotWidth, gotHeight, err := parseSize(tt.size)
+			if tt.wantErr != "" {
+				if err == nil {
+					t.Fatalf("parseSize(%q) should return error", tt.size)
+				}
+				if !strings.Contains(err.Error(), tt.wantErr) {
+					t.Fatalf("parseSize(%q) error = %v, want substring %q", tt.size, err, tt.wantErr)
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("parseSize(%q) error = %v", tt.size, err)
+			}
+			if gotWidth != tt.wantWidth || gotHeight != tt.wantHeight {
+				t.Fatalf("parseSize(%q) = %dx%d, want %dx%d", tt.size, gotWidth, gotHeight, tt.wantWidth, tt.wantHeight)
+			}
+		})
+	}
+}
+
+func TestModelScopeProvider_CreateTask_InvalidSize(t *testing.T) {
+	cfg := &config.Config{
+		ImageAPIKey:  "test-key",
+		ImageAPIBase: "https://mock.local",
+		ImageSize:    "16:9",
+	}
+
+	p, err := NewModelScopeProvider(cfg)
+	if err != nil {
+		t.Fatalf("NewModelScopeProvider() error = %v", err)
+	}
+
+	_, err = p.createTask(context.Background(), "test prompt")
+	if err == nil {
+		t.Fatal("createTask() should return error for aspect ratio size")
+	}
+
+	genErr, ok := err.(*GenerateError)
+	if !ok {
+		t.Fatalf("Error type = %T, want *GenerateError", err)
+	}
+
+	if genErr.Code != "invalid_size" {
+		t.Fatalf("Error code = %v, want invalid_size", genErr.Code)
+	}
+
+	if !strings.Contains(genErr.Message, "WIDTHxHEIGHT") {
+		t.Fatalf("Error message = %q, want WIDTHxHEIGHT hint", genErr.Message)
+	}
+}
+
 func TestModelScopeProvider_CreateTask(t *testing.T) {
 	taskID := "test-task-123"
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	cfg := &config.Config{
+		ImageAPIKey:  "test-key",
+		ImageAPIBase: "https://mock.local",
+		ImageModel:   "Tongyi-MAI/Z-Image-Turbo",
+	}
+
+	p, _ := NewModelScopeProvider(cfg)
+	p.client = newMockHTTPClient(func(r *http.Request) (*http.Response, error) {
 		// 验证请求
 		if r.Method != "POST" {
 			t.Errorf("Method = %v, want POST", r.Method)
@@ -81,21 +184,10 @@ func TestModelScopeProvider_CreateTask(t *testing.T) {
 			t.Errorf("Authorization header incorrect")
 		}
 
-		// 返回 task_id
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{
+		return jsonResponse(http.StatusOK, map[string]string{
 			"task_id": taskID,
-		})
-	}))
-	defer server.Close()
-
-	cfg := &config.Config{
-		ImageAPIKey:  "test-key",
-		ImageAPIBase: server.URL,
-		ImageModel:   "Tongyi-MAI/Z-Image-Turbo",
-	}
-
-	p, _ := NewModelScopeProvider(cfg)
+		}), nil
+	})
 	gotTaskID, err := p.createTask(context.Background(), "a golden cat")
 	if err != nil {
 		t.Fatalf("createTask() error = %v", err)
@@ -109,7 +201,13 @@ func TestModelScopeProvider_CreateTask(t *testing.T) {
 func TestModelScopeProvider_PollTaskStatus(t *testing.T) {
 	imageURL := "https://example.com/generated-image.png"
 	pollCount := 0
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	cfg := &config.Config{
+		ImageAPIKey:  "test-key",
+		ImageAPIBase: "https://mock.local",
+	}
+
+	p, _ := NewModelScopeProvider(cfg)
+	p.client = newMockHTTPClient(func(r *http.Request) (*http.Response, error) {
 		if r.Method != "GET" {
 			t.Errorf("Method = %v, want GET", r.Method)
 		}
@@ -136,17 +234,8 @@ func TestModelScopeProvider_PollTaskStatus(t *testing.T) {
 			}
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
-	}))
-	defer server.Close()
-
-	cfg := &config.Config{
-		ImageAPIKey:  "test-key",
-		ImageAPIBase: server.URL,
-	}
-
-	p, _ := NewModelScopeProvider(cfg)
+		return jsonResponse(http.StatusOK, response), nil
+	})
 	p.pollInterval = 10 * time.Millisecond // 加快测试速度
 
 	gotURL, err := p.pollTaskStatus(context.Background(), "test-task-id")
@@ -169,31 +258,28 @@ func TestModelScopeProvider_Generate(t *testing.T) {
 	var createCalled bool
 	var statusCalled int
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == "POST" && r.URL.Path == "/v1/images/generations" {
-			createCalled = true
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(map[string]string{
-				"task_id": taskID,
-			})
-		} else if r.Method == "GET" && r.URL.Path == "/v1/tasks/"+taskID {
-			statusCalled++
-			w.Header().Set("Content-Type", "application/json")
-			// 第一次直接返回成功，简化测试
-			json.NewEncoder(w).Encode(map[string]any{
-				"task_status":   "SUCCEED",
-				"output_images": []string{imageURL},
-			})
-		}
-	}))
-	defer server.Close()
-
 	cfg := &config.Config{
 		ImageAPIKey:  "test-key",
-		ImageAPIBase: server.URL,
+		ImageAPIBase: "https://mock.local",
 	}
 
 	p, _ := NewModelScopeProvider(cfg)
+	p.client = newMockHTTPClient(func(r *http.Request) (*http.Response, error) {
+		if r.Method == "POST" && r.URL.Path == "/v1/images/generations" {
+			createCalled = true
+			return jsonResponse(http.StatusOK, map[string]string{
+				"task_id": taskID,
+			}), nil
+		} else if r.Method == "GET" && r.URL.Path == "/v1/tasks/"+taskID {
+			statusCalled++
+			// 第一次直接返回成功，简化测试
+			return jsonResponse(http.StatusOK, map[string]any{
+				"task_status":   "SUCCEED",
+				"output_images": []string{imageURL},
+			}), nil
+		}
+		return jsonResponse(http.StatusNotFound, map[string]string{"message": "not found"}), nil
+	})
 	p.pollInterval = 10 * time.Millisecond
 
 	result, err := p.Generate(context.Background(), "a golden cat")
@@ -221,27 +307,24 @@ func TestModelScopeProvider_Generate(t *testing.T) {
 func TestModelScopeProvider_Generate_TaskFailed(t *testing.T) {
 	taskID := "test-task-failed"
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == "POST" && r.URL.Path == "/v1/images/generations" {
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(map[string]string{
-				"task_id": taskID,
-			})
-		} else if r.Method == "GET" && r.URL.Path == "/v1/tasks/"+taskID {
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(map[string]any{
-				"task_status": "FAILED",
-			})
-		}
-	}))
-	defer server.Close()
-
 	cfg := &config.Config{
 		ImageAPIKey:  "test-key",
-		ImageAPIBase: server.URL,
+		ImageAPIBase: "https://mock.local",
 	}
 
 	p, _ := NewModelScopeProvider(cfg)
+	p.client = newMockHTTPClient(func(r *http.Request) (*http.Response, error) {
+		if r.Method == "POST" && r.URL.Path == "/v1/images/generations" {
+			return jsonResponse(http.StatusOK, map[string]string{
+				"task_id": taskID,
+			}), nil
+		} else if r.Method == "GET" && r.URL.Path == "/v1/tasks/"+taskID {
+			return jsonResponse(http.StatusOK, map[string]any{
+				"task_status": "FAILED",
+			}), nil
+		}
+		return jsonResponse(http.StatusNotFound, map[string]string{"message": "not found"}), nil
+	})
 	p.pollInterval = 10 * time.Millisecond
 
 	_, err := p.Generate(context.Background(), "test prompt")
@@ -260,18 +343,15 @@ func TestModelScopeProvider_Generate_TaskFailed(t *testing.T) {
 }
 
 func TestModelScopeProvider_HandleErrorResponse_Unauthorized(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte(`{"message": "invalid token"}`))
-	}))
-	defer server.Close()
-
 	cfg := &config.Config{
 		ImageAPIKey:  "invalid-key",
-		ImageAPIBase: server.URL,
+		ImageAPIBase: "https://mock.local",
 	}
 
 	p, _ := NewModelScopeProvider(cfg)
+	p.client = newMockHTTPClient(func(r *http.Request) (*http.Response, error) {
+		return jsonResponse(http.StatusUnauthorized, `{"message": "invalid token"}`), nil
+	})
 	_, err := p.Generate(context.Background(), "test")
 
 	if err == nil {
@@ -293,18 +373,15 @@ func TestModelScopeProvider_HandleErrorResponse_Unauthorized(t *testing.T) {
 }
 
 func TestModelScopeProvider_HandleErrorResponse_RateLimit(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusTooManyRequests)
-		w.Write([]byte(`{"message": "rate limit exceeded"}`))
-	}))
-	defer server.Close()
-
 	cfg := &config.Config{
 		ImageAPIKey:  "test-key",
-		ImageAPIBase: server.URL,
+		ImageAPIBase: "https://mock.local",
 	}
 
 	p, _ := NewModelScopeProvider(cfg)
+	p.client = newMockHTTPClient(func(r *http.Request) (*http.Response, error) {
+		return jsonResponse(http.StatusTooManyRequests, `{"message": "rate limit exceeded"}`), nil
+	})
 	_, err := p.Generate(context.Background(), "test")
 
 	if err == nil {

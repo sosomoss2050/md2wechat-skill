@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/geekjourneyx/md2wechat-skill/internal/action"
 	"go.uber.org/zap"
 )
 
@@ -19,7 +20,7 @@ type AIConvertRequest struct {
 
 // AIConvertResult AI 转换结果
 type AIConvertResult struct {
-	HTML    string // 生成的 HTML
+	HTML    string
 	Success bool
 	Error   string
 }
@@ -42,14 +43,21 @@ func NewAIConverter(log *zap.Logger, theme *ThemeManager) *aiConverter {
 // 注意：实际的 AI 调用由外部（Claude）执行，此方法准备请求结构
 func (c *converter) convertViaAI(req *ConvertRequest) *ConvertResult {
 	result := &ConvertResult{
-		Mode:    ModeAI,
-		Theme:   req.Theme,
-		Success: false,
+		Mode:      ModeAI,
+		Theme:     req.Theme,
+		Status:    action.StatusActionRequired,
+		Action:    action.ActionConvert,
+		Retryable: false,
+		Success:   true,
 	}
 
 	// 获取提示词
 	prompt, err := c.buildAIPrompt(req)
 	if err != nil {
+		result.Status = action.StatusFailed
+		result.Action = action.ActionConvert
+		result.Retryable = false
+		result.Success = false
 		result.Error = fmt.Sprintf("build AI prompt failed: %s", err.Error())
 		return result
 	}
@@ -65,6 +73,7 @@ func (c *converter) convertViaAI(req *ConvertRequest) *ConvertResult {
 	// 4. 调用 CompleteAIConversion 填充结果
 
 	// 为了保持接口一致性，这里返回一个包含提示词的特殊结果
+	result.Prompt = prompt
 	result.Error = aiModePrefix + prompt
 	result.Images = images
 
@@ -79,6 +88,7 @@ func (c *converter) convertViaAI(req *ConvertRequest) *ConvertResult {
 // buildAIPrompt 构建 AI 提示词
 func (c *converter) buildAIPrompt(req *ConvertRequest) (string, error) {
 	var prompt string
+	metadata := ParseArticleMetadata(req.Markdown)
 
 	// 如果有自定义提示词，使用自定义
 	if req.CustomPrompt != "" {
@@ -97,7 +107,10 @@ func (c *converter) buildAIPrompt(req *ConvertRequest) (string, error) {
 			prompt = c.getGenericPrompt()
 		} else {
 			// 使用 PromptBuilder 构建完整 Prompt
-			prompt, err = c.promptBuilder.BuildPromptFromTheme(theme, req.Markdown, nil)
+			vars := map[string]string{
+				"TITLE": metadata.Title,
+			}
+			prompt, err = c.promptBuilder.BuildPromptFromTheme(theme, req.Markdown, vars)
 			if err != nil {
 				c.log.Warn("build prompt from theme failed, using raw prompt", zap.Error(err))
 				prompt = theme.Prompt + "\n\n```\n" + req.Markdown + "\n```"
@@ -162,18 +175,41 @@ func CompleteAIConversion(html string, images []ImageRef, theme string) *Convert
 		Mode:    ModeAI,
 		Theme:   theme,
 		Images:  images,
+		Status:  action.StatusCompleted,
+		Action:  action.ActionConvert,
 		Success: true,
 	}
 }
 
 // IsAIRequest 检查结果是否是 AI 请求
 func IsAIRequest(result *ConvertResult) bool {
+	if result == nil {
+		return false
+	}
+	if result.Status != "" {
+		return result.Status == action.StatusActionRequired
+	}
+	if result.Prompt != "" {
+		return true
+	}
 	return strings.HasPrefix(result.Error, aiModePrefix)
 }
 
 // ExtractAIRequest 从结果中提取 AI 请求
 func ExtractAIRequest(result *ConvertResult) string {
-	if IsAIRequest(result) {
+	if result == nil {
+		return ""
+	}
+	if result.Status != "" {
+		if result.Status == action.StatusActionRequired {
+			return result.Prompt
+		}
+		return ""
+	}
+	if result.Prompt != "" {
+		return result.Prompt
+	}
+	if strings.HasPrefix(result.Error, aiModePrefix) {
 		return strings.TrimPrefix(result.Error, aiModePrefix)
 	}
 	return ""
@@ -185,88 +221,4 @@ func GetAIRequestInfo(result *ConvertResult) (prompt string, images []ImageRef, 
 		return "", nil, false
 	}
 	return ExtractAIRequest(result), result.Images, true
-}
-
-// BuildAIRequestForExternal 为外部调用者构建 AI 请求
-func BuildAIRequestForExternal(markdown, theme, customPrompt string, themeMgr *ThemeManager) (string, []ImageRef, error) {
-	// 提取图片
-	var images []ImageRef
-
-	// 简单的图片提取逻辑
-	lines := markdown
-	imgIndex := 0
-	for _, line := range splitLines(lines) {
-		if containsImageSyntax(line) {
-			images = append(images, ImageRef{
-				Index:    imgIndex,
-				Original: line,
-			})
-			imgIndex++
-		}
-	}
-
-	// 构建提示词
-	var prompt string
-	if customPrompt != "" {
-		prompt = BuildCustomAIPrompt(customPrompt)
-	} else {
-		builtInPrompt, err := themeMgr.GetAIPrompt(theme)
-		if err != nil {
-			prompt = getGenericPromptForExternal()
-		} else {
-			prompt = builtInPrompt
-		}
-	}
-
-	// 添加 Markdown 内容
-	fullPrompt := prompt + "\n\n```\n" + markdown + "\n```"
-
-	return fullPrompt, images, nil
-}
-
-// 辅助函数
-func splitLines(s string) []string {
-	// 简单的按行分割
-	lines := []string{}
-	current := ""
-	for _, ch := range s {
-		if ch == '\n' {
-			lines = append(lines, current)
-			current = ""
-		} else {
-			current += string(ch)
-		}
-	}
-	if current != "" {
-		lines = append(lines, current)
-	}
-	return lines
-}
-
-func containsImageSyntax(line string) bool {
-	return len(line) > 4 && (line[0:2] == "![" || contains(line, "<!-- IMG:"))
-}
-
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && findSubstring(s, substr) >= 0
-}
-
-func findSubstring(s, substr string) int {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return i
-		}
-	}
-	return -1
-}
-
-func getGenericPromptForExternal() string {
-	return `你是一个专业的微信公众号排版助手。请将以下 Markdown 内容转换为微信公众号兼容的 HTML。
-
-## 重要规则
-1. 所有 CSS 必须使用内联 style 属性
-2. 不使用外部样式表或 <style> 标签
-3. 只使用安全的 HTML 标签
-4. 图片使用占位符格式：<!-- IMG:index -->
-5. 返回完整的 HTML，不需要其他说明文字`
 }

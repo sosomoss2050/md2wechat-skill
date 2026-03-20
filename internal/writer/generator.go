@@ -4,6 +4,8 @@ package writer
 import (
 	"fmt"
 	"strings"
+
+	"github.com/geekjourneyx/md2wechat-skill/internal/action"
 )
 
 // Generator 文章生成器接口
@@ -18,23 +20,26 @@ type Generator interface {
 
 // GenerateRequest 生成请求
 type GenerateRequest struct {
-	Style      *WriterStyle
-	UserInput  string
-	InputType  InputType
-	Title      string
-	Length     Length
+	Style       *WriterStyle
+	UserInput   string
+	InputType   InputType
+	Title       string
+	Length      Length
 	ArticleType ArticleType
 }
 
 // GenerateResult 生成结果
 type GenerateResult struct {
-	Article  string
-	Title    string
-	Quotes   []string
-	Success  bool
-	Error    string
-	Prompt   string   // 用于调试，显示使用的提示词
-	Style    *WriterStyle // 使用的风格（用于完成请求时提取金句）
+	Article   string
+	Title     string
+	Quotes    []string
+	Status    action.Status `json:"status,omitempty"`
+	Action    string        `json:"action,omitempty"`
+	Retryable bool          `json:"retryable,omitempty"`
+	Success   bool
+	Error     string
+	Prompt    string       // 用于调试，显示使用的提示词
+	Style     *WriterStyle // 使用的风格（用于完成请求时提取金句）
 }
 
 // articleGenerator 文章生成器实现
@@ -51,15 +56,21 @@ func NewGenerator() Generator {
 func (g *articleGenerator) Generate(req *GenerateRequest) *GenerateResult {
 	if req.Style == nil {
 		return &GenerateResult{
-			Success: false,
-			Error:   "风格未指定",
+			Status:    action.StatusFailed,
+			Action:    action.ActionWrite,
+			Retryable: false,
+			Success:   false,
+			Error:     "风格未指定",
 		}
 	}
 
 	if req.UserInput == "" {
 		return &GenerateResult{
-			Success: false,
-			Error:   "用户输入不能为空",
+			Status:    action.StatusFailed,
+			Action:    action.ActionWrite,
+			Retryable: false,
+			Success:   false,
+			Error:     "用户输入不能为空",
 		}
 	}
 
@@ -68,9 +79,12 @@ func (g *articleGenerator) Generate(req *GenerateRequest) *GenerateResult {
 
 	// 构建结果
 	result := &GenerateResult{
-		Prompt:  prompt,
-		Success: true,
-		Style:   req.Style,
+		Prompt:    prompt,
+		Status:    action.StatusActionRequired,
+		Action:    action.ActionWrite,
+		Retryable: false,
+		Success:   true,
+		Style:     req.Style,
 	}
 
 	// 注意：实际的 AI 调用在外部（Claude）完成
@@ -162,10 +176,7 @@ func (g *articleGenerator) ExtractQuotes(article string, style *WriterStyle) []s
 
 	// 如果有预定义的金句模板，使用它们
 	if len(style.QuoteTemplates) > 0 {
-		for _, template := range style.QuoteTemplates {
-			// 简化版：直接使用模板
-			quotes = append(quotes, template)
-		}
+		quotes = append(quotes, style.QuoteTemplates...)
 	}
 
 	// 如果没有预定义模板，从文章中提取
@@ -200,7 +211,7 @@ func (g *articleGenerator) extractQuotesFromArticle(article string, count int) [
 
 		// 检查是否是粗体标记的内容
 		if strings.HasPrefix(line, "**") && strings.HasSuffix(line, "**") {
-			content := strings.Trim(line, "**")
+			content := strings.TrimPrefix(strings.TrimSuffix(line, "**"), "**")
 			if len(content) > 10 && len(content) < 100 {
 				quotes = append(quotes, content)
 			}
@@ -216,13 +227,33 @@ func (g *articleGenerator) extractQuotesFromArticle(article string, count int) [
 
 // IsAIRequest 检查结果是否是 AI 请求
 func IsAIRequest(result *GenerateResult) bool {
-	return result != nil && result.Error != "" &&
-		strings.HasPrefix(result.Error, "AI_MODE_REQUEST:")
+	if result == nil {
+		return false
+	}
+	if result.Status != "" {
+		return result.Status == action.StatusActionRequired
+	}
+	if result.Prompt != "" {
+		return true
+	}
+	return result.Error != "" && strings.HasPrefix(result.Error, "AI_MODE_REQUEST:")
 }
 
 // ExtractAIRequest 从结果中提取 AI 请求
 func ExtractAIRequest(result *GenerateResult) string {
-	if IsAIRequest(result) {
+	if result == nil {
+		return ""
+	}
+	if result.Status != "" {
+		if result.Status == action.StatusActionRequired {
+			return result.Prompt
+		}
+		return ""
+	}
+	if result.Prompt != "" {
+		return result.Prompt
+	}
+	if strings.HasPrefix(result.Error, "AI_MODE_REQUEST:") {
 		return strings.TrimPrefix(result.Error, "AI_MODE_REQUEST:")
 	}
 	return ""
@@ -232,13 +263,19 @@ func ExtractAIRequest(result *GenerateResult) string {
 func CompleteAIRequest(article string, result *GenerateResult) *GenerateResult {
 	if result == nil {
 		return &GenerateResult{
-			Success: false,
-			Error:   "结果为空",
+			Status:    action.StatusFailed,
+			Action:    action.ActionWrite,
+			Retryable: false,
+			Success:   false,
+			Error:     "结果为空",
 		}
 	}
 
 	result.Article = article
 	result.Error = ""
+	result.Status = action.StatusCompleted
+	result.Action = action.ActionWrite
+	result.Retryable = false
 	result.Success = true
 
 	// 提取金句
@@ -274,11 +311,11 @@ func ValidateInput(input string) error {
 // BuildPromptForAI 为 AI 构建提示词（供外部使用）
 func BuildPromptForAI(style *WriterStyle, userInput string, inputType InputType, articleType ArticleType) string {
 	req := &GenerateRequest{
-		Style:      style,
-		UserInput:  userInput,
-		InputType:  inputType,
+		Style:       style,
+		UserInput:   userInput,
+		InputType:   inputType,
 		ArticleType: articleType,
-		Length:     LengthMedium,
+		Length:      LengthMedium,
 	}
 
 	gen := NewGenerator()

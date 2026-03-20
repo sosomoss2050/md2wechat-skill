@@ -52,62 +52,56 @@ var humanizeCmd = &cobra.Command{
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		return initConfig()
 	},
-	Run: func(cmd *cobra.Command, args []string) {
-		filePath := args[0]
-
-		// 读取文件
-		content, err := os.ReadFile(filePath)
-		if err != nil {
-			responseError(fmt.Errorf("读取文件失败: %w", err))
-			return
-		}
-
-		// 构建请求
-		req := &humanizer.HumanizeRequest{
-			Content:       string(content),
-			Intensity:     humanizer.ParseIntensity(intensityFlag),
-			ShowChanges:   showChangesFlag,
-			IncludeScore:  true,
-			PreserveStyle: false, // 独立使用时不保护特定风格
-		}
-
-		// 创建 humanizer 并获取提示词
-		h := humanizer.NewHumanizer()
-		prompt := h.BuildAIRequestForAI(req)
-
-		// 输出 AI 请求（由 Claude 执行）
-		response := map[string]interface{}{
-			"success": true,
-			"action":  "humanize_request",
-			"request": map[string]interface{}{
-				"content":   req.Content,
-				"intensity": req.Intensity.String(),
-				"prompt":    prompt,
-			},
-		}
-
-		// 如果指定了输出文件，同时保存提示词
-		if outputFlag != "" {
-			if err := os.WriteFile(outputFlag, []byte(prompt), 0644); err != nil {
-				responseError(fmt.Errorf("保存文件失败: %w", err))
-				return
-			}
-			// 添加输出文件信息到响应
-			response["output_file"] = outputFlag
-		}
-
-		printJSON(response)
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return runHumanize(args[0])
 	},
+}
+
+func runHumanize(filePath string) error {
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return wrapCLIError(codeHumanizeReadFailed, err, fmt.Sprintf("读取文件失败: %v", err))
+	}
+
+	req := &humanizer.HumanizeRequest{
+		Content:       string(content),
+		Intensity:     humanizer.ParseIntensity(intensityFlag),
+		ShowChanges:   showChangesFlag,
+		IncludeScore:  true,
+		PreserveStyle: false,
+	}
+
+	h := humanizer.NewHumanizer()
+	prompt := h.BuildAIRequestForAI(req)
+
+	response := map[string]interface{}{
+		"action": "humanize_request",
+		"request": map[string]interface{}{
+			"content":   req.Content,
+			"intensity": req.Intensity.String(),
+			"prompt":    prompt,
+		},
+	}
+
+	if outputFlag != "" {
+		if err := os.WriteFile(outputFlag, []byte(prompt), 0644); err != nil {
+			return wrapCLIError(codeHumanizeWriteFailed, err, fmt.Sprintf("保存文件失败: %v", err))
+		}
+		response["output_file"] = outputFlag
+	}
+
+	responseActionRequiredWith(codeHumanizeRequestReady, "Humanize AI request prepared", response)
+	return nil
 }
 
 // 从 AI 响应解析结果
 func parseHumanizeResponse(aiResponse string, originalContent string, intensity humanizer.HumanizeIntensity) map[string]interface{} {
 	h := humanizer.NewHumanizer()
 	req := &humanizer.HumanizeRequest{
-		Content:       originalContent,
-		Intensity:     intensity,
-		ShowChanges:   showChangesFlag,
-		IncludeScore:  true,
+		Content:      originalContent,
+		Intensity:    intensity,
+		ShowChanges:  showChangesFlag,
+		IncludeScore: true,
 	}
 	result := h.ParseAIResponse(aiResponse, req)
 
@@ -130,7 +124,7 @@ func parseHumanizeResponse(aiResponse string, originalContent string, intensity 
 	if result.Score != nil {
 		output["score"] = map[string]interface{}{
 			"total":        result.Score.Total,
-			"directness":  result.Score.Directness,
+			"directness":   result.Score.Directness,
 			"rhythm":       result.Score.Rhythm,
 			"trust":        result.Score.Trust,
 			"authenticity": result.Score.Authenticity,

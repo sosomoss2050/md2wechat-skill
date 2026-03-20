@@ -14,18 +14,18 @@ import (
 
 // OpenAIProvider OpenAI 图片生成服务提供者
 type OpenAIProvider struct {
-	apiKey    string
-	baseURL   string
-	model     string
-	size      string
-	client    *http.Client
+	apiKey  string
+	baseURL string
+	model   string
+	size    string
+	client  *http.Client
 }
 
 // NewOpenAIProvider 创建 OpenAI Provider
 func NewOpenAIProvider(cfg *config.Config) (*OpenAIProvider, error) {
 	model := cfg.ImageModel
 	if model == "" {
-		model = "dall-e-3" // 默认模型
+		model = "gpt-image-1.5" // 默认模型
 	}
 
 	size := cfg.ImageSize
@@ -95,7 +95,9 @@ func (p *OpenAIProvider) Generate(ctx context.Context, prompt string) (*Generate
 			Original: err,
 		}
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	// 处理错误响应
 	if resp.StatusCode != http.StatusOK {

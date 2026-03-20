@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/geekjourneyx/md2wechat-skill/internal/action"
+	"github.com/geekjourneyx/md2wechat-skill/internal/promptcatalog"
 )
 
 // Assistant 写作助手 - 核心协调器
@@ -28,19 +31,35 @@ type WriteResult struct {
 	Titles      []string // 备选标题
 	Quotes      []string // 提取的金句
 	Style       *WriterStyle
-	Prompt      string   // 用于 AI 的提示词
-	IsAIRequest bool     // 是否需要 AI 处理
+	Prompt      string        // 用于 AI 的提示词
+	Status      action.Status `json:"status,omitempty"`
+	Action      string        `json:"action,omitempty"`
+	Retryable   bool          `json:"retryable,omitempty"`
+	IsAIRequest bool          // 是否需要 AI 处理
 	Success     bool
 	Error       string
 }
 
 // Write 写作 - 主入口
 func (a *Assistant) Write(req *WriteRequest) *WriteResult {
+	if err := a.ValidateWriteRequest(req); err != nil {
+		return &WriteResult{
+			Status:    action.StatusFailed,
+			Action:    action.ActionWrite,
+			Retryable: false,
+			Success:   false,
+			Error:     err.Error(),
+		}
+	}
+
 	// 验证输入
 	if err := ValidateInput(req.Input); err != nil {
 		return &WriteResult{
-			Success: false,
-			Error:   err.Error(),
+			Status:    action.StatusFailed,
+			Action:    action.ActionWrite,
+			Retryable: false,
+			Success:   false,
+			Error:     err.Error(),
 		}
 	}
 
@@ -48,26 +67,21 @@ func (a *Assistant) Write(req *WriteRequest) *WriteResult {
 	style, err := a.styleManager.GetStyle(req.StyleName)
 	if err != nil {
 		return &WriteResult{
-			Success: false,
-			Error:   err.Error(),
+			Status:    action.StatusFailed,
+			Action:    action.ActionWrite,
+			Retryable: false,
+			Success:   false,
+			Error:     err.Error(),
 		}
-	}
-
-	// 设置默认值
-	if req.ArticleType == "" {
-		req.ArticleType = ArticleTypeEssay
-	}
-	if req.Length == "" {
-		req.Length = LengthMedium
 	}
 
 	// 构建生成请求
 	genReq := &GenerateRequest{
-		Style:      style,
-		UserInput:  req.Input,
-		InputType:  req.InputType,
-		Title:      req.Title,
-		Length:     req.Length,
+		Style:       style,
+		UserInput:   req.Input,
+		InputType:   req.InputType,
+		Title:       req.Title,
+		Length:      req.Length,
 		ArticleType: req.ArticleType,
 	}
 
@@ -75,21 +89,29 @@ func (a *Assistant) Write(req *WriteRequest) *WriteResult {
 	genResult := a.generator.Generate(genReq)
 
 	result := &WriteResult{
-		Style:   style,
-		Success: genResult.Success,
-		Error:   genResult.Error,
-		Prompt:  genResult.Prompt,
+		Style:     style,
+		Status:    genResult.Status,
+		Action:    genResult.Action,
+		Retryable: genResult.Retryable,
+		Success:   genResult.Success,
+		Error:     genResult.Error,
+		Prompt:    genResult.Prompt,
 	}
 
 	// 检查是否需要 AI 处理
 	if IsAIRequest(genResult) {
 		result.IsAIRequest = true
+		result.Status = action.StatusActionRequired
+		result.Action = action.ActionWrite
 		return result
 	}
 
 	// 处理生成结果
 	result.Article = genResult.Article
 	result.Quotes = genResult.Quotes
+	result.Status = action.StatusCompleted
+	result.Action = action.ActionWrite
+	result.Retryable = false
 
 	// 生成标题
 	result.Titles = a.generator.GenerateTitles(style, req.Input, 5)
@@ -105,8 +127,11 @@ func (a *Assistant) WriteFromFile(filePath string, styleName string) *WriteResul
 	content, err := os.ReadFile(filePath)
 	if err != nil {
 		return &WriteResult{
-			Success: false,
-			Error:   fmt.Sprintf("读取文件: %v", err),
+			Status:    action.StatusFailed,
+			Action:    action.ActionWrite,
+			Retryable: false,
+			Success:   false,
+			Error:     fmt.Sprintf("读取文件: %v", err),
 		}
 	}
 
@@ -125,8 +150,11 @@ func (a *Assistant) Refine(req *RefineRequest) *RefineResult {
 	style, err := a.styleManager.GetStyle(req.StyleName)
 	if err != nil {
 		return &RefineResult{
-			Success: false,
-			Error:   err.Error(),
+			Status:    action.StatusFailed,
+			Action:    action.ActionWrite,
+			Retryable: false,
+			Success:   false,
+			Error:     err.Error(),
 		}
 	}
 
@@ -134,45 +162,80 @@ func (a *Assistant) Refine(req *RefineRequest) *RefineResult {
 	prompt := a.buildRefinePrompt(style, req.Content, req.Feedback)
 
 	return &RefineResult{
-		Success: true,
+		Status:    action.StatusActionRequired,
+		Action:    action.ActionWrite,
+		Retryable: false,
+		Success:   true,
+		Prompt:    prompt,
 		// 实际润色由 AI 完成
-		Error:   "AI_REFINE_REQUEST:" + prompt,
+		Error: "AI_REFINE_REQUEST:" + prompt,
 	}
 }
 
 // buildRefinePrompt 构建润色提示词
 func (a *Assistant) buildRefinePrompt(style *WriterStyle, content, feedback string) string {
+	feedbackBlock := ""
+	if feedback != "" {
+		feedbackBlock = "\n\n### 用户反馈\n" + feedback
+	}
+
+	catalog, err := promptcatalog.DefaultCatalog()
+	if err != nil {
+		return buildRefinePromptFallback(style, content, feedback)
+	}
+	rendered, _, err := catalog.Render("refine", "default", map[string]string{
+		"STYLE_PROMPT":   style.WritingPrompt,
+		"CONTENT":        content,
+		"FEEDBACK_BLOCK": feedbackBlock,
+	})
+	if err != nil {
+		return buildRefinePromptFallback(style, content, feedback)
+	}
+	return rendered
+}
+
+func buildRefinePromptFallback(style *WriterStyle, content, feedback string) string {
 	var prompt strings.Builder
-
 	prompt.WriteString(style.WritingPrompt)
-	prompt.WriteString("\n\n")
-
-	prompt.WriteString("## 润色任务\n")
-	prompt.WriteString("请将以下内容用该风格重新润色：\n\n")
-
-	prompt.WriteString("### 原文\n")
+	prompt.WriteString("\n\n## 润色任务\n请将以下内容用该风格重新润色：\n\n### 原文\n")
 	prompt.WriteString(content)
-
 	if feedback != "" {
 		prompt.WriteString("\n\n### 用户反馈\n")
 		prompt.WriteString(feedback)
 	}
-
-	prompt.WriteString("\n\n---\n\n")
-	prompt.WriteString("请输出润色后的内容，保持原意，用该风格重新表达。")
-
+	prompt.WriteString("\n\n---\n\n请输出润色后的内容，保持原意，用该风格重新表达。")
 	return prompt.String()
 }
 
 // IsRefineRequest 检查结果是否是润色请求
 func IsRefineRequest(result *RefineResult) bool {
-	return result != nil && result.Error != "" &&
-		strings.HasPrefix(result.Error, "AI_REFINE_REQUEST:")
+	if result == nil {
+		return false
+	}
+	if result.Status != "" {
+		return result.Status == action.StatusActionRequired
+	}
+	if result.Prompt != "" {
+		return true
+	}
+	return result.Error != "" && strings.HasPrefix(result.Error, "AI_REFINE_REQUEST:")
 }
 
 // ExtractRefineRequest 提取润色请求
 func ExtractRefineRequest(result *RefineResult) string {
-	if IsRefineRequest(result) {
+	if result == nil {
+		return ""
+	}
+	if result.Status != "" {
+		if result.Status == action.StatusActionRequired {
+			return result.Prompt
+		}
+		return ""
+	}
+	if result.Prompt != "" {
+		return result.Prompt
+	}
+	if strings.HasPrefix(result.Error, "AI_REFINE_REQUEST:") {
 		return strings.TrimPrefix(result.Error, "AI_REFINE_REQUEST:")
 	}
 	return ""
@@ -184,7 +247,7 @@ func (a *Assistant) ListStyles() *StyleListResult {
 
 	return &StyleListResult{
 		Styles:  styles,
-		Success:  true,
+		Success: true,
 	}
 }
 
@@ -219,8 +282,14 @@ func (a *Assistant) SaveArticle(article, filePath string) error {
 
 // ValidateWriteRequest 验证写作请求
 func (a *Assistant) ValidateWriteRequest(req *WriteRequest) error {
-	if req.Input == "" {
+	if req == nil {
 		return NewInvalidInputError("请提供输入内容")
+	}
+	if strings.TrimSpace(req.Input) == "" {
+		return NewInvalidInputError("请提供输入内容")
+	}
+	if strings.TrimSpace(req.StyleName) == "" {
+		req.StyleName = DefaultStyleName
 	}
 
 	// 验证输入类型

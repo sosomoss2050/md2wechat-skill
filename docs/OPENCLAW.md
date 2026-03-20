@@ -1,6 +1,10 @@
 # OpenClaw 安装指南
 
-> **md2wechat** 现已支持 [OpenClaw](https://openclaw.ai/) 平台！
+> 本文档对应 OpenClaw 专用 skill 包 `platforms/openclaw/md2wechat/`。
+>
+> `skills/md2wechat/` 是给 Claude Code / Codex / OpenCode 的 coding-agent skill，两条路径独立维护。
+>
+> OpenClaw 安装主线是 skill 包与 runtime 一起安装，`run.sh` 只负责启动已安装 runtime，不承担首跑动态下载。
 
 ---
 
@@ -52,14 +56,16 @@ Your assistant. Your machine. Your rules.
 
 ## 安装方式
 
-### 方式一：ClawHub 安装（推荐，还在实践中，很快能上架到官方）
+### 方式一：ClawHub 安装
 
 如果你已安装 `clawhub` CLI，这是最简单的方式：
 
 ```bash
-# 安装 md2wechat 技能
+# 安装 OpenClaw 专用 md2wechat skill 包
 clawhub install md2wechat
 ```
+
+当前 ClawHub 路径会暴露结构化安装资源；完整、可验证的安装主线仍建议使用下面的固定版本 installer。
 
 **没有 clawhub？先安装它：**
 
@@ -75,12 +81,15 @@ clawhub login
 适合没有安装 clawhub 的用户：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/geekjourneyx/md2wechat-skill/main/scripts/install-openclaw.sh | bash
+export MD2WECHAT_RELEASE_BASE_URL=https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.0
+curl -fsSL "${MD2WECHAT_RELEASE_BASE_URL}/install-openclaw.sh" | bash
 ```
 
 **脚本功能：**
-- 自动下载最新技能文件
+- 按固定版本安装 OpenClaw skill 包与 runtime
+- 自动校验 `checksums.txt`
 - 安装到 `~/.openclaw/skills/md2wechat/`
+- 安装 runtime 到 `~/.openclaw/tools/md2wechat/md2wechat`
 - 显示配置说明
 
 ---
@@ -88,16 +97,29 @@ curl -fsSL https://raw.githubusercontent.com/geekjourneyx/md2wechat-skill/main/s
 ### 方式三：手动安装
 
 ```bash
-# 1. 克隆仓库
-git clone https://github.com/geekjourneyx/md2wechat-skill.git
+# 1. 下载固定版本 release 资产
+VERSION=2.0.0
+# 按你的平台选择对应二进制，这里以 Linux amd64 为例
+curl -LO https://github.com/geekjourneyx/md2wechat-skill/releases/download/v${VERSION}/md2wechat-openclaw-skill.tar.gz
+curl -LO https://github.com/geekjourneyx/md2wechat-skill/releases/download/v${VERSION}/md2wechat-linux-amd64
+curl -LO https://github.com/geekjourneyx/md2wechat-skill/releases/download/v${VERSION}/checksums.txt
+sha256sum -c checksums.txt --ignore-missing
 
-# 2. 复制技能目录
+# 2. 解压并复制技能目录
+mkdir -p /tmp/md2wechat-openclaw
+tar -xzf md2wechat-openclaw-skill.tar.gz -C /tmp/md2wechat-openclaw
 mkdir -p ~/.openclaw/skills
-cp -r md2wechat-skill/skills/md2wechat ~/.openclaw/skills/
+cp -r /tmp/md2wechat-openclaw/skills/md2wechat ~/.openclaw/skills/
 
-# 3. 设置执行权限
+# 3. 安装 runtime
+mkdir -p ~/.openclaw/tools/md2wechat
+install -m 0755 md2wechat-linux-amd64 ~/.openclaw/tools/md2wechat/md2wechat
+
+# 4. 设置执行权限
 chmod +x ~/.openclaw/skills/md2wechat/scripts/*.sh
 ```
+
+手动安装时，请以同一版本 release 提供的 OpenClaw 资产为准，确保 skill 包与 runtime 同步安装到 OpenClaw 管理目录，不要依赖 `run.sh` 首次运行再下载。
 
 ---
 
@@ -177,10 +199,25 @@ references/
 ### 测试运行
 
 ```bash
+md2wechat --help
+```
+
+如果你是在 OpenClaw 管理目录里验证启动器，请确认 runtime 已由安装器安装完成；`run.sh` 只应负责启动，不应在首跑时联网下载。
+
+也可以直接验证 OpenClaw skill 启动器：
+
+```bash
 bash ~/.openclaw/skills/md2wechat/scripts/run.sh --help
 ```
 
-首次运行会自动下载二进制文件（约 15MB）。
+建议再执行一轮发现命令，确认当前 runtime 和资源都可见：
+
+```bash
+md2wechat capabilities --json
+md2wechat providers list --json
+md2wechat themes list --json
+md2wechat prompts list --json
+```
 
 ### 在 OpenClaw 中使用
 
@@ -207,12 +244,13 @@ tree ~/.openclaw/skills/md2wechat/ -L 1
 
 ### Q: 运行时报错 "command not found"？
 
-**A:** `run.sh` 会自动下载二进制文件。确保有网络连接，并检查：
+**A:** 检查 runtime 是否已由 OpenClaw 安装器安装完成，并确认 `md2wechat` 可执行文件可用：
 
 ```bash
-# 查看缓存目录
-ls ~/.cache/md2wechat/bin/
+md2wechat --help
 ```
+
+如果仍然找不到命令，请重新安装 OpenClaw skill 包与 runtime，不要依赖 `run.sh` 首次运行下载。
 
 ### Q: 如何更新技能？
 
@@ -223,7 +261,8 @@ ls ~/.cache/md2wechat/bin/
 clawhub update md2wechat
 
 # 脚本方式（会覆盖安装）
-curl -fsSL https://raw.githubusercontent.com/geekjourneyx/md2wechat-skill/main/scripts/install-openclaw.sh | bash
+export MD2WECHAT_RELEASE_BASE_URL=https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.0
+curl -fsSL "${MD2WECHAT_RELEASE_BASE_URL}/install-openclaw.sh" | bash
 ```
 
 ### Q: 配置没生效？
@@ -254,13 +293,14 @@ cat ~/.openclaw/openclaw.json | python3 -m json.tool
 |------|-------------|----------|
 | **定位** | 终端 AI 编程助手 | 聊天应用 AI 助手（WhatsApp/Telegram 等） |
 | **运行方式** | 本地终端 | 本地运行，通过聊天应用操控 |
+| **仓库内 skill 路径** | `skills/md2wechat/` | `platforms/openclaw/md2wechat/` |
 | **技能目录** | `~/.claude/skills/` | `~/.openclaw/skills/` |
-| **安装方式** | `/plugin` 命令 | `clawhub` CLI |
+| **安装方式** | `/plugin` 命令 | `clawhub` CLI / OpenClaw installer |
 | **配置文件** | 环境变量 / config.yaml | `openclaw.json` |
 | **LLM 支持** | Claude | Claude、GPT、DeepSeek、KIMI 等 |
 | **市场** | Plugin Marketplace | [ClawHub](https://clawhub.ai/) |
 
-**技能本身完全兼容**，同一份 SKILL.md 可在两个平台运行。
+**说明：** 两个平台共享同一个 CLI 内核，但 skill 包和安装链分开维护。
 
 ---
 

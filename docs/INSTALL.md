@@ -5,10 +5,10 @@
 ## 目录
 
 - [系统要求](#系统要求)
-- [方式一：Go 工具链安装](#方式一go-工具链安装推荐)
+- [方式一：安装脚本](#方式一安装脚本推荐)
 - [方式二：预编译二进制](#方式二预编译二进制)
-- [方式三：从源码编译](#方式三从源码编译)
-- [方式四：Docker](#方式四docker)
+- [方式三：Go 工具链安装](#方式三go-工具链安装适合开发者)
+- [方式四：从源码编译](#方式四从源码编译)
 - [验证安装](#验证安装)
 - [卸载](#卸载)
 
@@ -17,48 +17,28 @@
 ## 系统要求
 
 - **操作系统**：Linux / macOS / Windows
-- **Go 版本**：1.24 或更高（如果从源码编译）
+- **Go 版本**：1.26.1 或更高（如果从源码编译）
 - **网络**：需要访问微信公众号 API
 
 ---
 
-## 方式一：Go 工具链安装（推荐）
+## 方式一：安装脚本（推荐，固定版本 release 资产）
 
-### 前置条件
-
-确保已安装 Go 1.24+：
+### macOS / Linux
 
 ```bash
-go version
-# 输出示例：go version go1.24.0 linux/amd64
+export MD2WECHAT_RELEASE_BASE_URL=https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.0
+curl -fsSL "${MD2WECHAT_RELEASE_BASE_URL}/install.sh" | bash
 ```
 
-如果没有安装 Go，请访问 [golang.org/dl](https://golang.org/dl/) 下载。
+### Windows PowerShell
 
-### 安装步骤
-
-1. **使用 go install 安装**
-
-```bash
-go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@latest
+```powershell
+$env:MD2WECHAT_RELEASE_BASE_URL = "https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.0"
+iex ((New-Object System.Net.WebClient).DownloadString("$env:MD2WECHAT_RELEASE_BASE_URL/install.ps1"))
 ```
 
-2. **确保 GOPATH/bin 在 PATH 中**
-
-```bash
-# 添加到 ~/.bashrc 或 ~/.zshrc
-export PATH=$PATH:$(go env GOPATH)/bin
-
-# 重新加载配置
-source ~/.bashrc  # 或 source ~/.zshrc
-```
-
-3. **验证安装**
-
-```bash
-md2wechat --version
-md2wechat --help
-```
+安装脚本会下载对应 release 资产并校验 `checksums.txt`。主路径应始终指向固定版本的 release，不要使用 `latest` 或 `main` 作为安装入口。
 
 ---
 
@@ -66,7 +46,7 @@ md2wechat --help
 
 ### 下载地址
 
-访问 [Releases](https://github.com/geekjourneyx/md2wechat-skill/releases) 页面下载适合你系统的版本。
+访问 [Releases](https://github.com/geekjourneyx/md2wechat-skill/releases) 页面下载与你目标版本匹配的资产。
 
 | 系统 | 文件名 |
 |------|--------|
@@ -75,114 +55,70 @@ md2wechat --help
 | macOS (Intel) | `md2wechat-darwin-amd64` |
 | macOS (Apple Silicon) | `md2wechat-darwin-arm64` |
 | Windows (64位) | `md2wechat-windows-amd64.exe` |
+| Installer shell script | `install.sh` |
+| Installer PowerShell script | `install.ps1` |
 
 ### 安装步骤
 
 #### Linux / macOS
 
 ```bash
-# 1. 下载
-wget https://github.com/geekjourneyx/md2wechat-skill/releases/latest/download/md2wechat-linux-amd64
+VERSION=v2.0.0
+ASSET=md2wechat-linux-amd64
+# macOS 请改成 md2wechat-darwin-amd64 或 md2wechat-darwin-arm64
+curl -LO https://github.com/geekjourneyx/md2wechat-skill/releases/download/${VERSION}/${ASSET}
+curl -LO https://github.com/geekjourneyx/md2wechat-skill/releases/download/${VERSION}/checksums.txt
+sha256sum -c checksums.txt --ignore-missing
 
 # 2. 添加执行权限
-chmod +x md2wechat-linux-amd64
+chmod +x "${ASSET}"
 
 # 3. 移动到 PATH
-sudo mv md2wechat-linux-amd64 /usr/local/bin/md2wechat
+sudo mv "${ASSET}" /usr/local/bin/md2wechat
 
 # 4. 验证
-md2wechat --help
+md2wechat version --json
 ```
 
 #### Windows
 
 ```powershell
-# 1. 下载到当前目录
-# 使用浏览器或 curl 下载
-
-# 2. 添加到 PATH
-# 将文件移动到某个 PATH 目录，或将其所在目录添加到 PATH
+# 1. 下载与你目标版本匹配的 release 资产
+# 2. 同时下载 install.ps1 / install.sh 和 checksums.txt 并校验
 
 # 3. 验证
-md2wechat.exe --help
+md2wechat.exe version --json
 ```
 
 ---
 
-## 方式三：从源码编译
+## 方式三：Go 工具链安装（适合开发者）
 
-### 前置条件
-
-- Go 1.24+
-- Git
-
-### 编译步骤
+如果你正在本地开发、调试或需要最新源码，可以使用 `go install`：
 
 ```bash
-# 1. 克隆仓库
+go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v2.0.0
+```
+
+如果你只是要稳定使用，仍然建议优先使用上面的安装脚本或 release 资产。
+
+---
+
+## 方式四：从源码编译
+
+```bash
 git clone https://github.com/geekjourneyx/md2wechat-skill.git
 cd md2wechat-skill
-
-# 2. 下载依赖
-go mod download
-
-# 3. 编译
 go build -o md2wechat ./cmd/md2wechat
-
-# 4. 安装（可选）
-sudo mv md2wechat /usr/local/bin/  # Linux/macOS
-# 或将当前目录添加到 PATH
 ```
 
-### 交叉编译
-
-为其他平台编译：
-
-```bash
-# Linux amd64
-GOOS=linux GOARCH=amd64 go build -o md2wechat-linux-amd64 ./cmd/md2wechat
-
-# macOS arm64 (Apple Silicon)
-GOOS=darwin GOARCH=arm64 go build -o md2wechat-darwin-arm64 ./cmd/md2wechat
-
-# Windows amd64
-GOOS=windows GOARCH=amd64 go build -o md2wechat-windows-amd64.exe ./cmd/md2wechat
-```
+如果你需要交叉编译，可以直接设置 `GOOS` / `GOARCH` 后再运行 `go build`。
 
 ---
 
-## 方式四：Docker
+## 关于 Docker
 
-### 拉取镜像
-
-```bash
-docker pull ghcr.io/geekjourneyx/md2wechat:latest
-```
-
-### 使用方式
-
-```bash
-# 基础用法
-docker run --rm -v $(pwd):/workspace md2wechat convert article.md
-
-# 带配置文件
-docker run --rm -v $(pwd):/workspace md2wechat config init
-```
-
-### Dockerfile
-
-如果需要自己构建镜像：
-
-```dockerfile
-FROM golang:1.24-alpine AS builder
-WORKDIR /app
-COPY . .
-RUN go build -o md2wechat ./cmd/md2wechat
-
-FROM alpine:latest
-COPY --from=builder /app/md2wechat /usr/local/bin/
-ENTRYPOINT ["md2wechat"]
-```
+仓库当前不提供官方 Docker 镜像或 Dockerfile。若后续补齐容器化发布流程，再以 release 文档为准。
 
 ---
 
@@ -191,14 +127,14 @@ ENTRYPOINT ["md2wechat"]
 运行以下命令验证安装成功：
 
 ```bash
-# 查看版本
+# 查看帮助
+md2wechat version --json
 md2wechat --help
 
 # 查看所有命令
 md2wechat help
 
-# 测试配置
-md2wechat config validate
+# 配置校验是独立动作，不是安装验证的一部分
 ```
 
 预期输出：
@@ -226,12 +162,6 @@ sudo rm /usr/local/bin/md2wechat
 
 # Windows
 # 删除安装目录下的 md2wechat.exe
-```
-
-### Docker
-
-```bash
-docker rmi ghcr.io/geekjourneyx/md2wechat:latest
 ```
 
 ---

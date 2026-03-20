@@ -10,7 +10,6 @@ set -e
 # CONFIGURATION
 # =============================================================================
 
-VERSION="1.11.0"
 REPO="geekjourneyx/md2wechat-skill"
 BINARY_NAME="md2wechat"
 
@@ -21,6 +20,27 @@ VERSION_FILE="${CACHE_DIR}/.version"
 
 # Minimum binary size (100KB - protects against corrupted downloads)
 MIN_BINARY_SIZE=102400
+
+get_version() {
+    if [[ -n "${MD2WECHAT_SKILL_VERSION:-}" ]]; then
+        printf '%s\n' "${MD2WECHAT_SKILL_VERSION}"
+        return 0
+    fi
+
+    local script_dir repo_root version_file
+    script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    repo_root="$(cd "${script_dir}/../../.." && pwd)"
+    version_file="${repo_root}/VERSION"
+
+    if [[ -f "${version_file}" ]]; then
+        tr -d '[:space:]' < "${version_file}"
+        return 0
+    fi
+
+    printf '2.0.0\n'
+}
+
+VERSION="$(get_version)"
 
 # =============================================================================
 # PLATFORM DETECTION
@@ -61,22 +81,60 @@ is_cache_valid() {
     [[ -x "$binary" ]] && [[ -f "$VERSION_FILE" ]] && [[ "$(cat "$VERSION_FILE" 2>/dev/null)" == "$VERSION" ]]
 }
 
+get_release_base_url() {
+    if [[ -n "${MD2WECHAT_SKILL_RELEASE_BASE_URL:-}" ]]; then
+        printf '%s\n' "${MD2WECHAT_SKILL_RELEASE_BASE_URL}"
+        return 0
+    fi
+
+    printf 'https://github.com/%s/releases/download/v%s\n' "${REPO}" "${VERSION}"
+}
+
+verify_checksum() {
+    local checksums_file=$1
+    local binary_file=$2
+    local binary_name=$3
+
+    if command -v sha256sum >/dev/null 2>&1; then
+        (cd "$(dirname "$binary_file")" && sha256sum -c "$checksums_file" --ignore-missing --status)
+        return 0
+    fi
+
+    if command -v shasum >/dev/null 2>&1; then
+        local expected actual
+        expected="$(awk -v file="$binary_name" '$2 == file { print $1 }' "$checksums_file")"
+        [[ -n "$expected" ]] || return 1
+        actual="$(shasum -a 256 "$binary_file" | awk '{print $1}')"
+        [[ "$expected" == "$actual" ]]
+        return 0
+    fi
+
+    echo "  Error: sha256sum or shasum required for checksum verification" >&2
+    return 1
+}
+
 download_binary() {
     local platform=$1
     local binary=$2
     local bin_name="${BINARY_NAME}-${platform}"
     [[ "$platform" == windows-* ]] && bin_name="${bin_name}.exe"
 
-    local url="https://github.com/${REPO}/releases/download/v${VERSION}/${bin_name}"
+    local release_base_url url checksums_url
+    release_base_url="$(get_release_base_url)"
+    url="${release_base_url}/${bin_name}"
+    checksums_url="${release_base_url}/checksums.txt"
     local temp_file="${binary}.tmp"
+    local temp_checksums="${binary}.checksums.tmp"
 
     echo "  Downloading md2wechat v${VERSION} for ${platform}..." >&2
 
     # Check for download tool
     if command -v curl &>/dev/null; then
         curl -fsSL --connect-timeout 15 --max-time 120 -o "$temp_file" "$url" 2>/dev/null
+        curl -fsSL --connect-timeout 15 --max-time 120 -o "$temp_checksums" "$checksums_url" 2>/dev/null
     elif command -v wget &>/dev/null; then
         wget -q --timeout=120 -O "$temp_file" "$url" 2>/dev/null
+        wget -q --timeout=120 -O "$temp_checksums" "$checksums_url" 2>/dev/null
     else
         echo "  Error: curl or wget required" >&2
         echo "  Install: brew install curl (macOS) or apt install curl (Linux)" >&2
@@ -87,12 +145,19 @@ download_binary() {
     local size
     size=$(wc -c < "$temp_file" 2>/dev/null | tr -d ' ') || size=0
     if [[ $size -lt $MIN_BINARY_SIZE ]]; then
-        rm -f "$temp_file"
+        rm -f "$temp_file" "$temp_checksums"
         echo "  Error: Download incomplete or corrupted" >&2
         return 1
     fi
 
+    if ! verify_checksum "$temp_checksums" "$temp_file" "$bin_name"; then
+        rm -f "$temp_file" "$temp_checksums"
+        echo "  Error: Checksum verification failed" >&2
+        return 1
+    fi
+
     mv "$temp_file" "$binary"
+    rm -f "$temp_checksums"
     chmod +x "$binary"
     echo "$VERSION" > "$VERSION_FILE"
     echo "  Ready!" >&2

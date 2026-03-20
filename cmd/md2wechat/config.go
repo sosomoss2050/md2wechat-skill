@@ -27,11 +27,9 @@ Config file search order:
   3. ./md2wechat.yaml                  (project config)
 
 💡 Tip: Use global config (~/.md2wechat.yaml) for all your projects.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		// 默认显示配置
-		if err := showConfig(false); err != nil {
-			responseError(err)
-		}
+		return runConfigShow(false)
 	},
 }
 
@@ -45,10 +43,8 @@ func init() {
 	var showCmd = &cobra.Command{
 		Use:   "show",
 		Short: "Show current configuration",
-		Run: func(cmd *cobra.Command, args []string) {
-			if err := showConfig(configShowSecret); err != nil {
-				responseError(err)
-			}
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runConfigShow(configShowSecret)
 		},
 	}
 	showCmd.Flags().BoolVar(&configShowSecret, "show-secret", false, "Show secret values")
@@ -59,15 +55,15 @@ func init() {
 	var validateCmd = &cobra.Command{
 		Use:   "validate",
 		Short: "Validate configuration",
-		Run: func(cmd *cobra.Command, args []string) {
-			if err := validateConfig(); err != nil {
-				responseError(err)
-			} else {
-				responseSuccess(map[string]any{
-					"valid":   true,
-					"message": "Configuration is valid",
-				})
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := runConfigValidate(); err != nil {
+				return err
 			}
+			responseSuccessWith(codeConfigValidated, "Configuration is valid", map[string]any{
+				"valid":   true,
+				"message": "Configuration is valid",
+			})
+			return nil
 		},
 	}
 	configCmd.AddCommand(validateCmd)
@@ -83,7 +79,7 @@ If no output file is specified, the config will be created in:
 
 This is the global config location, used by all your projects.`,
 		Args: cobra.MaximumNArgs(1),
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			var outputFile string
 			if len(args) > 0 {
 				outputFile = args[0]
@@ -94,53 +90,43 @@ This is the global config location, used by all your projects.`,
 				outputFile = configDir + "/config.yaml"
 			}
 
-			if err := initConfigFile(outputFile); err != nil {
-				responseError(err)
-			} else {
-				// 格式化输出路径
-				relPath := outputFile
-				homeDir, _ := os.UserHomeDir()
-				if homeDir != "" && strings.HasPrefix(outputFile, homeDir) {
-					rel := strings.TrimPrefix(outputFile, homeDir)
-					if strings.HasPrefix(rel, "/") || strings.HasPrefix(rel, "\\") {
-						rel = rel[1:]
-					}
-					relPath = "~/" + rel
-				}
-
+			if err := runConfigInit(outputFile); err != nil {
+				return err
+			}
+			relPath := normalizeConfigOutputPath(outputFile)
+			if !jsonOutput {
 				fmt.Fprintf(os.Stderr, "\n✅ 配置文件已创建: %s\n", relPath)
 				fmt.Fprintf(os.Stderr, "📝 下一步: 编辑配置文件，填入你的微信公众号 AppID 和 Secret\n")
 				fmt.Fprintf(os.Stderr, "📍 获取方式: 微信公众平台 > 设置与开发 > 基本配置\n\n")
-
-				responseSuccess(map[string]any{
-					"file":    relPath,
-					"message": "Config file created. Please edit it with your credentials.",
-				})
 			}
+
+			responseSuccessWith(codeConfigInitialized, "Config file created. Please edit it with your credentials.", map[string]any{
+				"file":    relPath,
+				"message": "Config file created. Please edit it with your credentials.",
+			})
+			return nil
 		},
 	}
 	configCmd.AddCommand(initCmd)
 }
 
-// showConfig 显示配置
-func showConfig(showSecret bool) error {
+// runConfigShow 显示配置
+func runConfigShow(showSecret bool) error {
 	// 加载配置
 	cfg, err := config.Load()
 	if err != nil {
 		// 如果加载失败，可能是缺少必需配置，尝试创建一个用于显示
 		if os.Getenv("WECHAT_APPID") == "" && os.Getenv("WECHAT_SECRET") == "" {
-			return fmt.Errorf("no configuration found. Set environment variables or create a config file with 'md2wechat config init'")
+			return newCLIError(codeConfigNotFound, "no configuration found. Set environment variables or create a config file with 'md2wechat config init'")
 		}
-		return err
+		return wrapCLIError(codeConfigInvalid, err, err.Error())
 	}
 
-	result := map[string]any{
-		"success": true,
-		"config":  cfg.ToMap(!showSecret),
-	}
-
-	if configFormat == "json" {
-		printJSON(result)
+	configData := cfg.ToMap(!showSecret)
+	if jsonOutput || configFormat == "json" {
+		responseSuccessWith(codeConfigShown, "Configuration loaded", map[string]any{
+			"config": configData,
+		})
 	} else {
 		// YAML 格式输出（简化版）
 		printYAMLConfig(cfg, !showSecret)
@@ -149,17 +135,21 @@ func showConfig(showSecret bool) error {
 	return nil
 }
 
-// validateConfig 验证配置
-func validateConfig() error {
+// runConfigValidate 验证配置
+func runConfigValidate() error {
 	cfg, err := config.Load()
 	if err != nil {
-		return err
+		return wrapCLIError(codeConfigInvalid, err, err.Error())
 	}
 
 	// 基本验证已在 Load 中完成
 	// 这里可以添加更多验证
 
-	log.Info("configuration validated",
+	logger := log
+	if logger == nil {
+		logger = zap.NewNop()
+	}
+	logger.Info("configuration validated",
 		zap.String("config_file", cfg.GetConfigFile()),
 		zap.String("convert_mode", cfg.DefaultConvertMode),
 		zap.String("default_theme", cfg.DefaultTheme))
@@ -167,30 +157,39 @@ func validateConfig() error {
 	return nil
 }
 
+func runConfigInit(outputFile string) error {
+	return initConfigFile(outputFile)
+}
+
 // initConfigFile 创建示例配置文件
 func initConfigFile(outputFile string) error {
 	// 检查文件是否已存在
 	if _, err := os.Stat(outputFile); err == nil {
-		return fmt.Errorf("config file already exists: %s", outputFile)
+		return newCLIError(codeConfigWriteFailed, fmt.Sprintf("config file already exists: %s", outputFile))
 	}
 
 	// 创建示例配置
 	cfg := &config.Config{
-		WechatAppID:        "your_wechat_appid",
-		WechatSecret:       "your_wechat_secret",
-		MD2WechatAPIKey:    "your_md2wechat_api_key",
-		ImageAPIKey:        "your_image_api_key",
-		ImageAPIBase:       "https://api.openai.com/v1",
-		DefaultConvertMode: "api",
-		DefaultTheme:       "default",
-		CompressImages:     true,
-		MaxImageWidth:      1920,
-		MaxImageSize:       5 * 1024 * 1024,
-		HTTPTimeout:        30,
+		WechatAppID:           "your_wechat_appid",
+		WechatSecret:          "your_wechat_secret",
+		MD2WechatAPIKey:       "your_md2wechat_api_key",
+		MD2WechatBaseURL:      "https://www.md2wechat.cn",
+		ImageProvider:         "openai",
+		ImageAPIKey:           "your_image_api_key",
+		ImageAPIBase:          "https://api.openai.com/v1",
+		ImageModel:            "gpt-image-1.5",
+		ImageSize:             "1024x1024",
+		DefaultConvertMode:    "api",
+		DefaultTheme:          "default",
+		DefaultBackgroundType: "default",
+		CompressImages:        true,
+		MaxImageWidth:         1920,
+		MaxImageSize:          5 * 1024 * 1024,
+		HTTPTimeout:           30,
 	}
 
 	if err := config.SaveConfig(outputFile, cfg); err != nil {
-		return err
+		return wrapCLIError(codeConfigWriteFailed, err, err.Error())
 	}
 
 	return nil
@@ -215,10 +214,15 @@ func printYAMLConfig(cfg *config.Config, maskSecret bool) {
 
 	fmt.Println("api:")
 	fmt.Printf("  md2wechat_key: %s\n", maskAPIKey(cfg.MD2WechatAPIKey, maskSecret))
+	fmt.Printf("  md2wechat_base_url: %s\n", cfg.MD2WechatBaseURL)
 	fmt.Printf("  image_key: %s\n", maskAPIKey(cfg.ImageAPIKey, maskSecret))
+	fmt.Printf("  image_provider: %s\n", cfg.ImageProvider)
 	fmt.Printf("  image_base_url: %s\n", cfg.ImageAPIBase)
+	fmt.Printf("  image_model: %s\n", cfg.ImageModel)
+	fmt.Printf("  image_size: %s\n", cfg.ImageSize)
 	fmt.Printf("  convert_mode: %s\n", cfg.DefaultConvertMode)
 	fmt.Printf("  default_theme: %s\n", cfg.DefaultTheme)
+	fmt.Printf("  background_type: %s\n", cfg.DefaultBackgroundType)
 	fmt.Printf("  http_timeout: %d\n\n", cfg.HTTPTimeout)
 
 	fmt.Println("image:")
@@ -235,4 +239,17 @@ func maskAPIKey(key string, mask bool) string {
 		return "***"
 	}
 	return key[:4] + "***" + key[len(key)-4:]
+}
+
+func normalizeConfigOutputPath(outputFile string) string {
+	relPath := outputFile
+	homeDir, _ := os.UserHomeDir()
+	if homeDir != "" && strings.HasPrefix(outputFile, homeDir) {
+		rel := strings.TrimPrefix(outputFile, homeDir)
+		if strings.HasPrefix(rel, "/") || strings.HasPrefix(rel, "\\") {
+			rel = rel[1:]
+		}
+		relPath = "~/" + rel
+	}
+	return relPath
 }
