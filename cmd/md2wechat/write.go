@@ -365,7 +365,9 @@ func generateCover(asst *writer.Assistant, req *writer.WriteRequest) error {
 // readLine 读取一行输入
 func readLine() string {
 	var line string
-	fmt.Scanln(&line)
+	if _, err := fmt.Scanln(&line); err != nil {
+		return ""
+	}
 	return strings.TrimSpace(line)
 }
 

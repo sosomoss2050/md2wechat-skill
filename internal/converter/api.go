@@ -149,7 +149,9 @@ func (a *apiConverter) Convert(req *APIRequest, apiKey string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("send request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	// 读取响应
 	body, err := io.ReadAll(resp.Body)

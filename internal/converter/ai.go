@@ -222,14 +222,3 @@ func GetAIRequestInfo(result *ConvertResult) (prompt string, images []ImageRef, 
 	}
 	return ExtractAIRequest(result), result.Images, true
 }
-
-func getGenericPromptForExternal() string {
-	return `你是一个专业的微信公众号排版助手。请将以下 Markdown 内容转换为微信公众号兼容的 HTML。
-
-## 重要规则
-1. 所有 CSS 必须使用内联 style 属性
-2. 不使用外部样式表或 <style> 标签
-3. 只使用安全的 HTML 标签
-4. 图片使用占位符格式：<!-- IMG:index -->
-5. 返回完整的 HTML，不需要其他说明文字`
-}

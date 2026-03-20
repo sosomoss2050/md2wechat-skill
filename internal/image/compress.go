@@ -109,7 +109,7 @@ func (c *Compressor) CompressImage(filePath string) (string, bool, error) {
 	}
 	tempPath := tmpFile.Name()
 	if err := tmpFile.Close(); err != nil {
-		os.Remove(tempPath)
+		_ = os.Remove(tempPath)
 		return "", false, fmt.Errorf("close temp file: %w", err)
 	}
 
@@ -121,7 +121,7 @@ func (c *Compressor) CompressImage(filePath string) (string, bool, error) {
 	// 检查压缩后的大小
 	newFileInfo, err := os.Stat(tempPath)
 	if err != nil {
-		os.Remove(tempPath)
+		_ = os.Remove(tempPath)
 		return "", false, fmt.Errorf("stat compressed file: %w", err)
 	}
 
@@ -135,7 +135,7 @@ func (c *Compressor) CompressImage(filePath string) (string, bool, error) {
 
 	// 如果压缩后反而变大，删除临时文件并返回原路径
 	if newFileInfo.Size() >= fileInfo.Size() {
-		os.Remove(tempPath)
+		_ = os.Remove(tempPath)
 		c.log.Debug("compressed image larger than original, using original")
 		return "", false, nil
 	}
@@ -149,7 +149,9 @@ func (c *Compressor) saveImage(img image.Image, filePath, format string) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	switch format {
 	case "jpeg", "jpg":
@@ -180,7 +182,9 @@ func GetImageDimensions(filePath string) (width, height int, err error) {
 	if err != nil {
 		return 0, 0, fmt.Errorf("open file: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	img, _, err := image.DecodeConfig(file)
 	if err != nil {
@@ -196,7 +200,9 @@ func GetImageFormat(filePath string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("open file: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	_, format, err := image.DecodeConfig(file)
 	if err != nil {

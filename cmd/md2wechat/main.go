@@ -103,10 +103,6 @@ func newCLIError(code, message string) error {
 	return &cliError{Code: code, Message: message}
 }
 
-func newRetryableCLIError(code, message string) error {
-	return &cliError{Code: code, Message: message, Retryable: true}
-}
-
 func wrapCLIError(code string, err error, message string) error {
 	return &cliError{Code: code, Message: message, Err: err}
 }
@@ -376,7 +372,7 @@ func runVersion() {
 		})
 		return
 	}
-	fmt.Fprintln(os.Stdout, Version)
+	_, _ = fmt.Fprintln(os.Stdout, Version)
 }
 
 // maskMediaID 遮蔽 media_id 用于日志

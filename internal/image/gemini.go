@@ -175,8 +175,8 @@ func (p *GeminiProvider) saveInlineData(data *genai.Blob) (string, error) {
 
 	// data.Data 已经是解码后的字节，直接写入
 	if _, err := tmpFile.Write(data.Data); err != nil {
-		tmpFile.Close()
-		os.Remove(tmpPath)
+		_ = tmpFile.Close()
+		_ = os.Remove(tmpPath)
 		return "", &GenerateError{
 			Provider: p.Name(),
 			Code:     "write_error",
@@ -185,7 +185,7 @@ func (p *GeminiProvider) saveInlineData(data *genai.Blob) (string, error) {
 		}
 	}
 	if err := tmpFile.Close(); err != nil {
-		os.Remove(tmpPath)
+		_ = os.Remove(tmpPath)
 		return "", &GenerateError{
 			Provider: p.Name(),
 			Code:     "write_error",

@@ -95,7 +95,9 @@ func (p *OpenAIProvider) Generate(ctx context.Context, prompt string) (*Generate
 			Original: err,
 		}
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	// 处理错误响应
 	if resp.StatusCode != http.StatusOK {

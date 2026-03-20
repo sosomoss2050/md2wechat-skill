@@ -176,10 +176,7 @@ func (g *articleGenerator) ExtractQuotes(article string, style *WriterStyle) []s
 
 	// 如果有预定义的金句模板，使用它们
 	if len(style.QuoteTemplates) > 0 {
-		for _, template := range style.QuoteTemplates {
-			// 简化版：直接使用模板
-			quotes = append(quotes, template)
-		}
+		quotes = append(quotes, style.QuoteTemplates...)
 	}
 
 	// 如果没有预定义模板，从文章中提取
@@ -214,7 +211,7 @@ func (g *articleGenerator) extractQuotesFromArticle(article string, count int) [
 
 		// 检查是否是粗体标记的内容
 		if strings.HasPrefix(line, "**") && strings.HasSuffix(line, "**") {
-			content := strings.Trim(line, "**")
+			content := strings.TrimPrefix(strings.TrimSuffix(line, "**"), "**")
 			if len(content) > 10 && len(content) < 100 {
 				quotes = append(quotes, content)
 			}

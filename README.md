@@ -6,7 +6,7 @@
 
 **用 Markdown 写公众号文章，像发朋友圈一样简单**
 
-[![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?logo=go)](https://golang.org)
+[![Go Version](https://img.shields.io/badge/Go-1.26.1+-00ADD8?logo=go)](https://golang.org)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![GitHub Release](https://img.shields.io/badge/download-latest-green)](https://github.com/geekjourneyx/md2wechat-skill/releases)
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-Skill-purple)](#-coding-agent-集成)

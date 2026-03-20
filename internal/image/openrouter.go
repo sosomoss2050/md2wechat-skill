@@ -103,7 +103,9 @@ func (p *OpenRouterProvider) Generate(ctx context.Context, prompt string) (*Gene
 			Original: err,
 		}
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	// 处理错误响应
 	if resp.StatusCode != http.StatusOK {
@@ -215,8 +217,8 @@ func (p *OpenRouterProvider) parseResponseAndSave(body io.Reader) (string, error
 	}
 	tmpPath := tmpFile.Name()
 	if _, err := tmpFile.Write(imageData); err != nil {
-		tmpFile.Close()
-		os.Remove(tmpPath)
+		_ = tmpFile.Close()
+		_ = os.Remove(tmpPath)
 		return "", &GenerateError{
 			Provider: p.Name(),
 			Code:     "write_error",
@@ -225,7 +227,7 @@ func (p *OpenRouterProvider) parseResponseAndSave(body io.Reader) (string, error
 		}
 	}
 	if err := tmpFile.Close(); err != nil {
-		os.Remove(tmpPath)
+		_ = os.Remove(tmpPath)
 		return "", &GenerateError{
 			Provider: p.Name(),
 			Code:     "write_error",

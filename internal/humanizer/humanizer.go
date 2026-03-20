@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/geekjourneyx/md2wechat-skill/internal/action"
@@ -258,8 +259,10 @@ func (h *Humanizer) extractScore(response string) *Score {
 				re := regexp.MustCompile(`(\d+)`)
 				matches := re.FindStringSubmatch(valueStr)
 				if len(matches) > 1 {
-					var value int
-					fmt.Sscanf(matches[1], "%d", &value)
+					value, err := strconv.Atoi(matches[1])
+					if err != nil {
+						continue
+					}
 
 					switch strings.ToLower(dimension) {
 					case "直接性":

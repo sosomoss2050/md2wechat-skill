@@ -190,7 +190,9 @@ func TestRunWriteReadsFileAndSwitchesInputTypeToFragment(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open /dev/null: %v", err)
 	}
-	defer devNull.Close()
+	defer func() {
+		_ = devNull.Close()
+	}()
 	os.Stdin = devNull
 
 	writeStyle = "dan-koe"

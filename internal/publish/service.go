@@ -302,15 +302,6 @@ func showCover(coverMediaID string) int {
 	return 1
 }
 
-func firstNonEmpty(values ...string) string {
-	for _, value := range values {
-		if value != "" {
-			return value
-		}
-	}
-	return ""
-}
-
 // DraftError keeps the user-facing hint for draft creation failures in the publish layer.
 type DraftError struct {
 	Message string

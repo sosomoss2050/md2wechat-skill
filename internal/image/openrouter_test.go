@@ -219,7 +219,9 @@ func TestOpenRouterProvider_Generate(t *testing.T) {
 
 		// 验证请求体
 		var reqBody map[string]any
-		json.NewDecoder(r.Body).Decode(&reqBody)
+		if err := json.NewDecoder(r.Body).Decode(&reqBody); err != nil {
+			t.Fatalf("decode request body: %v", err)
+		}
 
 		if reqBody["model"] != "google/gemini-3-pro-image-preview" {
 			t.Errorf("model = %v, want google/gemini-3-pro-image-preview", reqBody["model"])
@@ -263,7 +265,7 @@ func TestOpenRouterProvider_Generate(t *testing.T) {
 	if _, err := os.Stat(result.URL); os.IsNotExist(err) {
 		t.Errorf("Generated file does not exist: %s", result.URL)
 	} else {
-		os.Remove(result.URL) // 清理临时文件
+		_ = os.Remove(result.URL) // 清理临时文件
 	}
 
 	if result.Model != "google/gemini-3-pro-image-preview" {

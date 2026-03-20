@@ -152,10 +152,12 @@ func (s *Service) UploadMaterialFromBytes(data []byte, filename string) (*Upload
 		return nil, fmt.Errorf("create temp file: %w", err)
 	}
 	tmpPath := tmpFile.Name()
-	defer os.Remove(tmpPath)
+	defer func() {
+		_ = os.Remove(tmpPath)
+	}()
 
 	if _, err := tmpFile.Write(data); err != nil {
-		tmpFile.Close()
+		_ = tmpFile.Close()
 		return nil, fmt.Errorf("write temp file: %w", err)
 	}
 	if err := tmpFile.Close(); err != nil {
@@ -239,7 +241,9 @@ func DownloadFile(urlOrPath string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("download file: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("download failed with status: %d", resp.StatusCode)
@@ -258,12 +262,12 @@ func DownloadFile(urlOrPath string) (string, error) {
 
 	// 写入文件
 	if _, err := io.Copy(tmpFile, resp.Body); err != nil {
-		tmpFile.Close()
-		os.Remove(tmpPath)
+		_ = tmpFile.Close()
+		_ = os.Remove(tmpPath)
 		return "", fmt.Errorf("write file: %w", err)
 	}
 	if err := tmpFile.Close(); err != nil {
-		os.Remove(tmpPath)
+		_ = os.Remove(tmpPath)
 		return "", fmt.Errorf("close temp file: %w", err)
 	}
 
@@ -347,17 +351,19 @@ func CreateMultipartFormData(fieldName, filename string, data []byte) (string, *
 
 	part, err := writer.CreateFormFile(fieldName, filename)
 	if err != nil {
-		writer.Close()
+		_ = writer.Close()
 		return "", nil, ""
 	}
 
 	if _, err := part.Write(data); err != nil {
-		writer.Close()
+		_ = writer.Close()
 		return "", nil, ""
 	}
 
 	contentType := writer.FormDataContentType()
-	writer.Close()
+	if err := writer.Close(); err != nil {
+		return "", nil, ""
+	}
 
 	return contentType, body, boundary
 }
@@ -429,7 +435,9 @@ func (s *Service) CreateNewspicDraft(articles []NewspicArticle) (*CreateDraftRes
 	if err != nil {
 		return nil, fmt.Errorf("call wechat api: %w", err)
 	}
-	defer httpResp.Body.Close()
+	defer func() {
+		_ = httpResp.Body.Close()
+	}()
 
 	// 解析响应
 	respBody, err := io.ReadAll(httpResp.Body)

@@ -109,7 +109,9 @@ func (p *Processor) UploadLocalImage(filePath string) (*UploadResult, error) {
 			p.log.Warn("compress failed, using original", zap.Error(err))
 		} else if compressed {
 			processedPath = compressedPath
-			defer os.Remove(compressedPath)
+			defer func() {
+				_ = os.Remove(compressedPath)
+			}()
 			p.log.Info("using compressed image", zap.String("path", processedPath))
 		}
 	}
@@ -135,7 +137,9 @@ func (p *Processor) DownloadAndUpload(url string) (*UploadResult, error) {
 	if err != nil {
 		return nil, fmt.Errorf("download failed: %w", err)
 	}
-	defer os.Remove(tmpPath)
+	defer func() {
+		_ = os.Remove(tmpPath)
+	}()
 
 	// 检查格式
 	if !IsValidImageFormat(tmpPath) {
@@ -150,7 +154,9 @@ func (p *Processor) DownloadAndUpload(url string) (*UploadResult, error) {
 			p.log.Warn("compress failed, using original", zap.Error(err))
 		} else if compressed {
 			processedPath = compressedPath
-			defer os.Remove(compressedPath)
+			defer func() {
+				_ = os.Remove(compressedPath)
+			}()
 			p.log.Info("using compressed image", zap.String("path", processedPath))
 		}
 	}
@@ -228,7 +234,9 @@ func (p *Processor) generateAndUploadWithProvider(prompt string, provider Provid
 	if err != nil {
 		return nil, fmt.Errorf("download generated image: %w", err)
 	}
-	defer os.Remove(tmpPath)
+	defer func() {
+		_ = os.Remove(tmpPath)
+	}()
 
 	processedPath := tmpPath
 	if p.cfg.CompressImages {
@@ -237,7 +245,9 @@ func (p *Processor) generateAndUploadWithProvider(prompt string, provider Provid
 			p.log.Warn("compress failed, using original", zap.Error(err))
 		} else if compressed {
 			processedPath = compressedPath
-			defer os.Remove(compressedPath)
+			defer func() {
+				_ = os.Remove(compressedPath)
+			}()
 			p.log.Info("using compressed image", zap.String("path", processedPath))
 		}
 	}

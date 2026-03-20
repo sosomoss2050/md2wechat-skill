@@ -105,7 +105,9 @@ func TestDownloadFileDownloadsPublicRemoteImages(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DownloadFile() error = %v", err)
 	}
-	defer os.Remove(path)
+	defer func() {
+		_ = os.Remove(path)
+	}()
 
 	if filepath.Ext(path) != ".png" {
 		t.Fatalf("download path ext = %q, want .png", filepath.Ext(path))

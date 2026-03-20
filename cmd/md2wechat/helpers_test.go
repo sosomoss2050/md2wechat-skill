@@ -204,7 +204,9 @@ func TestOutputHTMLWritesFileAndResponseSuccessPrintsJSON(t *testing.T) {
 	}
 	os.Stdout = w
 	responseSuccess(map[string]any{"ok": true})
-	w.Close()
+	if err := w.Close(); err != nil {
+		t.Fatalf("close stdout pipe writer: %v", err)
+	}
 
 	var buf bytes.Buffer
 	if _, err := io.Copy(&buf, r); err != nil {

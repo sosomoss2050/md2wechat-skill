@@ -206,7 +206,7 @@ func (sm *StyleManager) mapToEnglishName(name string) string {
 func (sm *StyleManager) ListStyles() []StyleSummary {
 	// 确保已加载
 	if !sm.initialized {
-		sm.LoadStyles()
+		_ = sm.LoadStyles()
 	}
 
 	result := make([]StyleSummary, 0, len(sm.styles))
@@ -226,7 +226,7 @@ func (sm *StyleManager) ListStyles() []StyleSummary {
 func (sm *StyleManager) ListStyleNames() []string {
 	// 确保已加载
 	if !sm.initialized {
-		sm.LoadStyles()
+		_ = sm.LoadStyles()
 	}
 
 	names := make([]string, 0, len(sm.styles))
@@ -272,7 +272,7 @@ func (sm *StyleManager) ReloadStyles() error {
 // GetStyleCount 获取风格数量
 func (sm *StyleManager) GetStyleCount() int {
 	if !sm.initialized {
-		sm.LoadStyles()
+		_ = sm.LoadStyles()
 	}
 	return len(sm.styles)
 }
@@ -330,7 +330,7 @@ func (sm *StyleManager) ExportStyle(style *WriterStyle, destPath string) error {
 func (sm *StyleManager) GetStyleByCategory(category string) []StyleSummary {
 	// 确保已加载
 	if !sm.initialized {
-		sm.LoadStyles()
+		_ = sm.LoadStyles()
 	}
 
 	result := []StyleSummary{}
@@ -352,7 +352,7 @@ func (sm *StyleManager) GetStyleByCategory(category string) []StyleSummary {
 func (sm *StyleManager) ListCategories() []string {
 	// 确保已加载
 	if !sm.initialized {
-		sm.LoadStyles()
+		_ = sm.LoadStyles()
 	}
 
 	categoryMap := make(map[string]bool)

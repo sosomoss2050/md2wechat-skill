@@ -501,15 +501,6 @@ func getEnvInt(key string, defaultVal int) int {
 	return i
 }
 
-// getEnvString 获取字符串型环境变量
-func getEnvString(key, defaultVal string) string {
-	val := os.Getenv(key)
-	if val == "" {
-		return defaultVal
-	}
-	return val
-}
-
 // maskIf 掩码处理
 func maskIf(value string, mask bool) string {
 	if !mask || value == "" {
