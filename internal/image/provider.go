@@ -3,9 +3,93 @@ package image
 import (
 	"context"
 	"fmt"
+	"sort"
+	"strings"
 
 	"github.com/geekjourneyx/md2wechat-skill/internal/config"
 )
+
+type ProviderMeta struct {
+	Name           string   `json:"name"`
+	Aliases        []string `json:"aliases,omitempty"`
+	Description    string   `json:"description"`
+	RequiredConfig []string `json:"required_config,omitempty"`
+	OptionalConfig []string `json:"optional_config,omitempty"`
+	DefaultBaseURL string   `json:"default_base_url,omitempty"`
+	DefaultModel   string   `json:"default_model,omitempty"`
+	SupportsSize   bool     `json:"supports_size"`
+}
+
+var providerRegistry = []ProviderMeta{
+	{
+		Name:           "openai",
+		Description:    "OpenAI-compatible image generation provider",
+		RequiredConfig: []string{"IMAGE_API_KEY"},
+		OptionalConfig: []string{"IMAGE_API_BASE", "IMAGE_MODEL", "IMAGE_SIZE"},
+		DefaultBaseURL: "https://api.openai.com/v1",
+		DefaultModel:   "dall-e-3",
+		SupportsSize:   true,
+	},
+	{
+		Name:           "tuzi",
+		Description:    "TuZi image generation provider",
+		RequiredConfig: []string{"IMAGE_API_KEY", "IMAGE_API_BASE"},
+		OptionalConfig: []string{"IMAGE_MODEL", "IMAGE_SIZE"},
+		DefaultModel:   "gpt-image-1",
+		SupportsSize:   true,
+	},
+	{
+		Name:           "modelscope",
+		Aliases:        []string{"ms"},
+		Description:    "ModelScope image generation provider",
+		RequiredConfig: []string{"IMAGE_API_KEY"},
+		OptionalConfig: []string{"IMAGE_API_BASE", "IMAGE_MODEL", "IMAGE_SIZE"},
+		DefaultBaseURL: "https://api-inference.modelscope.cn",
+		DefaultModel:   "Tongyi-MAI/Z-Image-Turbo",
+		SupportsSize:   true,
+	},
+	{
+		Name:           "openrouter",
+		Aliases:        []string{"or"},
+		Description:    "OpenRouter image generation provider",
+		RequiredConfig: []string{"IMAGE_API_KEY"},
+		OptionalConfig: []string{"IMAGE_API_BASE", "IMAGE_MODEL", "IMAGE_SIZE"},
+		DefaultBaseURL: "https://openrouter.ai/api/v1",
+		DefaultModel:   "google/gemini-2.5-flash-image-preview",
+		SupportsSize:   true,
+	},
+	{
+		Name:           "gemini",
+		Aliases:        []string{"google"},
+		Description:    "Google Gemini image generation provider",
+		RequiredConfig: []string{"IMAGE_API_KEY"},
+		OptionalConfig: []string{"IMAGE_MODEL", "IMAGE_SIZE"},
+		DefaultModel:   "gemini-2.5-flash-image-preview",
+		SupportsSize:   true,
+	},
+}
+
+func SupportedProviders() []ProviderMeta {
+	result := make([]ProviderMeta, len(providerRegistry))
+	copy(result, providerRegistry)
+	sort.Slice(result, func(i, j int) bool { return result[i].Name < result[j].Name })
+	return result
+}
+
+func LookupProviderMeta(name string) (ProviderMeta, bool) {
+	name = strings.ToLower(strings.TrimSpace(name))
+	for _, meta := range providerRegistry {
+		if meta.Name == name {
+			return meta, true
+		}
+		for _, alias := range meta.Aliases {
+			if alias == name {
+				return meta, true
+			}
+		}
+	}
+	return ProviderMeta{}, false
+}
 
 // Provider 图片生成服务提供者接口
 type Provider interface {

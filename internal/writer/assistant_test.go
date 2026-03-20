@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/geekjourneyx/md2wechat-skill/internal/action"
+	"github.com/geekjourneyx/md2wechat-skill/internal/promptcatalog"
 )
 
 func newTestAssistant() *Assistant {
@@ -102,6 +103,8 @@ func TestGeneratePromptReturnsPromptForAIRequests(t *testing.T) {
 }
 
 func TestRefineReturnsExtractableAIRequest(t *testing.T) {
+	promptcatalog.ResetDefaultCatalogForTests()
+
 	asst := newTestAssistant()
 	result := asst.Refine(&RefineRequest{
 		Content:   "原始内容",
@@ -120,6 +123,9 @@ func TestRefineReturnsExtractableAIRequest(t *testing.T) {
 	}
 	if !strings.Contains(ExtractRefineRequest(result), "用户反馈") {
 		t.Fatalf("unexpected refine prompt: %q", ExtractRefineRequest(result))
+	}
+	if !strings.Contains(ExtractRefineRequest(result), "Write clearly and directly.") {
+		t.Fatalf("expected style prompt in refine prompt: %q", ExtractRefineRequest(result))
 	}
 }
 

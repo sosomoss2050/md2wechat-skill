@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/geekjourneyx/md2wechat-skill/internal/action"
+	"github.com/geekjourneyx/md2wechat-skill/internal/promptcatalog"
 )
 
 func TestHumanizeMethodsShareAIRequestContract(t *testing.T) {
@@ -88,5 +89,26 @@ func TestParseAIResponseFallsBackToOriginalContentOnParseFailure(t *testing.T) {
 	}
 	if result.Error == "" {
 		t.Fatalf("expected error message")
+	}
+}
+
+func TestBuildPromptUsesBundledPromptAssets(t *testing.T) {
+	promptcatalog.ResetDefaultCatalogForTests()
+
+	prompt := BuildPrompt(&HumanizeRequest{
+		Content:      "需要处理的文本",
+		Intensity:    IntensityAggressive,
+		ShowChanges:  true,
+		IncludeScore: true,
+	})
+
+	if !strings.Contains(prompt, "激进模式") {
+		t.Fatalf("prompt missing aggressive section: %q", prompt)
+	}
+	if !strings.Contains(prompt, "# Humanizer-zh: 去除 AI 写作痕迹") {
+		t.Fatalf("prompt missing bundled base template: %q", prompt)
+	}
+	if !strings.Contains(prompt, "需要处理的文本") {
+		t.Fatalf("prompt missing content: %q", prompt)
 	}
 }

@@ -291,6 +291,12 @@ Examples:
 	// config command
 	rootCmd.AddCommand(configCmd)
 
+	// discovery commands
+	rootCmd.AddCommand(capabilitiesCmd)
+	rootCmd.AddCommand(providersCmd)
+	rootCmd.AddCommand(themesCmd)
+	rootCmd.AddCommand(promptsCmd)
+
 	// write command
 	rootCmd.AddCommand(writeCmd)
 

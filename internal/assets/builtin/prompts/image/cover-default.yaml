@@ -1,0 +1,18 @@
+name: cover-default
+kind: image
+description: 通用文章封面提示词模板
+version: "1.0"
+variables:
+  - ARTICLE_TITLE
+  - ARTICLE_SUMMARY
+  - VISUAL_STYLE
+template: |
+  为公众号文章生成封面图提示词。
+  标题：{{ARTICLE_TITLE}}
+  摘要：{{ARTICLE_SUMMARY}}
+  视觉风格：{{VISUAL_STYLE}}
+
+  要求：
+  1. 适合 16:9 横版封面
+  2. 主题聚焦，视觉锚点明确
+  3. 避免堆砌文字，优先图像叙事

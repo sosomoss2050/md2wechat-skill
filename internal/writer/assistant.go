@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/geekjourneyx/md2wechat-skill/internal/action"
+	"github.com/geekjourneyx/md2wechat-skill/internal/promptcatalog"
 )
 
 // Assistant 写作助手 - 核心协调器
@@ -173,25 +174,36 @@ func (a *Assistant) Refine(req *RefineRequest) *RefineResult {
 
 // buildRefinePrompt 构建润色提示词
 func (a *Assistant) buildRefinePrompt(style *WriterStyle, content, feedback string) string {
+	feedbackBlock := ""
+	if feedback != "" {
+		feedbackBlock = "\n\n### 用户反馈\n" + feedback
+	}
+
+	catalog, err := promptcatalog.DefaultCatalog()
+	if err != nil {
+		return buildRefinePromptFallback(style, content, feedback)
+	}
+	rendered, _, err := catalog.Render("refine", "default", map[string]string{
+		"STYLE_PROMPT":   style.WritingPrompt,
+		"CONTENT":        content,
+		"FEEDBACK_BLOCK": feedbackBlock,
+	})
+	if err != nil {
+		return buildRefinePromptFallback(style, content, feedback)
+	}
+	return rendered
+}
+
+func buildRefinePromptFallback(style *WriterStyle, content, feedback string) string {
 	var prompt strings.Builder
-
 	prompt.WriteString(style.WritingPrompt)
-	prompt.WriteString("\n\n")
-
-	prompt.WriteString("## 润色任务\n")
-	prompt.WriteString("请将以下内容用该风格重新润色：\n\n")
-
-	prompt.WriteString("### 原文\n")
+	prompt.WriteString("\n\n## 润色任务\n请将以下内容用该风格重新润色：\n\n### 原文\n")
 	prompt.WriteString(content)
-
 	if feedback != "" {
 		prompt.WriteString("\n\n### 用户反馈\n")
 		prompt.WriteString(feedback)
 	}
-
-	prompt.WriteString("\n\n---\n\n")
-	prompt.WriteString("请输出润色后的内容，保持原意，用该风格重新表达。")
-
+	prompt.WriteString("\n\n---\n\n请输出润色后的内容，保持原意，用该风格重新表达。")
 	return prompt.String()
 }
 

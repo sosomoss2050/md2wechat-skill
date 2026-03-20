@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-//go:embed builtin/themes/*.yaml builtin/writers/*.yaml
+//go:embed builtin/themes/*.yaml builtin/writers/*.yaml builtin/prompts/*/*.yaml
 var builtinFS embed.FS
 
 func listYAMLNames(dir string) ([]string, error) {
@@ -53,4 +53,12 @@ func ListBuiltinWriters() ([]string, error) {
 
 func ReadBuiltinWriter(name string) ([]byte, error) {
 	return readYAMLFile("builtin/writers", name)
+}
+
+func ListBuiltinPrompts(kind string) ([]string, error) {
+	return listYAMLNames(path.Join("builtin/prompts", kind))
+}
+
+func ReadBuiltinPrompt(kind, name string) ([]byte, error) {
+	return readYAMLFile(path.Join("builtin/prompts", kind), name)
 }

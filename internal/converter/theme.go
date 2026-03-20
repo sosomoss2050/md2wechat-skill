@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/geekjourneyx/md2wechat-skill/internal/assets"
@@ -187,7 +188,22 @@ func (tm *ThemeManager) ListThemes() []string {
 	for name := range tm.themes {
 		names = append(names, name)
 	}
+	sort.Strings(names)
 	return names
+}
+
+func (tm *ThemeManager) ListThemeDefinitions() []Theme {
+	themes := make([]Theme, 0, len(tm.themes))
+	for _, theme := range tm.themes {
+		themes = append(themes, theme)
+	}
+	sort.Slice(themes, func(i, j int) bool {
+		if themes[i].Type == themes[j].Type {
+			return themes[i].Name < themes[j].Name
+		}
+		return themes[i].Type < themes[j].Type
+	})
+	return themes
 }
 
 // ListAIThemes 列出所有 AI 主题
