@@ -202,58 +202,21 @@ success "安装完成 / Installation complete!"
 
 printf "\n"
 printf "${BLUE}========================================${NC}\n"
-printf "${BLUE}   配置说明 / Configuration${NC}\n"
+printf "${BLUE}   下一步 / Next Steps${NC}\n"
 printf "${BLUE}========================================${NC}\n"
-printf "\n"
-
-CONFIG_FILE="${HOME}/.openclaw/openclaw.json"
-
-if [[ -f "$CONFIG_FILE" ]]; then
-    printf "${YELLOW}检测到已有配置文件 / Existing config found${NC}\n"
-    printf "\n"
-    printf "请在 ${GREEN}~/.openclaw/openclaw.json${NC} 的 skills.entries 中添加:\n"
-    printf "Add to skills.entries in your existing config:\n"
-    printf "\n"
-    printf "${GREEN}"
-    cat << 'EOF'
-"md2wechat": {
-  "enabled": true,
-  "env": {
-    "WECHAT_APPID": "your-appid",
-    "WECHAT_SECRET": "your-secret"
-  }
-}
-EOF
-    printf "${NC}\n"
-else
-    printf "创建配置文件 / Create config file:\n"
-    printf "${GREEN}~/.openclaw/openclaw.json${NC}\n"
-    printf "\n"
-    printf "${GREEN}"
-    cat << 'EOF'
-{
-  "skills": {
-    "entries": {
-      "md2wechat": {
-        "enabled": true,
-        "env": {
-          "WECHAT_APPID": "your-appid",
-          "WECHAT_SECRET": "your-secret"
-        }
-      }
-    }
-  }
-}
-EOF
-    printf "${NC}\n"
-fi
-
 printf "\n"
 printf "${YELLOW}注意 / Note:${NC}\n"
 printf "  • WECHAT_APPID/SECRET 仅草稿上传需要，预览转换可不配置\n"
 printf "  • 图片生成需额外配置 IMAGE_API_KEY\n"
 printf "  • OpenClaw 安装器会一并安装并校验 md2wechat runtime\n"
 printf "  • 推荐始终使用固定版本 release 资产，不要使用 main/raw 作为安装入口\n"
+printf "\n"
+printf "推荐执行 / Recommended commands:\n"
+printf "  ${GREEN}md2wechat config init${NC}\n"
+printf "  ${GREEN}md2wechat config validate${NC}\n"
+printf "\n"
+printf "默认配置文件 / Default config file:\n"
+printf "  ${GREEN}~/.config/md2wechat/config.yaml${NC}\n"
 printf "\n"
 printf "安装路径 / Installed to: ${GREEN}%s${NC}\n" "$INSTALL_DIR"
 printf "运行时 / Runtime installed to: ${GREEN}%s${NC}\n" "${RUNTIME_DIR}/md2wechat"

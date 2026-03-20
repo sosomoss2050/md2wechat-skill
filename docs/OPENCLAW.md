@@ -90,7 +90,7 @@ curl -fsSL "${MD2WECHAT_RELEASE_BASE_URL}/install-openclaw.sh" | bash
 - 自动校验 `checksums.txt`
 - 安装到 `~/.openclaw/skills/md2wechat/`
 - 安装 runtime 到 `~/.openclaw/tools/md2wechat/md2wechat`
-- 显示配置说明
+- 提示后续执行 `md2wechat config init`
 - 运行时会校验 runtime 版本是否与当前 skill 版本一致
 
 ---
@@ -127,26 +127,29 @@ chmod +x ~/.openclaw/skills/md2wechat/scripts/*.sh
 
 ## 配置说明
 
-安装完成后，需要配置微信公众号凭证。
+安装完成后，直接初始化 `md2wechat` 自己的配置文件即可。
 
-### 编辑 OpenClaw 配置文件
+### 初始化配置文件
 
-打开 `~/.openclaw/openclaw.json`，添加以下配置：
+```bash
+md2wechat config init
+md2wechat config validate
+```
 
-```json
-{
-  "skills": {
-    "entries": {
-      "md2wechat": {
-        "enabled": true,
-        "env": {
-          "WECHAT_APPID": "你的AppID",
-          "WECHAT_SECRET": "你的Secret"
-        }
-      }
-    }
-  }
-}
+默认配置文件路径：
+
+```text
+~/.config/md2wechat/config.yaml
+```
+
+推荐在这里配置微信公众号凭证和图片服务，而不是继续维护 `openclaw.json` 里的 skill 环境变量。
+
+最小示例：
+
+```yaml
+wechat:
+  appid: "你的AppID"
+  secret: "你的Secret"
 ```
 
 ### 配置项说明
@@ -159,26 +162,17 @@ chmod +x ~/.openclaw/skills/md2wechat/scripts/*.sh
 
 ### 可选：图片生成配置
 
-如果需要 AI 图片生成功能，添加以下配置：
+如果需要 AI 图片生成功能，在同一份 `config.yaml` 中继续添加：
 
-```json
-{
-  "skills": {
-    "entries": {
-      "md2wechat": {
-        "enabled": true,
-        "env": {
-          "WECHAT_APPID": "你的AppID",
-          "WECHAT_SECRET": "你的Secret",
-          "IMAGE_PROVIDER": "modelscope",
-          "IMAGE_API_KEY": "ms-your-token-here",
-          "IMAGE_API_BASE": "https://api-inference.modelscope.cn",
-          "IMAGE_MODEL": "Tongyi-MAI/Z-Image-Turbo"
-        }
-      }
-    }
-  }
-}
+```yaml
+wechat:
+  appid: "你的AppID"
+  secret: "你的Secret"
+api:
+  image_provider: "modelscope"
+  image_api_key: "ms-your-token-here"
+  image_api_base: "https://api-inference.modelscope.cn"
+  image_model: "Tongyi-MAI/Z-Image-Turbo"
 ```
 
 ---
@@ -269,11 +263,11 @@ curl -fsSL "${MD2WECHAT_RELEASE_BASE_URL}/install-openclaw.sh" | bash
 
 ### Q: 配置没生效？
 
-**A:** 检查 `openclaw.json` 格式是否正确：
+**A:** 先确认你改的是 `md2wechat` 自己的配置文件，而不是旧的 OpenClaw skill 环境配置。优先检查：
 
 ```bash
-# 验证 JSON 格式
-cat ~/.openclaw/openclaw.json | python3 -m json.tool
+md2wechat config show --format json
+md2wechat config validate
 ```
 
 ### Q: 和 Claude Code 安装冲突吗？
@@ -298,7 +292,7 @@ cat ~/.openclaw/openclaw.json | python3 -m json.tool
 | **仓库内 skill 路径** | `skills/md2wechat/` | `platforms/openclaw/md2wechat/` |
 | **技能目录** | `~/.claude/skills/` | `~/.openclaw/skills/` |
 | **安装方式** | `/plugin` 命令 | `clawhub` CLI / OpenClaw installer |
-| **配置文件** | 环境变量 / config.yaml | `openclaw.json` |
+| **配置文件** | 环境变量 / `~/.config/md2wechat/config.yaml` | `~/.config/md2wechat/config.yaml` |
 | **LLM 支持** | Claude | Claude、GPT、DeepSeek、KIMI 等 |
 | **市场** | Plugin Marketplace | [ClawHub](https://clawhub.ai/) |
 

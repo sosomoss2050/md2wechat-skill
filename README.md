@@ -1213,22 +1213,17 @@ install -m 0755 md2wechat-linux-amd64 ~/.openclaw/tools/md2wechat/md2wechat
 
 ### 配置
 
-编辑 `~/.openclaw/openclaw.json`：
+安装完成后直接初始化 `md2wechat` 配置：
 
-```json
-{
-  "skills": {
-    "entries": {
-      "md2wechat": {
-        "enabled": true,
-        "env": {
-          "WECHAT_APPID": "你的AppID",
-          "WECHAT_SECRET": "你的Secret"
-        }
-      }
-    }
-  }
-}
+```bash
+md2wechat config init
+md2wechat config validate
+```
+
+默认配置文件：
+
+```text
+~/.config/md2wechat/config.yaml
 ```
 
 ### Claude Code vs OpenClaw
@@ -1239,7 +1234,7 @@ install -m 0755 md2wechat-linux-amd64 ~/.openclaw/tools/md2wechat/md2wechat
 | **仓库内 skill 路径** | `skills/md2wechat/` | `platforms/openclaw/md2wechat/` |
 | **技能目录** | `~/.claude/skills/` | `~/.openclaw/skills/` |
 | **安装方式** | `/plugin` 命令 | `clawhub` CLI / OpenClaw installer |
-| **配置方式** | 环境变量 | `openclaw.json` |
+| **配置方式** | 环境变量 / `config.yaml` | `~/.config/md2wechat/config.yaml` |
 | **LLM 支持** | Claude | Claude、GPT、DeepSeek 等 |
 
 > **详细文档**：[OpenClaw 安装指南](docs/OPENCLAW.md)
