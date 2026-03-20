@@ -14,6 +14,12 @@ metadata: {"openclaw":{"emoji":"📝","homepage":"https://github.com/geekjourney
 - 草稿上传需要 `WECHAT_APPID` 和 `WECHAT_SECRET`。
 - 图片生成通常还需要 `IMAGE_API_KEY`，以及可选的 `IMAGE_PROVIDER` / `IMAGE_API_BASE`。
 
+配置入口：
+
+- 默认先检查 `~/.config/md2wechat/config.yaml`
+- 如需切换 API 域名、图片 provider 或确认默认模式，先看仓库文档 `docs/CONFIG.md`
+- 未显式传 `--mode` 时，`convert` 默认仍走 `api`
+
 ## 运行边界
 
 - 本 skill 只执行已经安装好的 `md2wechat` runtime。
@@ -24,11 +30,22 @@ metadata: {"openclaw":{"emoji":"📝","homepage":"https://github.com/geekjourney
 ## 推荐流程
 
 1. 先通过固定版本 OpenClaw installer 完成 skill 和 runtime 安装。
-2. 确认 `md2wechat` 可以直接运行。
+2. 先用发现命令确认当前实例支持的能力和资源：
+   - `md2wechat capabilities --json`
+   - `md2wechat providers list --json`
+   - `md2wechat themes list --json`
+   - `md2wechat prompts list --json`
 3. 再执行以下任务：
    - `convert <file.md> --preview`
    - `convert <file.md> --draft --cover <cover.jpg>`
-   - `create-image-post --from-markdown <file.md>`
+   - `create_image_post -m <file.md> -t "<title>"`
 4. 如果要使用 AI 转换或 AI 图片，再补齐图像服务配置。
+
+当任务依赖具体资源时，先检查再执行：
+
+- `md2wechat providers show <name> --json`
+- `md2wechat themes show <name> --json`
+- `md2wechat prompts show <name> --kind <kind> --json`
+- `md2wechat prompts render <name> --kind <kind> --var KEY=VALUE --json`
 
 See [references/runtime.md](references/runtime.md) for the runtime lookup contract.

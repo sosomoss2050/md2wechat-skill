@@ -1,6 +1,6 @@
 ---
 name: md2wechat
-description: Convert Markdown to WeChat Official Account HTML. Supports API mode (fast) and AI mode (themed). Features writer style assistant, AI trace removal (humanizer), and draft upload.
+description: Convert Markdown to WeChat Official Account HTML. Use this whenever the user wants WeChat article conversion, themed Markdown rendering, draft upload, image generation for articles, image-post creation, writer-style drafting, AI trace removal, or needs to inspect supported providers, themes, and prompt templates before running the workflow.
 ---
 
 # MD to WeChat
