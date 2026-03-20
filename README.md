@@ -2,7 +2,7 @@
 
 <div align="center">
 
-<img src="assets/md2wechat_logo.gif" alt="md2wechat" width="320" />
+<img src="assets/readme-cover.webp" alt="md2wechat" width="360" />
 
 **用 Markdown 写公众号文章，像发朋友圈一样简单**
 
