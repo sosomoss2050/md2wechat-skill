@@ -37,7 +37,7 @@ get_version() {
         return 0
     fi
 
-    printf '2.0.0\n'
+    printf '2.0.1\n'
 }
 
 VERSION="$(get_version)"
@@ -79,6 +79,29 @@ get_binary_path() {
 is_cache_valid() {
     local binary=$1
     [[ -x "$binary" ]] && [[ -f "$VERSION_FILE" ]] && [[ "$(cat "$VERSION_FILE" 2>/dev/null)" == "$VERSION" ]]
+}
+
+extract_version_from_json() {
+    local output=$1
+    printf '%s\n' "$output" | sed -n 's/.*"version":[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1
+}
+
+binary_matches_version() {
+    local candidate=$1
+    local resolved_candidate script_path output actual_version
+
+    [[ -x "$candidate" ]] || return 1
+
+    resolved_candidate="$(cd "$(dirname "$candidate")" && pwd)/$(basename "$candidate")"
+    script_path="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
+    if [[ "$resolved_candidate" == "$script_path" ]]; then
+        return 1
+    fi
+
+    output="$("$candidate" version --json 2>/dev/null)" || return 1
+    actual_version="$(extract_version_from_json "$output")"
+    [[ -n "$actual_version" ]] || return 1
+    [[ "$actual_version" == "$VERSION" ]]
 }
 
 get_release_base_url() {
@@ -130,14 +153,36 @@ download_binary() {
 
     # Check for download tool
     if command -v curl &>/dev/null; then
-        curl -fsSL --connect-timeout 15 --max-time 120 -o "$temp_file" "$url" 2>/dev/null
-        curl -fsSL --connect-timeout 15 --max-time 120 -o "$temp_checksums" "$checksums_url" 2>/dev/null
+        if ! curl -fsSL --connect-timeout 15 --max-time 120 -o "$temp_file" "$url" 2>/dev/null; then
+            rm -f "$temp_file" "$temp_checksums"
+            echo "  Error: Failed to download runtime from GitHub Releases" >&2
+            return 1
+        fi
+        if ! curl -fsSL --connect-timeout 15 --max-time 120 -o "$temp_checksums" "$checksums_url" 2>/dev/null; then
+            rm -f "$temp_file" "$temp_checksums"
+            echo "  Error: Failed to download checksums.txt from GitHub Releases" >&2
+            return 1
+        fi
     elif command -v wget &>/dev/null; then
-        wget -q --timeout=120 -O "$temp_file" "$url" 2>/dev/null
-        wget -q --timeout=120 -O "$temp_checksums" "$checksums_url" 2>/dev/null
+        if ! wget -q --timeout=120 -O "$temp_file" "$url" 2>/dev/null; then
+            rm -f "$temp_file" "$temp_checksums"
+            echo "  Error: Failed to download runtime from GitHub Releases" >&2
+            return 1
+        fi
+        if ! wget -q --timeout=120 -O "$temp_checksums" "$checksums_url" 2>/dev/null; then
+            rm -f "$temp_file" "$temp_checksums"
+            echo "  Error: Failed to download checksums.txt from GitHub Releases" >&2
+            return 1
+        fi
     else
         echo "  Error: curl or wget required" >&2
         echo "  Install: brew install curl (macOS) or apt install curl (Linux)" >&2
+        return 1
+    fi
+
+    if [[ ! -f "$temp_file" ]]; then
+        rm -f "$temp_checksums"
+        echo "  Error: Runtime download did not produce a file" >&2
         return 1
     fi
 
@@ -182,9 +227,20 @@ ensure_binary() {
     local local_binary="${script_dir}/bin/${BINARY_NAME}-${platform}"
     [[ "$platform" == windows-* ]] && local_binary="${local_binary}.exe"
 
-    if [[ -x "$local_binary" ]]; then
+    if binary_matches_version "$local_binary"; then
         echo "$local_binary"
         return 0
+    fi
+
+    # Try an existing installed CLI on PATH before downloading a new runtime
+    if command -v md2wechat >/dev/null 2>&1; then
+        local path_binary
+        path_binary="$(command -v md2wechat)"
+        if binary_matches_version "$path_binary"; then
+            echo "$path_binary"
+            return 0
+        fi
+        echo "  Found md2wechat on PATH, but version does not match v${VERSION}" >&2
     fi
 
     # Download
@@ -200,7 +256,8 @@ ensure_binary() {
 
     echo "" >&2
     echo "  Download failed. Try:" >&2
-    echo "    • Check your network connection" >&2
+    echo "    • If md2wechat is already installed, add it to PATH and rerun the skill" >&2
+    echo "    • If GitHub Releases CDN is blocked, set MD2WECHAT_SKILL_RELEASE_BASE_URL to a reachable mirror" >&2
     echo "    • Download manually: https://github.com/${REPO}/releases" >&2
     echo "" >&2
     return 1

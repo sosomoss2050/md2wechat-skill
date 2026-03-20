@@ -59,14 +59,14 @@ npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
 推荐先看 [安装指南](docs/INSTALL.md)。如果你只想快速开始，优先使用安装脚本：
 
 ```bash
-export MD2WECHAT_RELEASE_BASE_URL=https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.0
+export MD2WECHAT_RELEASE_BASE_URL=https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.1
 curl -fsSL "${MD2WECHAT_RELEASE_BASE_URL}/install.sh" | bash
 ```
 
 Windows PowerShell：
 
 ```powershell
-$env:MD2WECHAT_RELEASE_BASE_URL = "https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.0"
+$env:MD2WECHAT_RELEASE_BASE_URL = "https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.1"
 iex ((New-Object System.Net.WebClient).DownloadString("$env:MD2WECHAT_RELEASE_BASE_URL/install.ps1"))
 ```
 
@@ -1021,13 +1021,13 @@ md2wechat-skill/
 
 **Mac/Linux：**
 ```bash
-export MD2WECHAT_RELEASE_BASE_URL=https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.0
+export MD2WECHAT_RELEASE_BASE_URL=https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.1
 curl -fsSL "${MD2WECHAT_RELEASE_BASE_URL}/install.sh" | bash
 ```
 
 **Windows PowerShell：**
 ```powershell
-$env:MD2WECHAT_RELEASE_BASE_URL = "https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.0"
+$env:MD2WECHAT_RELEASE_BASE_URL = "https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.1"
 iex ((New-Object System.Net.WebClient).DownloadString("$env:MD2WECHAT_RELEASE_BASE_URL/install.ps1"))
 ```
 
@@ -1040,7 +1040,7 @@ iex ((New-Object System.Net.WebClient).DownloadString("$env:MD2WECHAT_RELEASE_BA
 ### 方式三：Go 工具链
 
 ```bash
-go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v2.0.0
+go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v2.0.1
 ```
 
 ### 方式四：从源码编译
@@ -1068,6 +1068,15 @@ npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
 ```
 
 安装后，直接在 Agent 中调用 `md2wechat` skill 即可。
+
+当前 coding-agent skill 的 runtime 逻辑是：
+
+- 先尝试使用缓存中的 `md2wechat`
+- 再尝试使用仓库内的开发二进制
+- 再尝试使用 `PATH` 里已经安装好的 `md2wechat`，但要求版本与当前 skill 一致
+- 只有前面都不可用时，才回退到固定版本 GitHub Releases 下载
+
+如果你所在网络无法访问 GitHub Releases CDN，优先先把 `md2wechat` 安装到 `PATH`，或者设置 `MD2WECHAT_SKILL_RELEASE_BASE_URL` 指向可访问镜像。
 
 #### 方式二：Claude Code Plugin Marketplace
 
@@ -1151,6 +1160,7 @@ md2wechat-skill/
 md2wechat 现已支持 [OpenClaw](https://openclaw.ai/) 平台！
 
 OpenClaw 使用独立的 `platforms/openclaw/md2wechat/` skill 包，和面向 Claude Code / Codex / OpenCode 的 `skills/md2wechat/` 分开维护。OpenClaw 安装主线是 skill 包与 runtime 一起安装，`run.sh` 只负责启动已安装 runtime，不再承担首跑动态下载。
+OpenClaw `run.sh` 还会校验 runtime 版本是否与当前 skill 版本一致，不会静默执行错版本二进制。
 
 ### 什么是 OpenClaw？
 
@@ -1176,7 +1186,7 @@ clawhub install md2wechat
 #### 方式二：一键脚本安装
 
 ```bash
-export MD2WECHAT_RELEASE_BASE_URL=https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.0
+export MD2WECHAT_RELEASE_BASE_URL=https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.1
 curl -fsSL "${MD2WECHAT_RELEASE_BASE_URL}/install-openclaw.sh" | bash
 ```
 
@@ -1185,7 +1195,7 @@ curl -fsSL "${MD2WECHAT_RELEASE_BASE_URL}/install-openclaw.sh" | bash
 #### 方式三：手动安装
 
 ```bash
-VERSION=2.0.0
+VERSION=2.0.1
 # 按你的平台选择对应二进制，这里以 Linux amd64 为例
 curl -LO https://github.com/geekjourneyx/md2wechat-skill/releases/download/v${VERSION}/md2wechat-openclaw-skill.tar.gz
 curl -LO https://github.com/geekjourneyx/md2wechat-skill/releases/download/v${VERSION}/md2wechat-linux-amd64
@@ -1336,7 +1346,7 @@ md2wechat write --style dan-koe --cover-only
 - 也可以使用一键安装脚本，会自动检测系统架构
 
 ```bash
-export MD2WECHAT_RELEASE_BASE_URL=https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.0
+export MD2WECHAT_RELEASE_BASE_URL=https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.1
 curl -fsSL "${MD2WECHAT_RELEASE_BASE_URL}/install.sh" | bash
 ```
 </details>

@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-03-20
+
+### Fixed
+- Fixed the release workflow so PowerShell installer smoke now runs on `windows-latest` instead of Ubuntu, and PowerShell version smoke parses CLI JSON output correctly.
+- Fixed the release workflow binary smoke so release version injection is validated against the actual bundled artifact path.
+- Tightened OpenClaw installation guidance to reflect current ClawHub behavior: `clawhub install md2wechat` installs the skill shell only and does not guarantee runtime provisioning.
+- Added OpenClaw runtime version checks so the OpenClaw wrapper rejects mismatched runtimes instead of silently executing them.
+- Added coding-agent runtime version checks so `skills/md2wechat/scripts/run.sh` only accepts PATH-discovered runtimes when the version matches the current skill version.
+- Improved coding-agent runtime fallback behavior so GitHub Releases download failures no longer produce misleading missing-temp-file errors.
+
 ## [2.0.0] - 2026-03-20
 
 ### Added

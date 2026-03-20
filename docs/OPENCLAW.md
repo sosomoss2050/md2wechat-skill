@@ -81,7 +81,7 @@ clawhub login
 适合没有安装 clawhub 的用户：
 
 ```bash
-export MD2WECHAT_RELEASE_BASE_URL=https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.0
+export MD2WECHAT_RELEASE_BASE_URL=https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.1
 curl -fsSL "${MD2WECHAT_RELEASE_BASE_URL}/install-openclaw.sh" | bash
 ```
 
@@ -91,6 +91,7 @@ curl -fsSL "${MD2WECHAT_RELEASE_BASE_URL}/install-openclaw.sh" | bash
 - 安装到 `~/.openclaw/skills/md2wechat/`
 - 安装 runtime 到 `~/.openclaw/tools/md2wechat/md2wechat`
 - 显示配置说明
+- 运行时会校验 runtime 版本是否与当前 skill 版本一致
 
 ---
 
@@ -98,7 +99,7 @@ curl -fsSL "${MD2WECHAT_RELEASE_BASE_URL}/install-openclaw.sh" | bash
 
 ```bash
 # 1. 下载固定版本 release 资产
-VERSION=2.0.0
+VERSION=2.0.1
 # 按你的平台选择对应二进制，这里以 Linux amd64 为例
 curl -LO https://github.com/geekjourneyx/md2wechat-skill/releases/download/v${VERSION}/md2wechat-openclaw-skill.tar.gz
 curl -LO https://github.com/geekjourneyx/md2wechat-skill/releases/download/v${VERSION}/md2wechat-linux-amd64
@@ -120,6 +121,7 @@ chmod +x ~/.openclaw/skills/md2wechat/scripts/*.sh
 ```
 
 手动安装时，请以同一版本 release 提供的 OpenClaw 资产为准，确保 skill 包与 runtime 同步安装到 OpenClaw 管理目录，不要依赖 `run.sh` 首次运行再下载。
+如果 runtime 存在但版本不匹配，OpenClaw `run.sh` 会直接拒绝执行并提示重新安装固定版本 runtime。
 
 ---
 
@@ -261,7 +263,7 @@ md2wechat --help
 clawhub update md2wechat
 
 # 脚本方式（会覆盖安装）
-export MD2WECHAT_RELEASE_BASE_URL=https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.0
+export MD2WECHAT_RELEASE_BASE_URL=https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.1
 curl -fsSL "${MD2WECHAT_RELEASE_BASE_URL}/install-openclaw.sh" | bash
 ```
 

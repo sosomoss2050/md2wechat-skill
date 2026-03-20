@@ -41,7 +41,7 @@ md2wechat --help
 **解决方案 A：重新用安装脚本安装**
 
 ```bash
-export MD2WECHAT_RELEASE_BASE_URL=https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.0
+export MD2WECHAT_RELEASE_BASE_URL=https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.1
 curl -fsSL "${MD2WECHAT_RELEASE_BASE_URL}/install.sh" | bash
 ```
 
@@ -67,6 +67,18 @@ export PATH=$PATH:/usr/local/bin
 - [OPENCLAW.md](OPENCLAW.md)
 
 **Claude Code / Codex 路径**如果只是二进制没装好，skill 也无法替你凭空执行 CLI。
+
+对 `skills/md2wechat/` 这条 coding-agent 路径，`run.sh` 当前会按这个顺序找 runtime：
+
+1. 本地缓存
+2. 仓库内开发二进制
+3. `PATH` 里的 `md2wechat`，但版本必须和当前 skill 一致
+4. 最后才回退到固定版本 GitHub Releases 下载
+
+如果你所在网络访问不了 GitHub Releases CDN，最稳做法是：
+
+- 先把 `md2wechat` 安装到 `PATH`
+- 或设置 `MD2WECHAT_SKILL_RELEASE_BASE_URL` 指向可访问镜像
 
 ---
 

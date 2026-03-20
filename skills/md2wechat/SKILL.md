@@ -777,14 +777,24 @@ A: WeChat resets `<p>` color to black. Always specify:
 ### Command Issues
 
 **Q: "command not found: md2wechat"**
-A: The `run.sh` script will auto-download the binary on first run. If you want to install manually:
+A: The `run.sh` wrapper does not assume the repository is the only runtime source. It uses this order:
+
+1. cached `md2wechat`
+2. repository-local development binary
+3. `md2wechat` already on `PATH`, but only if its version matches the current skill version
+4. fixed-version GitHub Releases download as the final fallback
+
+If you want to install manually:
 ```bash
-# Use the script - it will handle installation
+# Use the script first
 bash skills/md2wechat/scripts/run.sh --help
 
-# Or download from releases
-# Visit: https://github.com/geekjourneyx/md2wechat-skill/releases
+# Or install md2wechat globally and put it on PATH
+# Or download from releases:
+# https://github.com/geekjourneyx/md2wechat-skill/releases
 ```
+
+If your network cannot access GitHub Releases CDN, install `md2wechat` first or set `MD2WECHAT_SKILL_RELEASE_BASE_URL` to a reachable mirror before using the skill.
 
 **Q: AI mode very slow**
 A: AI mode requires Claude API call and takes 10-30 seconds. For faster results, use API mode.
@@ -793,7 +803,7 @@ A: AI mode requires Claude API call and takes 10-30 seconds. For faster results,
 
 ## CLI Commands Reference
 
-All commands go through the `run.sh` wrapper, which handles auto-installation:
+All commands go through the `run.sh` wrapper, which handles runtime discovery first and only downloads as a last resort:
 
 ```bash
 # Show help
