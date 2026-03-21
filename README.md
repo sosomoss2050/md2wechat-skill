@@ -24,6 +24,7 @@
 
 如果你第一次接触 `md2wechat`，先按这个顺序走：
 
+- 想用 Homebrew 安装 CLI：运行 `brew install geekjourneyx/tap/md2wechat`
 - 想直接安装 CLI：看 [安装指南](docs/INSTALL.md)
 - 想申请 API 服务或咨询：扫描文末公众号二维码联系，备注「API内测」
 - 想先看支持的主题 / 图片 prompt / provider：执行 discovery 命令
@@ -88,6 +89,12 @@ npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
 ### 第一步：安装工具
 
 推荐先看 [安装指南](docs/INSTALL.md)。如果你只想快速开始，优先使用安装脚本：
+
+```bash
+brew install geekjourneyx/tap/md2wechat
+```
+
+如果你不用 Homebrew，或者想走固定版本 release + checksum 路径，再用安装脚本：
 
 ```bash
 curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.2/install.sh | bash

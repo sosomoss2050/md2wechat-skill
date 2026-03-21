@@ -5,9 +5,10 @@
 ## 目录
 
 - [系统要求](#系统要求)
-- [方式一：安装脚本](#方式一安装脚本推荐)
-- [方式二：预编译二进制](#方式二预编译二进制)
-- [方式三：从源码编译](#方式三从源码编译)
+- [方式一：Homebrew tap](#方式一homebrew-tapmacos--linux)
+- [方式二：安装脚本](#方式二安装脚本固定版本-release-资产)
+- [方式三：预编译二进制](#方式三预编译二进制)
+- [方式四：从源码编译](#方式四从源码编译)
 - [验证安装](#验证安装)
 - [卸载](#卸载)
 
@@ -21,7 +22,25 @@
 
 ---
 
-## 方式一：安装脚本（推荐，固定版本 release 资产）
+## 方式一：Homebrew tap（macOS / Linux）
+
+如果你的环境已经装了 Homebrew，直接执行：
+
+```bash
+brew install geekjourneyx/tap/md2wechat
+```
+
+升级：
+
+```bash
+brew upgrade geekjourneyx/tap/md2wechat
+```
+
+这个路径只安装 CLI 本身，不会运行远程 installer。Homebrew formula 会直接下载当前版本对应平台的预编译归档并安装 `md2wechat`。
+
+---
+
+## 方式二：安装脚本（固定版本 release 资产）
 
 ### macOS / Linux
 
@@ -55,7 +74,7 @@ md2wechat version --json
 
 ---
 
-## 方式二：预编译二进制
+## 方式三：预编译二进制
 
 ### 下载地址
 
@@ -105,7 +124,7 @@ md2wechat.exe version --json
 
 ---
 
-## 方式三：从源码编译
+## 方式四：从源码编译
 
 ```bash
 git clone https://github.com/geekjourneyx/md2wechat-skill.git

@@ -76,6 +76,17 @@ jobs:
           build darwin arm64 md2wechat-darwin-arm64
           build windows amd64 md2wechat-windows-amd64.exe
 
+          create_homebrew_archive() {
+            source_binary="$1"
+            archive_name="$2"
+            archive_dir="$(mktemp -d)"
+
+            cp "${bundle_dir}/${source_binary}" "${archive_dir}/md2wechat"
+            chmod +x "${archive_dir}/md2wechat"
+            tar -czf "${bundle_dir}/${archive_name}" -C "${archive_dir}" md2wechat
+            rm -rf "${archive_dir}"
+          }
+
           {
             printf 'export MD2WECHAT_VERSION_DEFAULT=%q\n' "${VERSION}"
             cat scripts/install.sh
@@ -96,6 +107,10 @@ jobs:
           cp -r platforms/openclaw/md2wechat/. "${bundle_dir}/openclaw-skill/skills/md2wechat/"
           tar -czf "${bundle_dir}/md2wechat-openclaw-skill.tar.gz" -C "${bundle_dir}/openclaw-skill" skills/md2wechat
           rm -rf "${bundle_dir}/openclaw-skill"
+          create_homebrew_archive md2wechat-darwin-arm64 md2wechat_Darwin_arm64.tar.gz
+          create_homebrew_archive md2wechat-darwin-amd64 md2wechat_Darwin_x86_64.tar.gz
+          create_homebrew_archive md2wechat-linux-arm64 md2wechat_Linux_arm64.tar.gz
+          create_homebrew_archive md2wechat-linux-amd64 md2wechat_Linux_x86_64.tar.gz
           chmod +x "${bundle_dir}/install.sh" "${bundle_dir}/md2wechat-linux-amd64" "${bundle_dir}/md2wechat-linux-arm64" "${bundle_dir}/md2wechat-darwin-amd64" "${bundle_dir}/md2wechat-darwin-arm64" 2>/dev/null || true
 
           (
@@ -133,6 +148,22 @@ jobs:
 
           chmod +x "$binary"
           output="$("$binary" version --json)"
+          printf '%s\n' "$output"
+          echo "$output" | grep -q "\"version\": \"${VERSION}\""
+
+      - name: Smoke Homebrew archive from same artifact
+        env:
+          VERSION: ${{ needs.build-release.outputs.version }}
+        run: |
+          bundle_dir="${GITHUB_WORKSPACE}/release-artifact"
+          archive="${bundle_dir}/md2wechat_Linux_x86_64.tar.gz"
+          extract_dir="$(mktemp -d)"
+
+          test "$(tar -tzf "${archive}")" = "md2wechat"
+          tar -xzf "${archive}" -C "${extract_dir}"
+          chmod +x "${extract_dir}/md2wechat"
+
+          output="$("${extract_dir}/md2wechat" version --json)"
           printf '%s\n' "$output"
           echo "$output" | grep -q "\"version\": \"${VERSION}\""
 
@@ -263,9 +294,77 @@ jobs:
             release-artifact/install-openclaw.ps1
             release-artifact/install-openclaw.sh
             release-artifact/md2wechat-openclaw-skill.tar.gz
+            release-artifact/md2wechat_Darwin_arm64.tar.gz
+            release-artifact/md2wechat_Darwin_x86_64.tar.gz
+            release-artifact/md2wechat_Linux_arm64.tar.gz
+            release-artifact/md2wechat_Linux_x86_64.tar.gz
             release-artifact/checksums.txt
           draft: false
           prerelease: false
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  update-homebrew-tap:
+    needs:
+      - build-release
+      - release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check tap token
+        env:
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+        run: |
+          if [ -z "${HOMEBREW_TAP_GITHUB_TOKEN}" ]; then
+            echo "HOMEBREW_TAP_GITHUB_TOKEN is required to update geekjourneyx/homebrew-tap" >&2
+            exit 1
+          fi
+
+      - name: Checkout source repository
+        uses: actions/checkout@v4
+
+      - name: Download release bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: md2wechat-release-${{ needs.build-release.outputs.version }}
+          path: release-artifact
+
+      - name: Checkout tap repository
+        uses: actions/checkout@v4
+        with:
+          repository: geekjourneyx/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+          path: homebrew-tap
+
+      - name: Generate formula
+        env:
+          VERSION: ${{ needs.build-release.outputs.version }}
+        run: |
+          release_base_url="https://github.com/geekjourneyx/md2wechat-skill/releases/download/v${VERSION}"
+          formula_path="${GITHUB_WORKSPACE}/homebrew-tap/Formula/md2wechat.rb"
+
+          mkdir -p "$(dirname "${formula_path}")"
+
+          scripts/generate-homebrew-formula.sh \
+            --version "${VERSION}" \
+            --base-url "${release_base_url}" \
+            --darwin-arm64-sha "$(sha256sum release-artifact/md2wechat_Darwin_arm64.tar.gz | awk '{print $1}')" \
+            --darwin-x86-64-sha "$(sha256sum release-artifact/md2wechat_Darwin_x86_64.tar.gz | awk '{print $1}')" \
+            --linux-arm64-sha "$(sha256sum release-artifact/md2wechat_Linux_arm64.tar.gz | awk '{print $1}')" \
+            --linux-x86-64-sha "$(sha256sum release-artifact/md2wechat_Linux_x86_64.tar.gz | awk '{print $1}')" \
+            --output "${formula_path}"
+
+      - name: Commit and push tap update
+        working-directory: homebrew-tap
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git diff --quiet -- Formula/md2wechat.rb; then
+            echo "Formula already up to date"
+            exit 0
+          fi
+
+          git add Formula/md2wechat.rb
+          git commit -m "md2wechat v${{ needs.build-release.outputs.version }}"
+          git push origin HEAD:main

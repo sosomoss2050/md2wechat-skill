@@ -42,6 +42,7 @@ Treat these commands as the source of truth for:
 5. If `make release-check` exists in this branch, run it before declaring release-related work done.
 6. When release assets or installer scripts change, run artifact smoke and installer smoke against the same bundle before calling the work done.
 7. If the task touches release or installer paths, keep the documented primary path versioned and non-`latest`.
+8. If the task touches Homebrew distribution, verify the tap formula is generated from the same release bundle and points only to versioned release assets.
 
 ## Release And Version Discipline
 

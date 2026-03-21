@@ -2,7 +2,7 @@
 # 适用于开发者和高级用户
 
 VERSION ?= $(shell tr -d '[:space:]' < VERSION)
-LDFLAGS := -s -w -X github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat.Version=$(VERSION)
+LDFLAGS := -s -w -X main.Version=$(VERSION)
 
 .PHONY: all build clean test install help lint fmt vet release release-check deps
 
