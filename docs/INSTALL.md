@@ -45,13 +45,13 @@ brew upgrade geekjourneyx/tap/md2wechat
 ### macOS / Linux
 
 ```bash
-curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.2/install.sh | bash
+curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.3/install.sh | bash
 ```
 
 ### Windows PowerShell
 
 ```powershell
-$env:MD2WECHAT_RELEASE_BASE_URL = "https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.2"
+$env:MD2WECHAT_RELEASE_BASE_URL = "https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.3"
 iex ((New-Object System.Net.WebClient).DownloadString("$env:MD2WECHAT_RELEASE_BASE_URL/install.ps1"))
 ```
 
@@ -95,7 +95,7 @@ md2wechat version --json
 #### Linux / macOS
 
 ```bash
-VERSION=v2.0.2
+VERSION=v2.0.3
 ASSET=md2wechat-linux-amd64
 # macOS 请改成 md2wechat-darwin-amd64 或 md2wechat-darwin-arm64
 curl -LO https://github.com/geekjourneyx/md2wechat-skill/releases/download/${VERSION}/${ASSET}

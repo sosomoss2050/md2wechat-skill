@@ -4,7 +4,7 @@
 >
 > `skills/md2wechat/` 是给 Claude Code / Codex / OpenCode 的 coding-agent skill，两条路径独立维护。
 >
-> OpenClaw 安装主线是 skill 壳与已安装 CLI 配合使用。当前不再保留 skill 内部 `run.sh` wrapper，也不承担首跑动态下载。
+> OpenClaw 路径由两部分组成：OpenClaw skill 壳 + 已安装的 `md2wechat` CLI。当前不再保留 skill 内部 `run.sh` wrapper，也不承担首跑动态下载。
 
 ---
 
@@ -13,8 +13,9 @@
 - [什么是 OpenClaw](#什么是-openclaw)
 - [安装方式](#安装方式)
   - [方式一：ClawHub 安装（仅安装 skill 壳）](#方式一clawhub-安装仅安装-skill-壳)
-  - [方式二：一键脚本安装](#方式二一键脚本安装)
-  - [方式三：手动安装](#方式三手动安装)
+  - [方式二：先安装 CLI（brew / go install）](#方式二先安装-cli-brew--go-install)
+  - [方式三：一键脚本安装](#方式三一键脚本安装)
+  - [方式四：手动安装](#方式四手动安装)
   - [发给大模型的对话脚本](#发给大模型的对话脚本)
 - [配置说明](#配置说明)
 - [验证安装](#验证安装)
@@ -77,12 +78,30 @@ clawhub login
 
 ---
 
-### 方式二：一键脚本安装
+### 方式二：先安装 CLI（brew / go install）
+
+如果你已经装好了 OpenClaw skill 壳，或者你的 Agent / 审核系统只关心 CLI 安装方式，可以先安装 `md2wechat` CLI：
+
+```bash
+brew install geekjourneyx/tap/md2wechat
+```
+
+或者：
+
+```bash
+go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@latest
+```
+
+这两种方式只安装 CLI，**不会自动把 OpenClaw skill 壳写入 `~/.openclaw/skills/md2wechat/`**。如果你还没装 skill 壳，请继续使用上面的 `clawhub install md2wechat`，或者直接使用下面的一键脚本安装。
+
+---
+
+### 方式三：一键脚本安装
 
 适合没有安装 clawhub 的用户：
 
 ```bash
-curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.2/install-openclaw.sh | bash
+curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.3/install-openclaw.sh | bash
 ```
 
 **脚本功能：**
@@ -99,7 +118,7 @@ curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.
 ```text
 请帮我安装 OpenClaw 版 md2wechat，并验证 skill 和 CLI 都可用。
 按这个顺序执行：
-1. curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.2/install-openclaw.sh | bash
+1. curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.3/install-openclaw.sh | bash
 2. 先执行：export PATH="$HOME/.local/bin:$PATH"
 3. md2wechat version --json
 4. md2wechat config init
@@ -111,11 +130,11 @@ curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.
 
 ---
 
-### 方式三：手动安装
+### 方式四：手动安装
 
 ```bash
 # 1. 下载固定版本 release 资产
-VERSION=2.0.2
+VERSION=2.0.3
 # 按你的平台选择对应二进制，这里以 Linux amd64 为例
 curl -LO https://github.com/geekjourneyx/md2wechat-skill/releases/download/v${VERSION}/md2wechat-openclaw-skill.tar.gz
 curl -LO https://github.com/geekjourneyx/md2wechat-skill/releases/download/v${VERSION}/md2wechat-linux-amd64
@@ -249,7 +268,7 @@ tree ~/.openclaw/skills/md2wechat/ -L 1
 
 ### Q: 运行时报错 "command not found"？
 
-**A:** 检查 CLI 是否已由 OpenClaw 安装器安装完成，并确认 `md2wechat` 可执行文件可用：
+**A:** 先确认 `md2wechat` CLI 是否已经通过 `brew`、`go install` 或 OpenClaw 安装器装好，并确认可执行文件可用：
 
 ```bash
 md2wechat --help
@@ -264,7 +283,7 @@ md2wechat --help
 ```text
 请帮我安装 OpenClaw 版 md2wechat，并验证 CLI、配置初始化和能力发现都正常。
 执行：
-1. curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.2/install-openclaw.sh | bash
+1. curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.3/install-openclaw.sh | bash
 2. 先执行：export PATH="$HOME/.local/bin:$PATH"
 3. md2wechat version --json
 4. md2wechat config init
@@ -278,11 +297,17 @@ md2wechat --help
 **A:**
 
 ```bash
+# 如果 CLI 是通过 Homebrew 安装的
+brew upgrade geekjourneyx/tap/md2wechat
+
+# 如果 CLI 是通过 go install 安装的
+go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@latest
+
 # ClawHub 方式
 clawhub update md2wechat
 
 # 脚本方式（会覆盖安装）
-curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.2/install-openclaw.sh | bash
+curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.3/install-openclaw.sh | bash
 ```
 
 ### Q: 配置没生效？
@@ -315,7 +340,7 @@ md2wechat config validate
 | **运行方式** | 本地终端 | 本地运行，通过聊天应用操控 |
 | **仓库内 skill 路径** | `skills/md2wechat/` | `platforms/openclaw/md2wechat/` |
 | **技能目录** | `~/.claude/skills/` | `~/.openclaw/skills/` |
-| **安装方式** | `/plugin` 命令 | `clawhub` CLI / OpenClaw installer |
+| **安装方式** | `/plugin` 命令 | `clawhub` CLI + `brew/go install`，或 OpenClaw installer |
 | **配置文件** | 环境变量 / `~/.config/md2wechat/config.yaml` | `~/.config/md2wechat/config.yaml` |
 | **LLM 支持** | Claude | Claude、GPT、DeepSeek、KIMI 等 |
 | **市场** | Plugin Marketplace | [ClawHub](https://clawhub.ai/) |

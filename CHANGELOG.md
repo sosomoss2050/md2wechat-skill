@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.3] - 2026-03-21
+
+### Added
+- Added Homebrew-friendly multi-platform release archives for `darwin/linux` and `amd64/arm64`, so the project now publishes tarballs that formula-based installs can consume directly.
+- Added automatic tap update support in the release workflow, including generated `Formula/md2wechat.rb` output and a release-time push path to `geekjourneyx/homebrew-tap`.
+
+### Changed
+- Upgraded the OpenClaw skill metadata to `metadata.clawdbot` with explicit `brew` and `go install` entries, and rewrote the skill body around discovery-first usage instead of installer instructions.
+- Promoted `brew install geekjourneyx/tap/md2wechat` as a first-class installation path in user-facing docs while keeping the fixed-version release installer path for checksum-verified installs.
+- Standardized version injection around `main.Version` so local builds, release builds, formula tests, and `version --json` verification all resolve the same symbol.
+
+### Fixed
+- Fixed Homebrew tap CI so it installs `geekjourneyx/tap/md2wechat` through the tap workflow managed by `setup-homebrew`, avoiding local formula rejection, remote mismatch handling, and post-job cleanup failures.
+- Re-audited README, INSTALL, QUICKSTART, FAQ, OPENCLAW, plugin marketplace metadata, and both skill entry points to keep release references aligned at `2.0.3`.
+
 ## [2.0.2] - 2026-03-21
 
 ### Added
