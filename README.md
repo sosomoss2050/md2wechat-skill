@@ -27,7 +27,7 @@
 - 如果你是 mac 用户，优先用 Homebrew 安装 CLI：`brew install geekjourneyx/tap/md2wechat`
 - 如果你已经有稳定可用的 Go 环境，也可以选 `go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v2.0.3`
 - 想直接安装 CLI：看 [安装指南](docs/INSTALL.md)
-- 想申请 API 服务或咨询：扫描文末公众号二维码联系，备注「API内测」
+- 想申请 API 服务或咨询：扫描文末公众号二维码联系，备注「API咨询」
 - 想先看支持的主题 / 图片 prompt / provider：执行 discovery 命令
 - 想在 Claude Code / Codex / OpenCode 等 Coding Agent 里使用：先安装 CLI，再执行 `npx skills add`
 - 想在 Obsidian 的 Claudian 插件里使用：先安装 CLI，再执行 `npx skills add`，然后看 [Obsidian / Claudian 指南](docs/OBSIDIAN.md)
