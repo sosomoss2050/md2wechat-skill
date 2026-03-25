@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/geekjourneyx/md2wechat-skill/internal/config"
 	"github.com/geekjourneyx/md2wechat-skill/internal/converter"
@@ -83,6 +84,9 @@ var (
 	convertDraft          bool
 	convertSaveDraft      string
 	convertCoverImage     string // 封面图片路径
+	convertTitle          string
+	convertAuthor         string
+	convertDigest         string
 )
 
 func init() {
@@ -91,7 +95,7 @@ func init() {
 	convertCmd.Flags().StringVar(&convertTheme, "theme", "default", "Theme name")
 	convertCmd.Flags().StringVar(&convertAPIKey, "api-key", "", "API key for md2wechat.cn")
 	convertCmd.Flags().StringVar(&convertFontSize, "font-size", "medium", "Font size: small/medium/large (API mode only)")
-	convertCmd.Flags().StringVar(&convertBackgroundType, "background-type", "default", "Background type: default/grid/none (API mode only)")
+	convertCmd.Flags().StringVar(&convertBackgroundType, "background-type", "none", "Background type: default/grid/none (API mode only)")
 	convertCmd.Flags().StringVar(&convertCustomPrompt, "custom-prompt", "", "Custom AI prompt (AI mode only)")
 	convertCmd.Flags().StringVarP(&convertOutput, "output", "o", "", "Output HTML file path")
 	convertCmd.Flags().BoolVar(&convertPreview, "preview", false, "Preview only, do not upload images")
@@ -99,6 +103,9 @@ func init() {
 	convertCmd.Flags().BoolVar(&convertDraft, "draft", false, "Create WeChat draft after conversion")
 	convertCmd.Flags().StringVar(&convertSaveDraft, "save-draft", "", "Save draft JSON to file")
 	convertCmd.Flags().StringVar(&convertCoverImage, "cover", "", "Cover image path for draft (required when using --draft)")
+	convertCmd.Flags().StringVar(&convertTitle, "title", "", "Override article title (max 32 characters)")
+	convertCmd.Flags().StringVar(&convertAuthor, "author", "", "Override article author (max 16 characters)")
+	convertCmd.Flags().StringVar(&convertDigest, "digest", "", "Override article digest (max 128 characters)")
 }
 
 // runConvert 执行转换
@@ -120,16 +127,25 @@ func runConvert(cmd *cobra.Command, args []string) error {
 		return wrapCLIError(codeConvertReadFailed, err, fmt.Sprintf("read markdown file: %v", err))
 	}
 
-	metadata := converter.ParseArticleMetadata(string(markdown))
+	document := converter.ParseArticleDocument(string(markdown))
+	metadata := document.Metadata
+	bodyMarkdown := document.Body
+	resolvedTitle := firstNonEmptyTrimmed(convertTitle, metadata.Title)
+	resolvedAuthor := firstNonEmptyTrimmed(convertAuthor, metadata.Author)
+	resolvedDigest := firstNonEmptyTrimmed(convertDigest, metadata.Digest)
+	if err := validateConvertMetadata(resolvedTitle, resolvedAuthor, resolvedDigest); err != nil {
+		return err
+	}
+
 	service := newPublishService()
 	input := &publish.ConvertInput{
 		Source: publish.ArticleSource{
 			Path:     markdownFile,
-			Markdown: string(markdown),
+			Markdown: bodyMarkdown,
 			Metadata: publish.Metadata{
-				Title:  metadata.Title,
-				Author: metadata.Author,
-				Digest: metadata.Digest,
+				Title:  resolvedTitle,
+				Author: resolvedAuthor,
+				Digest: resolvedDigest,
 			},
 		},
 		Intent: publish.PublishIntent{
@@ -140,7 +156,12 @@ func runConvert(cmd *cobra.Command, args []string) error {
 			SaveDraft:   convertSaveDraft != "",
 		},
 		ConvertRequest: &converter.ConvertRequest{
-			Markdown:       string(markdown),
+			Markdown: bodyMarkdown,
+			Metadata: converter.ArticleMetadata{
+				Title:  resolvedTitle,
+				Author: resolvedAuthor,
+				Digest: resolvedDigest,
+			},
 			Mode:           converter.ConvertMode(convertMode),
 			Theme:          convertTheme,
 			APIKey:         convertAPIKey,
@@ -290,6 +311,36 @@ func validateConvertConfig() error {
 	}
 
 	return nil
+}
+
+func validateConvertMetadata(title, author, digest string) error {
+	if err := validateConvertMetadataField("--title", title, 32); err != nil {
+		return err
+	}
+	if err := validateConvertMetadataField("--author", author, 16); err != nil {
+		return err
+	}
+	if err := validateConvertMetadataField("--digest", digest, 128); err != nil {
+		return err
+	}
+	return nil
+}
+
+func validateConvertMetadataField(flagName, value string, limit int) error {
+	if utf8.RuneCountInString(value) <= limit {
+		return nil
+	}
+	return newCLIError(codeConvertInvalid, fmt.Sprintf("%s exceeds %d characters", flagName, limit))
+}
+
+func firstNonEmptyTrimmed(values ...string) string {
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value != "" {
+			return value
+		}
+	}
+	return ""
 }
 
 // uploadCoverImage 上传封面图片到微信素材库

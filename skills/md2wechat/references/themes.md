@@ -145,12 +145,14 @@ md2wechat convert article.md --theme minimal-blue --background-type none
 md2wechat convert article.md --theme focus-green --background-type grid --draft --cover cover.jpg
 ```
 
+默认值是 `none`。只有在需要显式背景时才传 `--background-type default` 或 `--background-type grid`。
+
 **配置文件设置：**
 
 ```yaml
 # ~/.config/md2wechat/config.yaml
 api:
-  background_type: grid  # default/grid/none
+  background_type: none  # default/grid/none
 ```
 
 ---

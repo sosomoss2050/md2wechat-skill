@@ -262,7 +262,7 @@ func TestSaveConfigAndLoadRoundTrip(t *testing.T) {
 		MD2WechatBaseURL:      "https://example.com",
 		DefaultConvertMode:    "api",
 		DefaultTheme:          "default",
-		DefaultBackgroundType: "default",
+		DefaultBackgroundType: "none",
 		ImageProvider:         "openai",
 		ImageAPIKey:           "image-key",
 		ImageAPIBase:          "https://api.example.com",

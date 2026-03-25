@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.4] - 2026-03-25
+
+### Added
+- **CLI flags for article metadata**: Added `--title`, `--author`, and `--digest` flags to `convert` command for explicit metadata override
+- **Metadata validation**: Added length validation for title (32 chars), author (16 chars), and digest (128 chars) with clear error messages
+- **Frontmatter stripping**: `convert` now properly strips frontmatter from markdown body before passing to converter, preventing metadata from appearing in generated HTML
+- **ArticleDocument structure**: Introduced `ArticleDocument` to separate metadata extraction from body parsing, improving testability
+
+### Changed
+- **background_type default**: Changed default `background_type` from `default` to `none` for cleaner output
+- **Metadata priority**: Clarified metadata resolution order: CLI flags → frontmatter → first markdown heading → fallback
+- **Test coverage**: Added comprehensive tests for metadata override, frontmatter stripping, and validation
+
+### Fixed
+- Fixed metadata extraction to properly handle `digest`, `summary`, and `description` frontmatter fields with correct priority
+- Fixed first-line title fallback logic to avoid treating non-heading body text as title
+- Fixed outdated documentation about background_type default value
+
+### Technical Details
+- **New Files**: None (structure changes only)
+- **Modified Files**:
+  - `cmd/md2wechat/convert.go` - Added CLI flags, validation, and document parsing
+  - `cmd/md2wechat/convert_test.go` - Added 4 new test cases
+  - `internal/converter/metadata.go` - Added `ArticleDocument` and `ParseArticleDocument`
+  - `internal/converter/converter.go` - Added `normalizeRequest` to handle metadata merging
+  - `internal/converter/ai.go` - Updated to use stripped body and resolved metadata
+  - `internal/config/config.go` - Changed default background_type to "none"
+  - Documentation updates across README, docs/, and SKILL.md files
+
+### Migration Guide
+No breaking changes. The new CLI flags are optional. If you relied on the previous `background_type: "default"` behavior, explicitly pass `--background-type default` or set it in your config file.
+
 ## [2.0.3] - 2026-03-21
 
 ### Added
@@ -190,7 +222,7 @@ No migration required.
 No migration required. All new features are additive:
 - `create_image_post` is a new command
 - New v2.0 themes are opt-in via `--theme` parameter
-- `background_type` defaults to "default" (existing behavior)
+- `background_type` changed to default to "none" (was "default" in v2.0.3)
 - Image providers are configurable, no breaking changes
 
 ### Technical Details

@@ -1,6 +1,9 @@
 package converter
 
 import (
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -86,6 +89,37 @@ func TestParseArticleMetadataPrefersFrontMatter(t *testing.T) {
 	}
 }
 
+func TestParseArticleDocumentStripsFrontMatterFromBody(t *testing.T) {
+	markdown := strings.Join([]string{
+		"---",
+		"title: Frontmatter Title",
+		"author: Jane Doe",
+		"summary: Frontmatter summary",
+		"---",
+		"",
+		"# Heading Title",
+		"",
+		"body",
+	}, "\n")
+
+	doc := ParseArticleDocument(markdown)
+	if doc.Metadata.Title != "Frontmatter Title" {
+		t.Fatalf("title = %q", doc.Metadata.Title)
+	}
+	if doc.Metadata.Author != "Jane Doe" {
+		t.Fatalf("author = %q", doc.Metadata.Author)
+	}
+	if doc.Metadata.Digest != "Frontmatter summary" {
+		t.Fatalf("digest = %q", doc.Metadata.Digest)
+	}
+	if strings.Contains(doc.Body, "title: Frontmatter Title") {
+		t.Fatalf("body still contains frontmatter: %q", doc.Body)
+	}
+	if !strings.HasPrefix(doc.Body, "\n# Heading Title") && !strings.HasPrefix(doc.Body, "# Heading Title") {
+		t.Fatalf("unexpected body = %q", doc.Body)
+	}
+}
+
 func TestParseArticleMetadataFallsBackToMarkdownTitle(t *testing.T) {
 	markdown := "# Heading Title\n\nbody"
 
@@ -95,6 +129,15 @@ func TestParseArticleMetadataFallsBackToMarkdownTitle(t *testing.T) {
 	}
 	if meta.Author != "" || meta.Digest != "" {
 		t.Fatalf("unexpected metadata: %#v", meta)
+	}
+}
+
+func TestParseArticleMetadataDoesNotUseFirstBodyLineAsTitle(t *testing.T) {
+	markdown := "This is body text without a heading.\n\nMore body."
+
+	meta := ParseArticleMetadata(markdown)
+	if meta.Title != "未命名文章" {
+		t.Fatalf("title = %q", meta.Title)
 	}
 }
 
@@ -181,6 +224,136 @@ func TestAIRequestHelpersExposePreparedPrompt(t *testing.T) {
 	}
 	if result.Status != action.StatusActionRequired || result.Action != action.ActionConvert {
 		t.Fatalf("unexpected typed state: %+v", result)
+	}
+}
+
+func TestBuildAIPromptPrefersResolvedMetadataTitle(t *testing.T) {
+	tm := NewThemeManager()
+	tm.themes["ai-test"] = Theme{
+		Name:   "ai-test",
+		Type:   "ai",
+		Prompt: "Title: {{TITLE}}\n\n{{MARKDOWN}}",
+	}
+	conv := &converter{
+		cfg:           &config.Config{},
+		log:           zap.NewNop(),
+		theme:         tm,
+		promptBuilder: NewPromptBuilder(),
+	}
+
+	prompt, err := conv.buildAIPrompt(&ConvertRequest{
+		Markdown: strings.Join([]string{
+			"---",
+			"title: Frontmatter 标题",
+			"---",
+			"",
+			"# 正文标题",
+			"",
+			"正文",
+		}, "\n"),
+		Metadata: ArticleMetadata{
+			Title: "命令行标题",
+		},
+		Mode:  ModeAI,
+		Theme: "ai-test",
+	})
+	if err != nil {
+		t.Fatalf("buildAIPrompt() error = %v", err)
+	}
+	if !strings.Contains(prompt, "命令行标题") {
+		t.Fatalf("prompt missing override title: %q", prompt)
+	}
+	if !strings.Contains(prompt, "Title: 命令行标题") {
+		t.Fatalf("prompt did not apply override title variable: %q", prompt)
+	}
+	if strings.Contains(prompt, "title: Frontmatter 标题") {
+		t.Fatalf("prompt should not include raw frontmatter: %q", prompt)
+	}
+}
+
+func TestPrepareAIRequestStripsFrontMatterFromMarkdown(t *testing.T) {
+	tm := NewThemeManager()
+	tm.themes["ai-test"] = Theme{
+		Name:   "ai-test",
+		Type:   "ai",
+		Prompt: "Body:\n\n{{MARKDOWN}}",
+	}
+	conv := &converter{
+		cfg:           &config.Config{},
+		log:           zap.NewNop(),
+		theme:         tm,
+		promptBuilder: NewPromptBuilder(),
+	}
+
+	req, err := conv.PrepareAIRequest(&ConvertRequest{
+		Markdown: strings.Join([]string{
+			"---",
+			"title: Frontmatter 标题",
+			"author: Jane Doe",
+			"---",
+			"",
+			"# 正文标题",
+			"",
+			"正文",
+		}, "\n"),
+		Mode:  ModeAI,
+		Theme: "ai-test",
+	})
+	if err != nil {
+		t.Fatalf("PrepareAIRequest() error = %v", err)
+	}
+	if strings.Contains(req.Markdown, "title: Frontmatter 标题") {
+		t.Fatalf("prepared markdown should not contain frontmatter: %q", req.Markdown)
+	}
+	if !strings.Contains(req.Markdown, "# 正文标题") {
+		t.Fatalf("prepared markdown missing body content: %q", req.Markdown)
+	}
+}
+
+func TestConvertViaAPIStripsFrontMatterBeforeSendingMarkdown(t *testing.T) {
+	var received APIRequest
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() { _ = r.Body.Close() }()
+		if err := json.NewDecoder(r.Body).Decode(&received); err != nil {
+			t.Fatalf("decode request: %v", err)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"code":0,"msg":"ok","data":{"html":"<p>ok</p>"}}`))
+	}))
+	defer server.Close()
+
+	conv := &converter{
+		cfg: &config.Config{
+			MD2WechatAPIKey:  "api-key",
+			MD2WechatBaseURL: server.URL,
+		},
+		log:           zap.NewNop(),
+		theme:         NewThemeManager(),
+		promptBuilder: NewPromptBuilder(),
+	}
+
+	result := conv.Convert(&ConvertRequest{
+		Markdown: strings.Join([]string{
+			"---",
+			"title: Frontmatter Title",
+			"author: Jane Doe",
+			"---",
+			"",
+			"# Heading Title",
+			"",
+			"body",
+		}, "\n"),
+		Mode:  ModeAPI,
+		Theme: "default",
+	})
+	if !result.Success {
+		t.Fatalf("Convert() failed: %+v", result)
+	}
+	if strings.Contains(received.Markdown, "title: Frontmatter Title") {
+		t.Fatalf("api request still contains frontmatter: %q", received.Markdown)
+	}
+	if !strings.Contains(received.Markdown, "# Heading Title") || !strings.Contains(received.Markdown, "body") {
+		t.Fatalf("api request missing body content: %q", received.Markdown)
 	}
 }
 

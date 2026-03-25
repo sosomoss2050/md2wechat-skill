@@ -67,8 +67,27 @@ md2wechat convert article.md -o output.html
 md2wechat convert article.md --upload -o output.html
 
 # 4. 完整流程 - 上传图片 + 创建草稿
-md2wechat convert article.md --upload --draft
+md2wechat convert article.md --upload --draft --cover cover.jpg
+
+# 5. 显式覆盖标题、作者、摘要
+md2wechat convert article.md --title "新标题" --author "作者名" --digest "摘要"
 ```
+
+### 文章元数据规则
+
+`convert` 会按下面顺序决定元数据：
+
+- 标题：`--title` -> `frontmatter.title` -> 正文首个 Markdown 标题 -> `未命名文章`
+- 作者：`--author` -> `frontmatter.author`
+- 摘要：`--digest` -> `frontmatter.digest` -> `frontmatter.summary` -> `frontmatter.description`
+
+长度限制：
+
+- 标题最多 32 个字符
+- 作者最多 16 个字符
+- 摘要最多 128 个字符
+
+创建草稿时如果摘要仍为空，会从正文 HTML 生成一个 120 字符兜底摘要。正文里的一级标题不会因为被拿来当标题来源就自动删除。
 
 ---
 
@@ -262,11 +281,16 @@ api:
 
 ```bash
 # 直接创建草稿
-md2wechat convert article.md --draft
+md2wechat convert article.md --draft --cover cover.jpg
 
 # 先上传图片再创建草稿
-md2wechat convert article.md --upload --draft
+md2wechat convert article.md --upload --draft --cover cover.jpg
 ```
+
+说明：
+
+- 创建草稿时必须显式提供 `--cover`
+- 如果需要覆盖标题、作者、摘要，可额外传 `--title`、`--author`、`--digest`
 
 ### 保存草稿 JSON
 

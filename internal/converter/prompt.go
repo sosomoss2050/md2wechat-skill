@@ -418,10 +418,6 @@ func ParseMarkdownTitle(markdown string) string {
 				return title
 			}
 		}
-		// 如果第一行非空，作为标题
-		if line != "" && !strings.HasPrefix(line, "!") && !strings.HasPrefix(line, ">") {
-			return line
-		}
 	}
 	return "未命名文章"
 }

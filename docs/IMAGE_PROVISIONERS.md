@@ -378,7 +378,7 @@ Gemini 支持以下宽高比，可通过配置文件或 `--size` 参数指定。
 
 ```bash
 # 转换文章（会自动生成图片并上传到微信）
-md2wechat convert article.md --draft
+md2wechat convert article.md --draft --cover cover.jpg
 
 # 只预览（不上传）
 md2wechat convert article.md --preview

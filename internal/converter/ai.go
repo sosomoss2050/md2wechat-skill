@@ -88,7 +88,12 @@ func (c *converter) convertViaAI(req *ConvertRequest) *ConvertResult {
 // buildAIPrompt 构建 AI 提示词
 func (c *converter) buildAIPrompt(req *ConvertRequest) (string, error) {
 	var prompt string
-	metadata := ParseArticleMetadata(req.Markdown)
+	doc := ParseArticleDocument(req.Markdown)
+	markdown := doc.Body
+	metadata := doc.Metadata
+	metadata.Title = firstNonEmpty(req.Metadata.Title, metadata.Title)
+	metadata.Author = firstNonEmpty(req.Metadata.Author, metadata.Author)
+	metadata.Digest = firstNonEmpty(req.Metadata.Digest, metadata.Digest)
 
 	// 如果有自定义提示词，使用自定义
 	if req.CustomPrompt != "" {
@@ -110,10 +115,10 @@ func (c *converter) buildAIPrompt(req *ConvertRequest) (string, error) {
 			vars := map[string]string{
 				"TITLE": metadata.Title,
 			}
-			prompt, err = c.promptBuilder.BuildPromptFromTheme(theme, req.Markdown, vars)
+			prompt, err = c.promptBuilder.BuildPromptFromTheme(theme, markdown, vars)
 			if err != nil {
 				c.log.Warn("build prompt from theme failed, using raw prompt", zap.Error(err))
-				prompt = theme.Prompt + "\n\n```\n" + req.Markdown + "\n```"
+				prompt = theme.Prompt + "\n\n```\n" + markdown + "\n```"
 			} else {
 				// 验证 Prompt 内容
 				validation := ValidatePromptContent(prompt)
@@ -131,7 +136,7 @@ func (c *converter) buildAIPrompt(req *ConvertRequest) (string, error) {
 	}
 
 	// 添加 Markdown 内容
-	fullPrompt := prompt + "\n\n```\n" + req.Markdown + "\n```"
+	fullPrompt := prompt + "\n\n```\n" + markdown + "\n```"
 
 	return fullPrompt, nil
 }
@@ -159,9 +164,10 @@ func (c *converter) PrepareAIRequest(req *ConvertRequest) (*AIConvertRequest, er
 	if err != nil {
 		return nil, err
 	}
+	doc := ParseArticleDocument(req.Markdown)
 
 	return &AIConvertRequest{
-		Markdown:     req.Markdown,
+		Markdown:     doc.Body,
 		Prompt:       prompt,
 		Theme:        req.Theme,
 		CustomPrompt: req.CustomPrompt,

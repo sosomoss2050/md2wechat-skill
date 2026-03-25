@@ -99,7 +99,7 @@ go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@latest
 适合没有安装 clawhub 的用户：
 
 ```bash
-curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.3/install-openclaw.sh | bash
+curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.4/install-openclaw.sh | bash
 ```
 
 **脚本功能：**
@@ -116,7 +116,7 @@ curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.
 ```text
 请帮我安装 OpenClaw 版 md2wechat，并验证 skill 和 CLI 都可用。
 按这个顺序执行：
-1. curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.3/install-openclaw.sh | bash
+1. curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.4/install-openclaw.sh | bash
 2. 先执行：export PATH="$HOME/.local/bin:$PATH"
 3. md2wechat version --json
 4. md2wechat config init
@@ -132,7 +132,7 @@ curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.
 
 ```bash
 # 1. 下载固定版本 release 资产
-VERSION=2.0.3
+VERSION=2.0.4
 # 按你的平台选择对应二进制，这里以 Linux amd64 为例
 curl -LO https://github.com/geekjourneyx/md2wechat-skill/releases/download/v${VERSION}/md2wechat-openclaw-skill.tar.gz
 curl -LO https://github.com/geekjourneyx/md2wechat-skill/releases/download/v${VERSION}/md2wechat-linux-amd64
@@ -281,7 +281,7 @@ md2wechat --help
 ```text
 请帮我安装 OpenClaw 版 md2wechat，并验证 CLI、配置初始化和能力发现都正常。
 执行：
-1. curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.3/install-openclaw.sh | bash
+1. curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.4/install-openclaw.sh | bash
 2. 先执行：export PATH="$HOME/.local/bin:$PATH"
 3. md2wechat version --json
 4. md2wechat config init
@@ -305,7 +305,7 @@ go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@latest
 clawhub update md2wechat
 
 # 脚本方式（会覆盖安装）
-curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.3/install-openclaw.sh | bash
+curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.4/install-openclaw.sh | bash
 ```
 
 ### Q: 配置没生效？

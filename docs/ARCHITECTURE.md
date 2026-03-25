@@ -75,12 +75,18 @@ md2wechat-skill 的核心目标不是“把 Markdown 变好看”，而是把文
 ### `convert`
 
 1. 读取 Markdown
-2. 提取 metadata
+2. 提取 metadata，并应用 `--title` / `--author` / `--digest` 覆盖
 3. 解析图片引用
 4. 执行 API 或 AI 转换
 5. 必要时通过 `AssetPipeline` 上传并回填 HTML
 6. 可选保存 draft JSON
 7. 可选上传封面并创建微信草稿
+
+metadata 解析顺序：
+
+- 标题：命令行 `--title` -> frontmatter `title` -> 正文首个 Markdown 标题 -> `未命名文章`
+- 作者：命令行 `--author` -> frontmatter `author`
+- 摘要：命令行 `--digest` -> frontmatter `digest` / `summary` / `description`
 
 ### `create_image_post`
 

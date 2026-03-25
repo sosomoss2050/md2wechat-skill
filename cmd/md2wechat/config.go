@@ -181,7 +181,7 @@ func initConfigFile(outputFile string) error {
 		ImageSize:             "1024x1024",
 		DefaultConvertMode:    "api",
 		DefaultTheme:          "default",
-		DefaultBackgroundType: "default",
+		DefaultBackgroundType: "none",
 		CompressImages:        true,
 		MaxImageWidth:         1920,
 		MaxImageSize:          5 * 1024 * 1024,

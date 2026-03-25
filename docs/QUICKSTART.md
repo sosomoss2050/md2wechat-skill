@@ -19,13 +19,13 @@ brew install geekjourneyx/tap/md2wechat
 如果你不用 Homebrew，再执行：
 
 ```bash
-curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.3/install.sh | bash
+curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.4/install.sh | bash
 ```
 
 Windows PowerShell：
 
 ```powershell
-$env:MD2WECHAT_RELEASE_BASE_URL = "https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.3"
+$env:MD2WECHAT_RELEASE_BASE_URL = "https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.4"
 iex ((New-Object System.Net.WebClient).DownloadString("$env:MD2WECHAT_RELEASE_BASE_URL/install.ps1"))
 ```
 
@@ -102,7 +102,20 @@ md2wechat convert article.md --mode ai --theme autumn-warm --json
 md2wechat convert article.md --preview
 md2wechat convert article.md -o article.html
 md2wechat convert article.md --draft --cover cover.jpg
+md2wechat convert article.md --title "新标题" --author "作者名" --digest "摘要"
 ```
+
+元数据优先级：
+
+- 标题：`--title` -> `frontmatter.title` -> 正文首个 Markdown 标题 -> `未命名文章`
+- 作者：`--author` -> `frontmatter.author`
+- 摘要：`--digest` -> `frontmatter.digest` -> `frontmatter.summary` -> `frontmatter.description`
+
+限制：
+
+- 标题最多 32 个字符
+- 作者最多 16 个字符
+- 摘要最多 128 个字符
 
 ### 图片帖子（小绿书 / newspic）
 

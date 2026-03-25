@@ -233,7 +233,7 @@ api:
   image_size: "1024x1024"
   convert_mode: "api"
   default_theme: "default"
-  background_type: "default"
+  background_type: "none"
   http_timeout: 30
 
 image:
@@ -261,7 +261,7 @@ image:
 | `api.md2wechat_base_url` | 否 | 排版 API 域名 | `https://www.md2wechat.cn` |
 | `api.convert_mode` | 否 | 默认转换模式 | `api` |
 | `api.default_theme` | 否 | 默认主题 | `default` |
-| `api.background_type` | 否 | 背景类型 | `default` |
+| `api.background_type` | 否 | 背景类型 | `none` |
 | `api.http_timeout` | 否 | HTTP 超时秒数 | `30` |
 
 ### 图片生成配置

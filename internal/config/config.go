@@ -82,7 +82,7 @@ func LoadWithDefaults(configPath string) (*Config, error) {
 	cfg := &Config{
 		DefaultConvertMode:    "api",
 		DefaultTheme:          "default",
-		DefaultBackgroundType: "default",
+		DefaultBackgroundType: "none",
 		MD2WechatBaseURL:      "https://www.md2wechat.cn",
 		CompressImages:        true,
 		MaxImageWidth:         1920,

@@ -33,9 +33,10 @@ const (
 // ConvertRequest 转换请求
 type ConvertRequest struct {
 	// 基础输入
-	Markdown string      // Markdown 内容
-	Mode     ConvertMode // 转换模式
-	Theme    string      // 主题名称 / AI 提示词名称
+	Markdown string          // Markdown 内容
+	Metadata ArticleMetadata // 已解析/覆盖后的文章元信息
+	Mode     ConvertMode     // 转换模式
+	Theme    string          // 主题名称 / AI 提示词名称
 
 	// API 模式专用
 	APIKey         string // md2wechat.cn API Key
@@ -104,6 +105,8 @@ func (c *converter) Convert(req *ConvertRequest) *ConvertResult {
 		Theme: req.Theme,
 	}
 
+	c.normalizeRequest(req)
+
 	// 验证请求
 	if err := c.validateRequest(req); err != nil {
 		result.Success = false
@@ -128,6 +131,18 @@ func (c *converter) Convert(req *ConvertRequest) *ConvertResult {
 		result.Error = "unsupported convert mode: " + string(req.Mode)
 		return result
 	}
+}
+
+func (c *converter) normalizeRequest(req *ConvertRequest) {
+	if req == nil || req.Markdown == "" {
+		return
+	}
+
+	doc := ParseArticleDocument(req.Markdown)
+	req.Markdown = doc.Body
+	req.Metadata.Title = firstNonEmpty(req.Metadata.Title, doc.Metadata.Title)
+	req.Metadata.Author = firstNonEmpty(req.Metadata.Author, doc.Metadata.Author)
+	req.Metadata.Digest = firstNonEmpty(req.Metadata.Digest, doc.Metadata.Digest)
 }
 
 // validateRequest 验证请求参数

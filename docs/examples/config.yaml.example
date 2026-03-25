@@ -12,7 +12,7 @@ api:
   image_size: "1024x1024"
   convert_mode: "api"
   default_theme: "default"
-  background_type: "default"
+  background_type: "none"
   http_timeout: 30
 
 image:

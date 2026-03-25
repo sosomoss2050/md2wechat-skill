@@ -13,6 +13,12 @@ type ArticleMetadata struct {
 	Digest string
 }
 
+// ArticleDocument 表示解析后的文章元信息与正文。
+type ArticleDocument struct {
+	Metadata ArticleMetadata
+	Body     string
+}
+
 type frontMatter struct {
 	Title       string `yaml:"title"`
 	Author      string `yaml:"author"`
@@ -23,6 +29,11 @@ type frontMatter struct {
 
 // ParseArticleMetadata 提取 frontmatter 和正文中的元信息。
 func ParseArticleMetadata(markdown string) ArticleMetadata {
+	return ParseArticleDocument(markdown).Metadata
+}
+
+// ParseArticleDocument 提取 frontmatter 元信息，并返回去除 frontmatter 后的正文。
+func ParseArticleDocument(markdown string) ArticleDocument {
 	meta := ArticleMetadata{}
 	body := markdown
 
@@ -37,7 +48,10 @@ func ParseArticleMetadata(markdown string) ArticleMetadata {
 		meta.Title = ParseMarkdownTitle(body)
 	}
 
-	return meta
+	return ArticleDocument{
+		Metadata: meta,
+		Body:     body,
+	}
 }
 
 func parseFrontMatter(markdown string) (frontMatter, string, bool) {
