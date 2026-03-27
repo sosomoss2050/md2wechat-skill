@@ -91,6 +91,12 @@ func SetStatusWriter(writer io.Writer) {
 	statusWriter = writer
 }
 
+func writeStatusf(format string, args ...any) {
+	if _, err := fmt.Fprintf(statusWriter, format, args...); err != nil {
+		return
+	}
+}
+
 // Load 从配置文件和环境变量加载配置
 // 优先级：环境变量 > 配置文件 > 默认值
 func Load() (*Config, error) {
@@ -122,14 +128,14 @@ func LoadWithDefaults(configPath string) (*Config, error) {
 		if err := loadFromFile(cfg, configPath); err != nil {
 			// 配置文件加载失败不是致命错误，继续使用环境变量和默认值
 			if !quietOutput {
-				fmt.Fprintf(statusWriter, "⚠️  警告: 配置文件加载失败 (%v)，将使用环境变量或默认值\n", err)
+				writeStatusf("⚠️  警告: 配置文件加载失败 (%v)，将使用环境变量或默认值\n", err)
 			}
 		} else {
 			cfg.configFile = configPath
 			// 显示正在使用的配置文件
 			if !quietOutput {
 				relPath := getRelativePath(configPath)
-				fmt.Fprintf(statusWriter, "✅ 使用配置文件: %s\n", relPath)
+				writeStatusf("✅ 使用配置文件: %s\n", relPath)
 			}
 		}
 	}

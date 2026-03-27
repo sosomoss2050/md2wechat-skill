@@ -4,7 +4,7 @@
 VERSION ?= $(shell tr -d '[:space:]' < VERSION)
 LDFLAGS := -s -w -X main.Version=$(VERSION)
 
-.PHONY: all build clean test install help lint fmt vet release release-check deps
+.PHONY: all build clean test install help lint fmt vet release release-check deps quality-gates
 
 # 默认目标
 all: build
@@ -61,7 +61,7 @@ test:
 # 代码检查
 lint:
 	@echo "🔍 代码检查..."
-	@golangci-lint run ./... 2>/dev/null || echo "  (需要安装 golangci-lint)"
+	@bash scripts/run-golangci-lint.sh
 
 # 格式化代码
 fmt:
@@ -78,6 +78,10 @@ vet:
 release-check:
 	@echo "🔍 检查发布一致性..."
 	@bash scripts/release-check.sh
+
+# 本地/CI 统一质量门
+quality-gates:
+	@bash scripts/quality-gates.sh
 
 # 安装到 GOPATH/bin
 install:
@@ -104,6 +108,8 @@ help:
 	@echo "  make fmt         - 格式化代码"
 	@echo "  make vet         - 静态分析"
 	@echo "  make test        - 运行测试"
+	@echo "  make lint        - 运行与 CI 一致的 golangci-lint"
+	@echo "  make quality-gates - 运行与 CI 一致的完整发布前检查"
 	@echo "  make release-check - 检查版本/文档/workflow 一致性"
 	@echo ""
 	@echo "依赖管理:"

@@ -37,12 +37,13 @@ Treat these commands as the source of truth for:
 
 1. Run `gofmt -l .` when Go files change.
 2. Run `go vet ./...` after structural changes.
-3. Run `GOCACHE=/tmp/md2wechat-go-build go test ./...` for regression coverage.
-4. Run `GOCACHE=/tmp/md2wechat-go-build go test -cover ./...` when coverage is part of the task.
-5. If `make release-check` exists in this branch, run it before declaring release-related work done.
-6. When release assets or installer scripts change, run artifact smoke and installer smoke against the same bundle before calling the work done.
-7. If the task touches release or installer paths, keep the documented primary path versioned and non-`latest`.
-8. If the task touches Homebrew distribution, verify the tap formula is generated from the same release bundle and points only to versioned release assets.
+3. Run `make quality-gates` before declaring release-related or CI-sensitive work done. This is the local source of truth for the same gate sequence enforced in GitHub Actions.
+4. Run `GOCACHE=/tmp/md2wechat-go-build go test ./...` for focused regression work when you do not need the full gate.
+5. Run `GOCACHE=/tmp/md2wechat-go-build go test -cover ./...` when coverage is part of the task.
+6. If `make release-check` exists in this branch, keep it green, but do not treat it as a substitute for `make quality-gates`.
+7. When release assets or installer scripts change, run artifact smoke and installer smoke against the same bundle before calling the work done.
+8. If the task touches release or installer paths, keep the documented primary path versioned and non-`latest`.
+9. If the task touches Homebrew distribution, verify the tap formula is generated from the same release bundle and points only to versioned release assets.
 
 ## Test Discipline
 
@@ -63,6 +64,7 @@ Required rules:
 5. When behavior depends on combinations of inputs, prefer table-driven matrix tests over one-off happy-path tests.
 6. When the code talks to external systems, keep a small number of real smoke tests, but make the default regression suite deterministic and local-first.
 7. If a test is brittle, environment-dependent, or mostly re-tests implementation details without protecting user trust, do not add it unless there is a concrete regression history behind it.
+8. A change is not CI-safe until the exact local gate that CI runs has passed. Do not rely on “I ran tests” if CI also runs lint, formatting, or release-consistency checks that you did not run locally.
 
 Priority order for effective tests:
 

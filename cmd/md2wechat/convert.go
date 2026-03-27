@@ -357,7 +357,9 @@ func uploadCoverImage(imagePath string) (string, error) {
 func outputHTML(html, outputPath string, preview bool) {
 	if preview || outputPath == "" {
 		// 预览模式或未指定输出，输出纯 HTML 到标准输出
-		fmt.Fprint(os.Stdout, html)
+		if _, err := fmt.Fprint(os.Stdout, html); err != nil {
+			log.Error("failed to write html to stdout", zap.Error(err))
+		}
 	}
 
 	if outputPath != "" {

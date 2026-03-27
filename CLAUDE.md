@@ -238,6 +238,7 @@ ClawHub 发布跳过。如需手动发布，请稍后执行：
      - `skills/md2wechat/SKILL.md`
      - `platforms/openclaw/md2wechat/SKILL.md`
 5. 这类任务不以“代码改完”为完成标准，必须完成高价值入口文档校准，防止代码和文档漂移
+6. 这类任务如果会触发 CI 或 release，不要只跑 `go test`。必须先跑和云端一致的本地 gate：`make quality-gates`
 
 ### 新增命令 / 新增功能后的测试闭环
 
@@ -293,7 +294,7 @@ ClawHub 发布跳过。如需手动发布，请稍后执行：
 - 关键契约有测试保护
 - 关键失败路径有测试保护
 - 文档已同步
-- 如有 release gate，已通过 `make release-check`
+- 如有 release 或 CI gate，已通过和云端一致的本地 gate：`make quality-gates`
 
 ### 新增图片 Prompt 后
 
