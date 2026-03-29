@@ -123,6 +123,8 @@ grep -q 'releases/download/v' docs/INSTALL.md || fail "docs/INSTALL.md must poin
 grep -q 'releases/download/v' docs/OPENCLAW.md || fail "docs/OPENCLAW.md must point OpenClaw install instructions at fixed-version release assets"
 grep -q 'npm install -g @geekjourneyx/md2wechat' README.md || fail "README must document the npm install path"
 grep -q 'npm install -g @geekjourneyx/md2wechat' docs/INSTALL.md || fail "docs/INSTALL.md must document the npm install path"
+grep -q 'npx cnpm sync @geekjourneyx/md2wechat' docs/INSTALL.md || fail "docs/INSTALL.md must document the post-publish npmmirror sync step"
+grep -q 'npx cnpm sync @geekjourneyx/md2wechat' docs/FAQ.md || fail "docs/FAQ.md must document the npmmirror sync recovery path"
 grep -q 'brew install geekjourneyx/tap/md2wechat' README.md || fail "README must document the tap install path"
 grep -q 'brew install geekjourneyx/tap/md2wechat' docs/INSTALL.md || fail "docs/INSTALL.md must document the tap install path"
 ! grep -q 'raw.githubusercontent.com/geekjourneyx/md2wechat-skill/main/scripts/install.sh' README.md || fail "README must not point the md2wechat installer at main"

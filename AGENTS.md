@@ -44,6 +44,7 @@ Treat these commands as the source of truth for:
 7. When release assets or installer scripts change, run artifact smoke and installer smoke against the same bundle before calling the work done.
 8. If the task touches release or installer paths, keep the documented primary path versioned and non-`latest`.
 9. If the task touches Homebrew distribution, verify the tap formula is generated from the same release bundle and points only to versioned release assets.
+10. If the task publishes a new npm version, manually trigger `npx cnpm sync @geekjourneyx/md2wechat` after npm publish so `npmmirror` users do not get a stale tarball 404 on the fresh release.
 
 ## Test Discipline
 
@@ -104,6 +105,8 @@ Coverage guidance:
    - `scripts/install.sh`
    - `scripts/install-openclaw.sh`
    - `platforms/openclaw/md2wechat/SKILL.md`
+   - `docs/INSTALL.md`
+   - `docs/FAQ.md`
 5. If any of the files above still carry an old version, stale release URL, stale maintainer identity, or outdated command examples, block the release and fix them before tagging.
 
 ## Documentation Discipline

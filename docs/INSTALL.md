@@ -64,6 +64,20 @@ npm install -g @geekjourneyx/md2wechat
 - Linux: `amd64` / `arm64`
 - Windows: `amd64`
 
+如果你的 npm 默认指向 `https://registry.npmmirror.com`，而新版本刚发布，镜像 tarball 可能会短暂 `404`。先用官方源安装：
+
+```bash
+npm install -g @geekjourneyx/md2wechat --registry=https://registry.npmjs.org/
+```
+
+维护者在 npm 发布新版本后，也应手动执行一次：
+
+```bash
+npx cnpm sync @geekjourneyx/md2wechat
+```
+
+这样可以尽快把新版本同步到 `npmmirror`。
+
 如果你的全局 npm bin 目录还没加入 `PATH`，先修复 npm 的全局命令路径，再重新打开终端验证：
 
 ```bash

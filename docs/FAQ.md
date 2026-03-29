@@ -80,6 +80,44 @@ md2wechat version --json
 
 ---
 
+### Q1.1：`npm install -g @geekjourneyx/md2wechat` 提示 `npmmirror` tarball `404`
+
+这通常不是包没发布，而是你的 npm 当前走的是：
+
+```text
+https://registry.npmmirror.com
+```
+
+而镜像上的新版本 tarball 还没同步完成。
+
+先确认当前 registry：
+
+```bash
+npm config get registry
+```
+
+如果输出是 `https://registry.npmmirror.com/`，直接改用官方源安装：
+
+```bash
+npm install -g @geekjourneyx/md2wechat --registry=https://registry.npmjs.org/
+```
+
+如果你想把默认源切回官方 npm：
+
+```bash
+npm config set registry https://registry.npmjs.org/
+```
+
+对于维护者，npm 发布新版本后还需要额外执行一次：
+
+```bash
+npx cnpm sync @geekjourneyx/md2wechat
+```
+
+这样可以主动触发 `npmmirror` 同步，减少用户在镜像源上的新版本 `404`。
+
+---
+
 ### Q2：OpenClaw / Claude Code 装了 skill，但命令还是跑不起来
 
 先区分两种路径：

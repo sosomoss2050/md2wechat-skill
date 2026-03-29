@@ -119,6 +119,12 @@ NPM 包不会在本地重新编译 Go 项目。它会下载与包版本同号的
 - Linux: `amd64` / `arm64`
 - Windows: `amd64`
 
+如果你的 npm 默认走 `https://registry.npmmirror.com`，而刚发布的新版本还没同步过去，可能会出现 tarball `404`。这种情况下先改用官方源安装：
+
+```bash
+npm install -g @geekjourneyx/md2wechat --registry=https://registry.npmjs.org/
+```
+
 如果你不用 Homebrew，或者想走固定版本 release + checksum 路径，再用安装脚本：
 
 ```bash
