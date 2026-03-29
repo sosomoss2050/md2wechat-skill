@@ -220,7 +220,7 @@ md2wechat convert article.md --draft --cover cover.jpg
 
 这个项目由 [geekjourneyx](https://github.com/geekjourneyx/geekjourneyx) 维护。
 
-- 大厂后端工程师 / 独立开发者 / AI Builder / AI 科技领域博主
+- 独立开发者 / AI Builder / AI 科技领域博主
 - 持续打磨面向 AI Agent 的 CLI、API 与自动化工作流
 - 相关项目和长期方向可见 GitHub 主页: [github.com/geekjourneyx/geekjourneyx](https://github.com/geekjourneyx/geekjourneyx)
 
