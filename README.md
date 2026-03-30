@@ -81,7 +81,7 @@ npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
 ---
 
 > ### 先看这里
-> - `convert` 默认走 `API` 模式，需要你自己的 `md2wechat.cn` API Key；如需咨询或申请内测，扫描文末公众号二维码联系，备注「API内测」
+> - `convert` 默认走 `API` 模式，需要你自己的 `md2wechat.cn` API Key；如需咨询或申请测试，扫描文末公众号二维码联系，备注「API咨询」
 > - `AI` 模式不需要 `md2wechat.cn` API Key，但当前 CLI 返回的是 `AI request / prompt`，需要由 Claude Code / Codex / OpenAI 等外部模型继续完成 HTML
 > - 主题、图片 prompt、provider 不要靠猜，先执行 `md2wechat themes list --json`、`md2wechat prompts list --kind image --json`、`md2wechat providers list --json`
 > - 安装、配置和校验入口分别看：[安装指南](docs/INSTALL.md) / [配置指南](docs/CONFIG.md) / [能力发现](docs/DISCOVERY.md)
