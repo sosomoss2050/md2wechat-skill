@@ -234,10 +234,10 @@ api:
   md2wechat_key: "your_md2wechat_api_key"
   md2wechat_base_url: "https://www.md2wechat.cn"
   image_key: "your_image_api_key"
-  image_base_url: "https://api.openai.com/v1"
-  image_provider: "openai"
-  image_model: "gpt-image-1.5"
-  image_size: "1024x1024"
+  image_base_url: "https://ark.cn-beijing.volces.com/api/v3"
+  image_provider: "volcengine"
+  image_model: "doubao-seedream-5-0-260128"
+  image_size: "2K"
   convert_mode: "api"
   default_theme: "default"
   background_type: "none"
@@ -318,7 +318,9 @@ image:
 | `api.image_provider` | 否 | 图片服务提供方 | `openai` |
 | `api.image_base_url` | 否 | 图片服务地址 | `https://api.openai.com/v1` |
 | `api.image_model` | 否 | 图片模型 | `gpt-image-1.5` |
-| `api.image_size` | 否 | 默认图片执行尺寸/宽高比 | `1024x1024` |
+| `api.image_size` | 否 | 默认图片执行尺寸/宽高比 | 跟随当前 provider，例如 `openai=1024x1024`、`volcengine=2K` |
+
+当前内置 provider：`openai`、`tuzi`、`modelscope` (`ms`)、`openrouter` (`or`)、`gemini` (`google`)、`volcengine` (`volc`)。
 
 ### 图片处理配置
 
@@ -433,7 +435,8 @@ api:
 - `generate_image --size ...` 会覆盖配置文件里的 `api.image_size`
 - 图片 prompt 里的 `default_aspect_ratio` 是 preset 的语义默认画幅，用于渲染 prompt 与默认视觉比例
 - 对于 Gemini / OpenRouter 这类支持比例格式的 provider，`api.image_size` 可以直接写成 `16:9`、`3:4`、`21:9`
-- `api.image_base_url` 对 OpenAI、TuZi、ModelScope、OpenRouter 生效；Gemini 直连模式当前固定走官方 Go SDK backend，不读取该配置
+- 对于 Volcengine Ark 当前接入，`api.image_size` 使用尺寸等级，例如 `2K`、`3K`；如果省略，当前默认值是 `2K`
+- `api.image_base_url` 对 OpenAI、TuZi、ModelScope、OpenRouter、Volcengine 生效；Gemini 直连模式当前固定走官方 Go SDK backend，不读取该配置
 
 ---
 

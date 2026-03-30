@@ -30,7 +30,7 @@ type OpenRouterProvider struct {
 func NewOpenRouterProvider(cfg *config.Config) (*OpenRouterProvider, error) {
 	model := cfg.ImageModel
 	if model == "" {
-		model = "google/gemini-3-pro-image-preview" // 默认模型
+		model = DefaultProviderModel("openrouter")
 	}
 
 	// 将 IMAGE_SIZE (WIDTHxHEIGHT) 映射到 OpenRouter 的 aspect_ratio 和 image_size
@@ -38,7 +38,7 @@ func NewOpenRouterProvider(cfg *config.Config) (*OpenRouterProvider, error) {
 
 	baseURL := cfg.ImageAPIBase
 	if baseURL == "" {
-		baseURL = "https://openrouter.ai/api/v1" // 默认 API 地址
+		baseURL = DefaultProviderBaseURL("openrouter")
 	}
 
 	return &OpenRouterProvider{
@@ -305,11 +305,15 @@ func (p *OpenRouterProvider) handleErrorResponse(resp *http.Response) error {
 			Original: fmt.Errorf("status 429: %s", string(body)),
 		}
 	case http.StatusBadRequest:
+		hint := "请检查模型名称、aspect_ratio 等参数是否正确"
+		if modelsHint := ProviderSupportedModelsHint("openrouter"); modelsHint != "" {
+			hint += "。" + modelsHint
+		}
 		return &GenerateError{
 			Provider: p.Name(),
 			Code:     "bad_request",
 			Message:  fmt.Sprintf("请求参数错误: %s", errMsg),
-			Hint:     "请检查模型名称、aspect_ratio 等参数是否正确。支持的模型: google/gemini-3-pro-image-preview",
+			Hint:     hint,
 			Original: fmt.Errorf("status 400: %s", string(body)),
 		}
 	case http.StatusPaymentRequired, http.StatusForbidden:
@@ -396,15 +400,7 @@ func mapSizeToOpenRouter(size string) (aspectRatio, imageSize string) {
 
 // GetOpenRouterSupportedModels 返回 OpenRouter 支持的图片生成模型列表
 func GetOpenRouterSupportedModels() []string {
-	return []string{
-		"google/gemini-3-pro-image-preview",
-		"google/gemini-2.5-flash-image-preview",
-		"black-forest-labs/flux.2-pro",
-		"black-forest-labs/flux.2-flex",
-		"sourceful/riverflow-v2-standard-preview",
-		"sourceful/riverflow-v2-fast",
-		"sourceful/riverflow-v2-pro",
-	}
+	return ProviderSupportedModelNames("openrouter")
 }
 
 // GetOpenRouterSupportedAspectRatios 返回 OpenRouter 支持的宽高比列表

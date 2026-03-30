@@ -55,13 +55,13 @@ npm install -g @geekjourneyx/md2wechat
 如果你已经有稳定可用的 Go 环境，也可以：
 
 ```bash
-go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v2.0.6
+go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v2.0.7
 ```
 
 如果以上都不适合，再走固定版本安装脚本：
 
 ```bash
-curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.6/install.sh | bash
+curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.7/install.sh | bash
 ```
 
 安装脚本默认会把 CLI 放到：
@@ -149,13 +149,13 @@ npm install -g @geekjourneyx/md2wechat
 如果你已经有 Go 环境，再把第一步改成：
 
 ```bash
-go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v2.0.6
+go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v2.0.7
 ```
 
 如果以上都不适合，再把第一步改成：
 
 ```bash
-curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.6/install.sh | bash
+curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.7/install.sh | bash
 ```
 
 如果你懒得自己操作，也可以直接把下面的话发给 Claude Code / Codex / OpenCode：
@@ -164,8 +164,8 @@ curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.
 请先安装 md2wechat CLI，再安装 md2wechat skill，并验证版本和能力发现都正常。
 执行：
 1. 如果我是 mac 用户，先运行：brew install geekjourneyx/tap/md2wechat
-2. 如果我已经有稳定可用的 Go 环境，也可以改成：go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v2.0.6
-3. 如果以上两种都不适合，再运行：curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.6/install.sh | bash
+2. 如果我已经有稳定可用的 Go 环境，也可以改成：go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v2.0.7
+3. 如果以上两种都不适合，再运行：curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.7/install.sh | bash
 4. 运行：npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
 5. 如果我是通过 install.sh 安装的，再执行：export PATH="$HOME/.local/bin:$PATH"
 6. md2wechat version --json
@@ -179,7 +179,7 @@ curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.
 ```text
 请帮我安装 OpenClaw 版 md2wechat，并验证 skill 和 CLI 都可用。
 执行：
-1. curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.6/install-openclaw.sh | bash
+1. curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.7/install-openclaw.sh | bash
 2. 先执行：export PATH="$HOME/.local/bin:$PATH"
 3. md2wechat version --json
 4. md2wechat config init
@@ -209,7 +209,7 @@ npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
 如果你已经有 Go 环境，再改成：
 
 ```bash
-go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v2.0.6
+go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v2.0.7
 md2wechat version --json
 npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
 ```
@@ -217,7 +217,7 @@ npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
 如果以上都不适合，再改成：
 
 ```bash
-curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.6/install.sh | bash
+curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.7/install.sh | bash
 export PATH="$HOME/.local/bin:$PATH"
 md2wechat version --json
 npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
@@ -453,6 +453,7 @@ md2wechat prompts list --kind image --tag editorial --json
 
 ```bash
 md2wechat providers show openrouter --json
+md2wechat providers show volcengine --json
 md2wechat themes show autumn-warm --json
 md2wechat prompts show cover-default --kind image --json
 ```
@@ -542,13 +543,17 @@ md2wechat convert article.md -o output.html
 1. `IMAGE_API_KEY` 没配
 2. 当前 provider 配置不完整
 3. 你选的 provider 模型或 base URL 不对
+4. 当前账号还没开通目标模型（例如 Volcengine `ModelNotOpen`）
 
 先执行：
 
 ```bash
 md2wechat providers list --json
+md2wechat providers show volcengine --json
 md2wechat config show --format json
 ```
+
+如果是 Volcengine 返回 `ModelNotOpen`，去 [豆包大模型](https://www.volcengine.com/product/doubao) 点击“控制台” -> “开通管理”，勾选 `Seedream` 模型完成开通，再重试。
 
 然后再试最小命令：
 
@@ -744,6 +749,7 @@ md2wechat config show --format json
 md2wechat config show --format json
 md2wechat capabilities --json
 md2wechat providers list --json
+md2wechat providers show volcengine --json
 md2wechat themes list --json
 md2wechat prompts list --json
 ```
@@ -752,6 +758,7 @@ md2wechat prompts list --json
 
 - 当前配置用了哪份文件
 - 默认 provider 是什么
+- 当前 provider 支持哪些模型
 - 当前有哪些 theme / prompt 真正可用
 
 ---

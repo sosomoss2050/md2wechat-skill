@@ -54,6 +54,7 @@ Run these before selecting a provider, theme, or prompt:
 Inspect a specific resource before using it:
 
 - `md2wechat providers show openrouter --json`
+- `md2wechat providers show volcengine --json`
 - `md2wechat themes show autumn-warm --json`
 - `md2wechat prompts show cover-default --kind image --json`
 - `md2wechat prompts show cover-hero --kind image --archetype cover --tag hero --json`
@@ -61,6 +62,7 @@ Inspect a specific resource before using it:
 - `md2wechat prompts render cover-default --kind image --var article_title='Example' --json`
 
 When choosing image presets, prefer the prompt metadata returned by `prompts show --json`, especially `primary_use_case`, `compatible_use_cases`, `recommended_aspect_ratios`, and `default_aspect_ratio`.
+When choosing an image model, prefer `providers show <name> --json` and read `supported_models` before hard-coding `--model`.
 
 ## Core Commands
 

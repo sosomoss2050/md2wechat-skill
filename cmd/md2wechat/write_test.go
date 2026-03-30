@@ -10,6 +10,21 @@ import (
 	"testing"
 )
 
+type pipeCaptureResult struct {
+	data []byte
+	err  error
+}
+
+func readPipeAsync(r *os.File) <-chan pipeCaptureResult {
+	done := make(chan pipeCaptureResult, 1)
+	go func() {
+		var buf bytes.Buffer
+		_, err := io.Copy(&buf, r)
+		done <- pipeCaptureResult{data: buf.Bytes(), err: err}
+	}()
+	return done
+}
+
 func chdirToRepoRoot(t *testing.T) {
 	t.Helper()
 
@@ -37,22 +52,27 @@ func captureStdout(t *testing.T, fn func()) []byte {
 		t.Fatalf("pipe: %v", err)
 	}
 	os.Stdout = w
-	t.Cleanup(func() {
+	defer func() {
 		os.Stdout = oldStdout
-	})
+		_ = w.Close()
+	}()
+	done := readPipeAsync(r)
 
 	fn()
 
+	os.Stdout = oldStdout
 	if err := w.Close(); err != nil {
 		t.Fatalf("close writer: %v", err)
 	}
-
-	var buf bytes.Buffer
-	if _, err := io.Copy(&buf, r); err != nil {
-		t.Fatalf("read stdout: %v", err)
+	result := <-done
+	if err := r.Close(); err != nil {
+		t.Fatalf("close reader: %v", err)
+	}
+	if result.err != nil {
+		t.Fatalf("read stdout: %v", result.err)
 	}
 
-	return buf.Bytes()
+	return result.data
 }
 
 func TestExecuteWriteOutputsAIRequestWithHumanizerAndCover(t *testing.T) {

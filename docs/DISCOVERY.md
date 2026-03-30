@@ -52,6 +52,7 @@ md2wechat preview article.md --json
 md2wechat providers list --json
 md2wechat providers show openai --json
 md2wechat providers show openrouter --json
+md2wechat providers show volcengine --json
 ```
 
 当前 CLI 会枚举 provider 元数据，包括：
@@ -63,6 +64,7 @@ md2wechat providers show openrouter --json
 - `optional_config`
 - `default_base_url`
 - `default_model`
+- `supported_models`
 - `supports_size`
 - `current`
 - `configured`
@@ -74,6 +76,7 @@ md2wechat providers show openrouter --json
 - `modelscope` / `ms`
 - `openrouter` / `or`
 - `gemini` / `google`
+- `volcengine` / `volc`
 
 ## 主题发现
 

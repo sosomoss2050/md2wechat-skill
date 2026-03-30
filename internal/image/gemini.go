@@ -24,7 +24,7 @@ type GeminiProvider struct {
 func NewGeminiProvider(cfg *config.Config) (*GeminiProvider, error) {
 	model := cfg.ImageModel
 	if model == "" {
-		model = "gemini-3.1-flash-image-preview" // 默认模型
+		model = DefaultProviderModel("gemini")
 	}
 
 	// 处理宽高比与分辨率配置
@@ -223,11 +223,15 @@ func (p *GeminiProvider) handleError(err error) error {
 	}
 
 	if strings.Contains(errStr, "INVALID_ARGUMENT") || strings.Contains(errStr, "400") {
+		hint := "请检查模型名称和 image_size 是否正确"
+		if modelsHint := ProviderSupportedModelsHint("gemini"); modelsHint != "" {
+			hint += "。" + modelsHint
+		}
 		return &GenerateError{
 			Provider: p.Name(),
 			Code:     "bad_request",
 			Message:  "请求参数错误",
-			Hint:     "请检查模型名称和 image_size 是否正确。支持的模型: gemini-3.1-flash-image-preview, gemini-3-pro-image-preview, gemini-2.5-flash-image",
+			Hint:     hint,
 			Original: err,
 		}
 	}
@@ -343,13 +347,7 @@ func (p *GeminiProvider) Close() error {
 
 // GetGeminiSupportedModels 返回 Gemini 支持的图片生成模型列表
 func GetGeminiSupportedModels() []string {
-	return []string{
-		"gemini-3.1-flash-image-preview",        // Gemini 3.1 Flash 图片预览版（默认，推荐）
-		"gemini-3-pro-image-preview",            // Gemini 3 Pro 图片预览版
-		"gemini-2.5-flash-image",                // Gemini 2.5 Flash 图片版
-		"gemini-2.5-flash-preview-image",        // Gemini 2.5 Flash 图片预览版（兼容旧名）
-		"gemini-2.0-flash-exp-image-generation", // Gemini 2.0 Flash 实验版
-	}
+	return ProviderSupportedModelNames("gemini")
 }
 
 // GetGeminiSupportedAspectRatios 返回 Gemini 支持的宽高比列表

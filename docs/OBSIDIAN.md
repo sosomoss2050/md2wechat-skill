@@ -47,7 +47,7 @@ md2wechat capabilities --json
 如果你已经有 Go 环境，再改成：
 
 ```bash
-go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v2.0.6
+go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v2.0.7
 md2wechat version --json
 npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
 md2wechat capabilities --json
@@ -56,7 +56,7 @@ md2wechat capabilities --json
 如果以上都不适合，再改成：
 
 ```bash
-curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.6/install.sh | bash
+curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.7/install.sh | bash
 export PATH="$HOME/.local/bin:$PATH"
 md2wechat version --json
 npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
@@ -95,13 +95,13 @@ brew install geekjourneyx/tap/md2wechat
 如果你已经有 Go 环境，也可以：
 
 ```bash
-go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v2.0.6
+go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v2.0.7
 ```
 
 如果以上都不适合，再用固定版本安装脚本：
 
 ```bash
-curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.6/install.sh | bash
+curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.7/install.sh | bash
 ```
 
 默认安装位置：
@@ -143,7 +143,6 @@ ls ~/.claude/skills/md2wechat
 
 ```text
 SKILL.md
-references
 ```
 
 ---
@@ -152,6 +151,7 @@ references
 
 ```bash
 md2wechat capabilities --json
+md2wechat providers show volcengine --json
 md2wechat themes list --json
 md2wechat prompts list --kind image --json
 md2wechat providers list --json
@@ -159,6 +159,7 @@ md2wechat providers list --json
 
 这是最稳的验证方式。  
 不要靠猜当前支持什么，先看 discovery 输出。
+如果需要选图片模型，优先查看 `providers show <name> --json` 里的 `supported_models`。
 
 ---
 
@@ -231,8 +232,8 @@ command -v md2wechat
 ```text
 请帮我在当前电脑上安装 md2wechat，并让 Claudian 可以在 Obsidian 里通过 /md2wechat 使用它。按这个顺序执行：
 1. 如果我是 mac 用户，先运行：brew install geekjourneyx/tap/md2wechat
-2. 如果我已经有稳定可用的 Go 环境，也可以改成：go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v2.0.6
-3. 如果以上两种都不适合，再运行：curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.6/install.sh | bash
+2. 如果我已经有稳定可用的 Go 环境，也可以改成：go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v2.0.7
+3. 如果以上两种都不适合，再运行：curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.7/install.sh | bash
 4. 如果我是通过 install.sh 安装的，再运行：export PATH="$HOME/.local/bin:$PATH"
 5. 运行：md2wechat version --json
 6. 运行：npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat

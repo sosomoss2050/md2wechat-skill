@@ -33,6 +33,12 @@ func TestBuildProviderViewsIncludesBuiltinProviders(t *testing.T) {
 			if provider.DefaultModel != "gpt-image-1.5" {
 				t.Fatalf("openai default model = %q, want gpt-image-1.5", provider.DefaultModel)
 			}
+			if len(provider.SupportedModels) == 0 {
+				t.Fatal("expected openai supported models")
+			}
+			if provider.SupportedModels[0].Name != "gpt-image-1.5" || !provider.SupportedModels[0].Default {
+				t.Fatalf("unexpected openai supported models: %#v", provider.SupportedModels)
+			}
 		}
 	}
 	if !found {
@@ -53,6 +59,7 @@ func TestBuildProviderViewsUsesCurrentRuntimeDefaults(t *testing.T) {
 	defaults := map[string]string{
 		"openrouter": "google/gemini-3-pro-image-preview",
 		"gemini":     "gemini-3.1-flash-image-preview",
+		"volcengine": "doubao-seedream-5-0-260128",
 	}
 
 	for name, wantModel := range defaults {
@@ -64,6 +71,9 @@ func TestBuildProviderViewsUsesCurrentRuntimeDefaults(t *testing.T) {
 			found = true
 			if provider.DefaultModel != wantModel {
 				t.Fatalf("%s default model = %q, want %q", name, provider.DefaultModel, wantModel)
+			}
+			if len(provider.SupportedModels) == 0 {
+				t.Fatalf("expected %s supported models", name)
 			}
 		}
 		if !found {

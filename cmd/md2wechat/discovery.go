@@ -20,16 +20,17 @@ const (
 )
 
 type providerView struct {
-	Name           string   `json:"name"`
-	Aliases        []string `json:"aliases,omitempty"`
-	Description    string   `json:"description"`
-	RequiredConfig []string `json:"required_config,omitempty"`
-	OptionalConfig []string `json:"optional_config,omitempty"`
-	DefaultBaseURL string   `json:"default_base_url,omitempty"`
-	DefaultModel   string   `json:"default_model,omitempty"`
-	SupportsSize   bool     `json:"supports_size"`
-	Current        bool     `json:"current"`
-	Configured     bool     `json:"configured"`
+	Name            string                    `json:"name"`
+	Aliases         []string                  `json:"aliases,omitempty"`
+	Description     string                    `json:"description"`
+	RequiredConfig  []string                  `json:"required_config,omitempty"`
+	OptionalConfig  []string                  `json:"optional_config,omitempty"`
+	DefaultBaseURL  string                    `json:"default_base_url,omitempty"`
+	DefaultModel    string                    `json:"default_model,omitempty"`
+	SupportedModels []image.ProviderModelMeta `json:"supported_models,omitempty"`
+	SupportsSize    bool                      `json:"supports_size"`
+	Current         bool                      `json:"current"`
+	Configured      bool                      `json:"configured"`
 }
 
 var (
@@ -243,16 +244,17 @@ func buildProviderViews() ([]providerView, error) {
 		}
 		configured := currentCfg.ImageAPIKey != ""
 		result = append(result, providerView{
-			Name:           meta.Name,
-			Aliases:        meta.Aliases,
-			Description:    meta.Description,
-			RequiredConfig: meta.RequiredConfig,
-			OptionalConfig: meta.OptionalConfig,
-			DefaultBaseURL: meta.DefaultBaseURL,
-			DefaultModel:   meta.DefaultModel,
-			SupportsSize:   meta.SupportsSize,
-			Current:        meta.Name == current || contains(meta.Aliases, current),
-			Configured:     configured,
+			Name:            meta.Name,
+			Aliases:         meta.Aliases,
+			Description:     meta.Description,
+			RequiredConfig:  meta.RequiredConfig,
+			OptionalConfig:  meta.OptionalConfig,
+			DefaultBaseURL:  meta.DefaultBaseURL,
+			DefaultModel:    meta.DefaultModel,
+			SupportedModels: meta.SupportedModels,
+			SupportsSize:    meta.SupportsSize,
+			Current:         meta.Name == current || contains(meta.Aliases, current),
+			Configured:      configured,
 		})
 	}
 	return result, nil

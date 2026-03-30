@@ -115,9 +115,6 @@ func LoadWithDefaults(configPath string) (*Config, error) {
 		MaxImageSize:          5 * 1024 * 1024, // 5MB
 		HTTPTimeout:           30,
 		ImageProvider:         "openai",
-		ImageAPIBase:          "https://api.openai.com/v1",
-		ImageModel:            "gpt-image-1.5",
-		ImageSize:             "1024x1024",
 	}
 
 	// 1. 尝试从配置文件加载
@@ -143,18 +140,86 @@ func LoadWithDefaults(configPath string) (*Config, error) {
 	// 2. 环境变量覆盖配置文件
 	loadFromEnv(cfg)
 
-	// 3. 验证通用配置
+	// 3. 按当前 provider 填充图片相关默认值，避免 OpenAI 通用默认值误伤其他 provider。
+	applyImageProviderDefaults(cfg)
+
+	// 4. 验证通用配置
 	if err := cfg.validateCommon(); err != nil {
 		return nil, err
 	}
 
-	// 4. 处理 MaxImageSize (配置文件中是 MB)
+	// 5. 处理 MaxImageSize (配置文件中是 MB)
 	if cfg.configFile != "" && cfg.MaxImageSize < 1024*1024 {
 		// 如果值小于 1MB，可能是配置文件使用了 MB 单位
 		cfg.MaxImageSize = cfg.MaxImageSize * 1024 * 1024
 	}
 
 	return cfg, nil
+}
+
+func applyImageProviderDefaults(cfg *Config) {
+	provider := strings.ToLower(strings.TrimSpace(cfg.ImageProvider))
+	if provider == "" {
+		provider = "openai"
+		cfg.ImageProvider = provider
+	}
+
+	switch provider {
+	case "openai":
+		if cfg.ImageAPIBase == "" {
+			cfg.ImageAPIBase = "https://api.openai.com/v1"
+		}
+		if cfg.ImageModel == "" {
+			cfg.ImageModel = "gpt-image-1.5"
+		}
+		if cfg.ImageSize == "" {
+			cfg.ImageSize = "1024x1024"
+		}
+	case "tuzi":
+		if cfg.ImageModel == "" {
+			cfg.ImageModel = "doubao-seedream-4-5-251128"
+		}
+		if cfg.ImageSize == "" {
+			cfg.ImageSize = "2048x2048"
+		}
+	case "modelscope", "ms":
+		if cfg.ImageAPIBase == "" {
+			cfg.ImageAPIBase = "https://api-inference.modelscope.cn"
+		}
+		if cfg.ImageModel == "" {
+			cfg.ImageModel = "Tongyi-MAI/Z-Image-Turbo"
+		}
+		if cfg.ImageSize == "" {
+			cfg.ImageSize = "1024x1024"
+		}
+	case "openrouter", "or":
+		if cfg.ImageAPIBase == "" {
+			cfg.ImageAPIBase = "https://openrouter.ai/api/v1"
+		}
+		if cfg.ImageModel == "" {
+			cfg.ImageModel = "google/gemini-3-pro-image-preview"
+		}
+		if cfg.ImageSize == "" {
+			cfg.ImageSize = "1:1"
+		}
+	case "gemini", "google":
+		if cfg.ImageModel == "" {
+			cfg.ImageModel = "gemini-3.1-flash-image-preview"
+		}
+		if cfg.ImageSize == "" {
+			cfg.ImageSize = "1:1"
+		}
+	case "volcengine", "volc":
+		if cfg.ImageAPIBase == "" {
+			cfg.ImageAPIBase = "https://ark.cn-beijing.volces.com/api/v3"
+		}
+		if cfg.ImageModel == "" {
+			cfg.ImageModel = "doubao-seedream-5-0-260128"
+		}
+		if cfg.ImageSize == "" {
+			cfg.ImageSize = "2K"
+		}
+	}
 }
 
 // findConfigFile 查找配置文件

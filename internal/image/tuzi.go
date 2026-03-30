@@ -25,7 +25,7 @@ type TuZiProvider struct {
 func NewTuZiProvider(cfg *config.Config) (*TuZiProvider, error) {
 	model := cfg.ImageModel
 	if model == "" {
-		model = "doubao-seedream-4-5-251128" // 默认使用豆包 Seedream
+		model = DefaultProviderModel("tuzi")
 	}
 
 	size := cfg.ImageSize
@@ -179,11 +179,15 @@ func (p *TuZiProvider) handleErrorResponse(resp *http.Response) error {
 		if msg == "" {
 			msg = string(body)
 		}
+		hint := "请检查图片尺寸、模型名称等参数是否正确"
+		if modelsHint := ProviderSupportedModelsHint("tuzi"); modelsHint != "" {
+			hint += "。" + modelsHint
+		}
 		return &GenerateError{
 			Provider: p.Name(),
 			Code:     "bad_request",
 			Message:  fmt.Sprintf("请求参数错误: %s", msg),
-			Hint:     "请检查图片尺寸、模型名称等参数是否正确。支持的模型: gemini-3-pro-image-preview, doubao-seedream-4-5-251128",
+			Hint:     hint,
 			Original: fmt.Errorf("status 400: %s", string(body)),
 		}
 	case http.StatusPaymentRequired, http.StatusForbidden:
@@ -207,10 +211,7 @@ func (p *TuZiProvider) handleErrorResponse(resp *http.Response) error {
 
 // GetSupportedModels 返回 TuZi 支持的模型列表
 func GetSupportedModels() []string {
-	return []string{
-		"gemini-3-pro-image-preview",
-		"doubao-seedream-4-5-251128",
-	}
+	return ProviderSupportedModelNames("tuzi")
 }
 
 // GetSupportedSizes 返回 TuZi 支持的尺寸列表

@@ -25,7 +25,7 @@ type OpenAIProvider struct {
 func NewOpenAIProvider(cfg *config.Config) (*OpenAIProvider, error) {
 	model := cfg.ImageModel
 	if model == "" {
-		model = "gpt-image-1.5" // 默认模型
+		model = DefaultProviderModel("openai")
 	}
 
 	size := cfg.ImageSize
@@ -171,11 +171,15 @@ func (p *OpenAIProvider) handleErrorResponse(resp *http.Response) error {
 			Original: fmt.Errorf("status 429: %s", string(body)),
 		}
 	case http.StatusBadRequest:
+		hint := "请检查图片尺寸、模型名称等参数是否正确"
+		if modelsHint := ProviderSupportedModelsHint("openai"); modelsHint != "" {
+			hint += "。" + modelsHint
+		}
 		return &GenerateError{
 			Provider: p.Name(),
 			Code:     "bad_request",
 			Message:  fmt.Sprintf("请求参数错误: %s", errResp.Error.Message),
-			Hint:     "请检查图片尺寸、模型名称等参数是否正确",
+			Hint:     hint,
 			Original: fmt.Errorf("status 400: %s", string(body)),
 		}
 	case http.StatusPaymentRequired, http.StatusForbidden:

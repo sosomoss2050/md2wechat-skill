@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -19,21 +17,26 @@ func captureStderr(t *testing.T, fn func()) []byte {
 		t.Fatalf("pipe: %v", err)
 	}
 	os.Stderr = w
-	t.Cleanup(func() {
+	defer func() {
 		os.Stderr = oldStderr
-	})
+		_ = w.Close()
+	}()
+	done := readPipeAsync(r)
 
 	fn()
 
+	os.Stderr = oldStderr
 	if err := w.Close(); err != nil {
 		t.Fatalf("close writer: %v", err)
 	}
-
-	var buf bytes.Buffer
-	if _, err := io.Copy(&buf, r); err != nil {
-		t.Fatalf("read stderr: %v", err)
+	result := <-done
+	if err := r.Close(); err != nil {
+		t.Fatalf("close reader: %v", err)
 	}
-	return buf.Bytes()
+	if result.err != nil {
+		t.Fatalf("read stderr: %v", result.err)
+	}
+	return result.data
 }
 
 func TestConfigShowJSONEnvelope(t *testing.T) {
@@ -169,7 +172,7 @@ func TestConfigInitJSONEnvelopeSuppressesHumanStderr(t *testing.T) {
 	}
 }
 
-func TestConfigInitWritesSampleAPIBaseURLAndImageSettings(t *testing.T) {
+func TestConfigInitWritesSampleVolcengineImageSettings(t *testing.T) {
 	oldJSON := jsonOutput
 	t.Cleanup(func() {
 		jsonOutput = oldJSON
@@ -193,9 +196,10 @@ func TestConfigInitWritesSampleAPIBaseURLAndImageSettings(t *testing.T) {
 	content := string(data)
 	expectedSnippets := []string{
 		"md2wechat_base_url: https://www.md2wechat.cn",
-		"image_provider: openai",
-		"image_model: gpt-image-1.5",
-		"image_size: 1024x1024",
+		"image_provider: volcengine",
+		"image_base_url: https://ark.cn-beijing.volces.com/api/v3",
+		"image_model: doubao-seedream-5-0-260128",
+		"image_size: 2K",
 	}
 	for _, snippet := range expectedSnippets {
 		if !strings.Contains(content, snippet) {

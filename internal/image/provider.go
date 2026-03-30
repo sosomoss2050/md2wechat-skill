@@ -10,14 +10,21 @@ import (
 )
 
 type ProviderMeta struct {
-	Name           string   `json:"name"`
-	Aliases        []string `json:"aliases,omitempty"`
-	Description    string   `json:"description"`
-	RequiredConfig []string `json:"required_config,omitempty"`
-	OptionalConfig []string `json:"optional_config,omitempty"`
-	DefaultBaseURL string   `json:"default_base_url,omitempty"`
-	DefaultModel   string   `json:"default_model,omitempty"`
-	SupportsSize   bool     `json:"supports_size"`
+	Name            string              `json:"name"`
+	Aliases         []string            `json:"aliases,omitempty"`
+	Description     string              `json:"description"`
+	RequiredConfig  []string            `json:"required_config,omitempty"`
+	OptionalConfig  []string            `json:"optional_config,omitempty"`
+	DefaultBaseURL  string              `json:"default_base_url,omitempty"`
+	DefaultModel    string              `json:"default_model,omitempty"`
+	SupportedModels []ProviderModelMeta `json:"supported_models,omitempty"`
+	SupportsSize    bool                `json:"supports_size"`
+}
+
+type ProviderModelMeta struct {
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	Default     bool   `json:"default,omitempty"`
 }
 
 var providerRegistry = []ProviderMeta{
@@ -28,15 +35,26 @@ var providerRegistry = []ProviderMeta{
 		OptionalConfig: []string{"IMAGE_API_BASE", "IMAGE_MODEL", "IMAGE_SIZE"},
 		DefaultBaseURL: "https://api.openai.com/v1",
 		DefaultModel:   "gpt-image-1.5",
-		SupportsSize:   true,
+		SupportedModels: []ProviderModelMeta{
+			{Name: "gpt-image-1.5", Description: "OpenAI current primary image model", Default: true},
+			{Name: "gpt-image-1", Description: "Previous generation general image model"},
+			{Name: "gpt-image-1-mini", Description: "Lower-cost OpenAI image model"},
+			{Name: "dall-e-3", Description: "Legacy compatibility model"},
+			{Name: "dall-e-2", Description: "Legacy compatibility model"},
+		},
+		SupportsSize: true,
 	},
 	{
 		Name:           "tuzi",
 		Description:    "TuZi image generation provider",
 		RequiredConfig: []string{"IMAGE_API_KEY", "IMAGE_API_BASE"},
 		OptionalConfig: []string{"IMAGE_MODEL", "IMAGE_SIZE"},
-		DefaultModel:   "gpt-image-1",
-		SupportsSize:   true,
+		DefaultModel:   "doubao-seedream-4-5-251128",
+		SupportedModels: []ProviderModelMeta{
+			{Name: "doubao-seedream-4-5-251128", Description: "Doubao Seedream 4.5", Default: true},
+			{Name: "gemini-3-pro-image-preview", Description: "Gemini 3 Pro image preview"},
+		},
+		SupportsSize: true,
 	},
 	{
 		Name:           "modelscope",
@@ -46,7 +64,10 @@ var providerRegistry = []ProviderMeta{
 		OptionalConfig: []string{"IMAGE_API_BASE", "IMAGE_MODEL", "IMAGE_SIZE"},
 		DefaultBaseURL: "https://api-inference.modelscope.cn",
 		DefaultModel:   "Tongyi-MAI/Z-Image-Turbo",
-		SupportsSize:   true,
+		SupportedModels: []ProviderModelMeta{
+			{Name: "Tongyi-MAI/Z-Image-Turbo", Description: "Default verified ModelScope image model", Default: true},
+		},
+		SupportsSize: true,
 	},
 	{
 		Name:           "openrouter",
@@ -56,7 +77,16 @@ var providerRegistry = []ProviderMeta{
 		OptionalConfig: []string{"IMAGE_API_BASE", "IMAGE_MODEL", "IMAGE_SIZE"},
 		DefaultBaseURL: "https://openrouter.ai/api/v1",
 		DefaultModel:   "google/gemini-3-pro-image-preview",
-		SupportsSize:   true,
+		SupportedModels: []ProviderModelMeta{
+			{Name: "google/gemini-3-pro-image-preview", Description: "Gemini 3 Pro via OpenRouter", Default: true},
+			{Name: "google/gemini-2.5-flash-image-preview", Description: "Gemini 2.5 Flash via OpenRouter"},
+			{Name: "black-forest-labs/flux.2-pro", Description: "Flux 2 Pro"},
+			{Name: "black-forest-labs/flux.2-flex", Description: "Flux 2 Flex"},
+			{Name: "sourceful/riverflow-v2-standard-preview", Description: "Riverflow v2 standard"},
+			{Name: "sourceful/riverflow-v2-fast", Description: "Riverflow v2 fast"},
+			{Name: "sourceful/riverflow-v2-pro", Description: "Riverflow v2 pro"},
+		},
+		SupportsSize: true,
 	},
 	{
 		Name:           "gemini",
@@ -65,7 +95,28 @@ var providerRegistry = []ProviderMeta{
 		RequiredConfig: []string{"IMAGE_API_KEY"},
 		OptionalConfig: []string{"IMAGE_MODEL", "IMAGE_SIZE"},
 		DefaultModel:   "gemini-3.1-flash-image-preview",
-		SupportsSize:   true,
+		SupportedModels: []ProviderModelMeta{
+			{Name: "gemini-3.1-flash-image-preview", Description: "Gemini 3.1 Flash image preview", Default: true},
+			{Name: "gemini-3-pro-image-preview", Description: "Gemini 3 Pro image preview"},
+			{Name: "gemini-2.5-flash-image", Description: "Gemini 2.5 Flash image model"},
+			{Name: "gemini-2.5-flash-preview-image", Description: "Gemini 2.5 Flash preview compatibility name"},
+			{Name: "gemini-2.0-flash-exp-image-generation", Description: "Gemini 2.0 Flash experimental image generation"},
+		},
+		SupportsSize: true,
+	},
+	{
+		Name:           "volcengine",
+		Aliases:        []string{"volc"},
+		Description:    "Volcengine Ark image generation provider",
+		RequiredConfig: []string{"IMAGE_API_KEY"},
+		OptionalConfig: []string{"IMAGE_API_BASE", "IMAGE_MODEL", "IMAGE_SIZE"},
+		DefaultBaseURL: "https://ark.cn-beijing.volces.com/api/v3",
+		DefaultModel:   "doubao-seedream-5-0-260128",
+		SupportedModels: []ProviderModelMeta{
+			{Name: "doubao-seedream-5-0-260128", Description: "Doubao Seedream 5.0", Default: true},
+			{Name: "doubao-seedream-5-0-lite-260128", Description: "Doubao Seedream 5.0 Lite"},
+		},
+		SupportsSize: true,
 	},
 }
 
@@ -89,6 +140,49 @@ func LookupProviderMeta(name string) (ProviderMeta, bool) {
 		}
 	}
 	return ProviderMeta{}, false
+}
+
+func DefaultProviderModel(name string) string {
+	meta, ok := LookupProviderMeta(name)
+	if !ok {
+		return ""
+	}
+	return meta.DefaultModel
+}
+
+func DefaultProviderBaseURL(name string) string {
+	meta, ok := LookupProviderMeta(name)
+	if !ok {
+		return ""
+	}
+	return meta.DefaultBaseURL
+}
+
+func ProviderSupportedModels(name string) []ProviderModelMeta {
+	meta, ok := LookupProviderMeta(name)
+	if !ok {
+		return nil
+	}
+	result := make([]ProviderModelMeta, len(meta.SupportedModels))
+	copy(result, meta.SupportedModels)
+	return result
+}
+
+func ProviderSupportedModelNames(name string) []string {
+	models := ProviderSupportedModels(name)
+	result := make([]string, 0, len(models))
+	for _, model := range models {
+		result = append(result, model.Name)
+	}
+	return result
+}
+
+func ProviderSupportedModelsHint(name string) string {
+	models := ProviderSupportedModelNames(name)
+	if len(models) == 0 {
+		return ""
+	}
+	return "支持的模型: " + strings.Join(models, ", ")
 }
 
 // Provider 图片生成服务提供者接口
@@ -133,7 +227,15 @@ func (e *GenerateError) Unwrap() error {
 
 // NewProvider 根据配置创建对应的 Provider
 func NewProvider(cfg *config.Config) (Provider, error) {
-	switch cfg.ImageProvider {
+	providerName := strings.TrimSpace(cfg.ImageProvider)
+	if providerName == "" {
+		providerName = "openai"
+	}
+	if meta, ok := LookupProviderMeta(providerName); ok {
+		providerName = meta.Name
+	}
+
+	switch providerName {
 	case "tuzi":
 		if err := validateTuZiConfig(cfg); err != nil {
 			return nil, err
@@ -154,6 +256,11 @@ func NewProvider(cfg *config.Config) (Provider, error) {
 			return nil, err
 		}
 		return NewGeminiProvider(cfg)
+	case "volcengine", "volc":
+		if err := validateVolcengineConfig(cfg); err != nil {
+			return nil, err
+		}
+		return NewVolcengineProvider(cfg)
 	case "openai", "":
 		if err := validateOpenAIConfig(cfg); err != nil {
 			return nil, err
@@ -163,7 +270,7 @@ func NewProvider(cfg *config.Config) (Provider, error) {
 		return nil, &config.ConfigError{
 			Field:   "ImageProvider",
 			Message: fmt.Sprintf("未知的图片服务提供者: %s", cfg.ImageProvider),
-			Hint:    "支持的提供者: openai, tuzi, modelscope (或 ms), openrouter (或 or), gemini (或 google)",
+			Hint:    "支持的提供者: openai, tuzi, modelscope (或 ms), openrouter (或 or), gemini (或 google), volcengine (或 volc)",
 		}
 	}
 }
@@ -239,6 +346,17 @@ func validateGeminiConfig(cfg *config.Config) error {
 			Field:   "ImageAPIKey",
 			Message: "使用 Google Gemini 图片服务需要配置 API Key",
 			Hint:    "在配置文件中设置 api.image_key 或环境变量 IMAGE_API_KEY，前往 https://aistudio.google.com/apikey 获取",
+		}
+	}
+	return nil
+}
+
+func validateVolcengineConfig(cfg *config.Config) error {
+	if cfg.ImageAPIKey == "" {
+		return &config.ConfigError{
+			Field:   "ImageAPIKey",
+			Message: "使用火山引擎图片服务需要配置 API Key",
+			Hint:    "在配置文件中设置 api.image_key 或环境变量 IMAGE_API_KEY，前往火山引擎 Ark 控制台获取",
 		}
 	}
 	return nil

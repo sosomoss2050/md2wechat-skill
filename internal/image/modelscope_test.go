@@ -46,8 +46,8 @@ func TestNewModelScopeProviderDefaults(t *testing.T) {
 		t.Fatalf("NewModelScopeProvider() error = %v", err)
 	}
 
-	if p.baseURL != "https://api-inference.modelscope.cn/" {
-		t.Errorf("baseURL = %v, want https://api-inference.modelscope.cn/", p.baseURL)
+	if p.baseURL != "https://api-inference.modelscope.cn" {
+		t.Errorf("baseURL = %v, want https://api-inference.modelscope.cn", p.baseURL)
 	}
 
 	if p.model != "Tongyi-MAI/Z-Image-Turbo" {

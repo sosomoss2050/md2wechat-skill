@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.7] - 2026-03-30
+
+### Added
+- Added `volcengine` / `volc` as a built-in image provider for Volcengine Ark, with support for `doubao-seedream-5-0-260128` and `doubao-seedream-5-0-lite-260128`.
+- Added provider-level `supported_models` discovery to `providers list --json`, `providers show --json`, and `capabilities --json`, so agents and scripts can inspect image model catalogs before choosing `--model`.
+
+### Changed
+- Switched `config init` and the bundled example config to a `volcengine` image setup by default, including the Ark base URL, default Seedream model, and `2K` size tier.
+- Made image defaults provider-aware, so Volcengine now falls back to `2K` when `api.image_size` is omitted instead of inheriting an OpenAI-shaped square size.
+- Consolidated image-provider model metadata into the shared provider registry and re-audited high-signal docs and both skill entry points to keep provider, model, and discovery guidance aligned.
+- Removed the `skills/md2wechat/references/` directory and folded the remaining guidance back into the main `SKILL.md` entry point.
+
+### Fixed
+- Fixed Volcengine `ModelNotOpen` guidance to point users to the Doubao model activation path instead of a vague Ark-console hint.
+- Fixed JSON-mode CLI tests to stream captured stdout/stderr safely, preventing large discovery payloads from deadlocking the test process.
+
 ## [2.0.6] - 2026-03-28
 
 ### Added

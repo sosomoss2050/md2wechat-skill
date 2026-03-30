@@ -55,6 +55,7 @@ Inspect a specific resource before using it:
 
 ```bash
 md2wechat providers show openrouter --json
+md2wechat providers show volcengine --json
 md2wechat themes show autumn-warm --json
 md2wechat prompts show cover-default --kind image --json
 md2wechat prompts show cover-hero --kind image --archetype cover --tag hero --json
@@ -63,6 +64,7 @@ md2wechat prompts render cover-default --kind image --var article_title='Example
 ```
 
 When choosing image presets, prefer the prompt metadata returned by `prompts show --json`, especially `primary_use_case`, `compatible_use_cases`, `recommended_aspect_ratios`, and `default_aspect_ratio`.
+When choosing an image model, prefer `providers show <name> --json` and read `supported_models` before hard-coding `--model`.
 
 ## Core Commands
 
@@ -153,15 +155,6 @@ Draft behavior:
 - If draft creation returns `45004`, check digest/summary/description before assuming the body content is too long.
 - If the user asks for AI conversion or style writing, be explicit that the CLI may return an AI request or prompt rather than final HTML or prose unless the workflow completes the external model step.
 - Do not perform draft creation, publishing, or remote image generation unless the user asked for it.
-
-## References
-
-- Theme examples and visual guidance: `references/themes.md`
-- WeChat draft and image-post API details: `references/wechat-api.md`
-- Markdown image syntax and AI placeholders: `references/image-syntax.md`
-- HTML conversion notes: `references/html-guide.md`
-- Writer-style workflow: `references/writing-guide.md`
-- Humanizer workflow: `references/humanizer.md`
 
 ## Safety And Transparency
 

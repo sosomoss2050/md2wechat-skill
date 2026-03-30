@@ -28,13 +28,13 @@ npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
 如果你已经有稳定可用的 Go 环境，也可以把第一步改成：
 
 ```bash
-go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v2.0.6
+go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v2.0.7
 ```
 
 如果以上都不适合，再改成固定版本安装脚本：
 
 ```bash
-curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.6/install.sh | bash
+curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.0.7/install.sh | bash
 export PATH="$HOME/.local/bin:$PATH"
 npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
 ```
@@ -240,14 +240,33 @@ md2wechat generate_image --preset cover-hero --article article.md
 md2wechat generate_image --preset cover-hero --article article.md --model gemini-3-pro-image-preview
 ```
 
+在决定 `--model` 之前，建议先执行：
+
+```bash
+md2wechat providers show openrouter --json
+md2wechat providers show volcengine --json
+```
+
+优先看返回里的 `supported_models`，不要凭记忆写死模型名。
+
 输出示例：
 
 ```json
 {
   "success": true,
-  "prompt": "A beautiful sunset over mountains",
-  "media_id": "12345***6789",
-  "wechat_url": "http://mmbiz.qpic.cn/..."
+  "code": "OK",
+  "message": "Success",
+  "schema_version": "v1",
+  "status": "completed",
+  "retryable": false,
+  "data": {
+    "prompt": "A beautiful sunset over mountains",
+    "original_url": "https://provider.example/generated/xxx.png",
+    "media_id": "12345***6789",
+    "wechat_url": "https://mmbiz.qpic.cn/...",
+    "width": 0,
+    "height": 0
+  }
 }
 ```
 

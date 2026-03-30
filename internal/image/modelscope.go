@@ -30,7 +30,7 @@ type ModelScopeProvider struct {
 func NewModelScopeProvider(cfg *config.Config) (*ModelScopeProvider, error) {
 	model := cfg.ImageModel
 	if model == "" {
-		model = "Tongyi-MAI/Z-Image-Turbo" // 默认模型
+		model = DefaultProviderModel("modelscope")
 	}
 
 	size := cfg.ImageSize
@@ -40,8 +40,9 @@ func NewModelScopeProvider(cfg *config.Config) (*ModelScopeProvider, error) {
 
 	baseURL := cfg.ImageAPIBase
 	if baseURL == "" {
-		baseURL = "https://api-inference.modelscope.cn/" // 默认 API 地址
+		baseURL = DefaultProviderBaseURL("modelscope") // 默认 API 地址
 	}
+	baseURL = strings.TrimRight(baseURL, "/")
 
 	return &ModelScopeProvider{
 		apiKey:       cfg.ImageAPIKey,
@@ -341,11 +342,15 @@ func (p *ModelScopeProvider) handleErrorResponse(resp *http.Response) error {
 			Original: fmt.Errorf("status 429: %s", string(body)),
 		}
 	case http.StatusBadRequest:
+		hint := "请检查图片尺寸、模型名称等参数是否正确"
+		if modelsHint := ProviderSupportedModelsHint("modelscope"); modelsHint != "" {
+			hint += "。" + modelsHint
+		}
 		return &GenerateError{
 			Provider: p.Name(),
 			Code:     "bad_request",
 			Message:  fmt.Sprintf("请求参数错误: %s", message),
-			Hint:     "请检查图片尺寸、模型名称等参数是否正确。支持的模型: Tongyi-MAI/Z-Image-Turbo",
+			Hint:     hint,
 			Original: fmt.Errorf("status 400: %s", string(body)),
 		}
 	case http.StatusPaymentRequired, http.StatusForbidden:
@@ -369,7 +374,5 @@ func (p *ModelScopeProvider) handleErrorResponse(resp *http.Response) error {
 
 // GetSupportedModels 返回 ModelScope 支持的模型列表
 func GetModelScopeSupportedModels() []string {
-	return []string{
-		"Tongyi-MAI/Z-Image-Turbo",
-	}
+	return ProviderSupportedModelNames("modelscope")
 }
