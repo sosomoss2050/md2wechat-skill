@@ -97,10 +97,13 @@ make build
 
 # Check no raw ::: syntax remains in the output HTML
 python3 -c "
-modules = ['hero','toc','verdict','metrics','compare','steps','quote','callout','faq','checklist','cta','summary']
+modules = ['hero','toc','verdict','audience-fit','myth-fact','metrics','compare','steps',
+           'timeline','quote','callout','definition','author-card','subscribe',
+           'faq','checklist','cta','notice','summary']
 html = open('/tmp/layout-smoke.html').read()
 failed = [m for m in modules if ':::' + m in html]
-print('PASS') if not failed else print('FAIL - not rendered:', failed)
+ok = [m for m in modules if ':::' + m not in html]
+print(f'PASS {len(ok)}/{len(modules)}') if not failed else print('FAIL - not rendered:', failed)
 "
 
 # Validate syntax is correct before running convert
@@ -136,7 +139,7 @@ Three layers exist and must never be mixed in docs or guidance:
 - **`config show --format json` output keys** — e.g., `image_api_base`
 
 ### Prompt Catalog (YAML, not Go code)
-Image/humanizer/refine prompts live in `internal/assets/builtin/prompts/`. Do not embed long prompts directly in Go code. Every new `image` prompt YAML must include: `name`, `kind`, `description`, `version`, `archetype`, `primary_use_case`, `recommended_aspect_ratios`, `default_aspect_ratio`, `metadata.author`, `metadata.provenance`, `template`. The `default_aspect_ratio` must appear in `recommended_aspect_ratios`.
+Image/humanizer/refine prompts live in `internal/assets/builtin/prompts/`. Do not embed long prompts directly in Go code. Humanizer supports 4 intensity levels: `gentle` / `medium` / `aggressive` / `authentic` — the `authentic` mode uses a standalone YAML prompt (`authentic.yaml`) that bypasses the base template. Every new `image` prompt YAML must include: `name`, `kind`, `description`, `version`, `archetype`, `primary_use_case`, `recommended_aspect_ratios`, `default_aspect_ratio`, `metadata.author`, `metadata.provenance`, `template`. The `default_aspect_ratio` must appear in `recommended_aspect_ratios`.
 
 ### Test Discipline
 Tests protect contracts, not coverage numbers. Before writing any test, ask:
@@ -162,10 +165,12 @@ Any change to CLI commands, flags, JSON output shape, providers, themes, or prom
 - `docs/FAQ.md`
 - `skills/md2wechat/SKILL.md`
 - `platforms/openclaw/md2wechat/SKILL.md`
+- `docs/HUMANIZE.md` when humanizer behavior or intensity levels change
 
 If the change affects config, install, or setup: also update `docs/CONFIG.md`, `docs/QUICKSTART.md`, `docs/USAGE.md`.
 
 ### Git and Release Rules
 - Never `git push`, `git tag`, or `gh release create` without explicit user confirmation.
 - Never rebase or amend history unless the user explicitly asks.
+- GitHub Release is created automatically by `release.yml` when a tag matching `v*.*.*` is pushed — `gh` CLI is not required.
 - After `npm publish`, trigger `npx cnpm sync @geekjourneyx/md2wechat` so npmmirror stays current.

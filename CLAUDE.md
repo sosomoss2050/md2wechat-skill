@@ -26,6 +26,7 @@ md2wechat capabilities --json
 md2wechat providers list --json
 md2wechat themes list --json
 md2wechat prompts list --json
+md2wechat layout list --json
 ```
 
 需要具体资源时，再执行：
@@ -35,11 +36,14 @@ md2wechat providers show <name> --json
 md2wechat themes show <name> --json
 md2wechat prompts show <name> --kind <kind> --json
 md2wechat prompts render <name> --kind <kind> --var KEY=VALUE --json
+md2wechat layout show <name> --json
+md2wechat layout render <name> --var KEY=VALUE
+md2wechat layout validate --file <file.md> --json
 ```
 
 当前 prompt catalog 主要承载：
 
-- `humanizer`
+- `humanizer`（强度：`gentle` / `medium` / `aggressive` / `authentic`）
 - `refine`
 - `image`
 
@@ -68,7 +72,8 @@ make build
 # 检查所有核心模块是否正常渲染（无 ::: 原始语法残留）
 python3 -c "
 modules = ['hero','toc','verdict','audience-fit','myth-fact','metrics','compare','steps',
-           'timeline','quote','callout','faq','checklist','cta','notice','summary']
+           'timeline','quote','callout','definition','author-card','subscribe',
+           'faq','checklist','cta','notice','summary']
 html = open('/tmp/layout-smoke.html').read()
 failed = [m for m in modules if ':::' + m in html]
 ok = [m for m in modules if ':::' + m not in html]
@@ -121,7 +126,7 @@ grep -r "config" internal/config/
 |------|------|------|
 | `VERSION` | 文件内容 | `x.y.z` |
 | `.claude-plugin/marketplace.json` | plugin version / owner / author | `x.y.z` / 当前维护者身份 |
-| `platforms/openclaw/md2wechat/SKILL.md` | `metadata.openclaw.install[*].url` | 固定版本 release 资源 |
+| `platforms/openclaw/md2wechat/SKILL.md` | `metadata.openclaw.install` | 使用 `@latest` go 模块，发布后自动生效 |
 | `CHANGELOG.md` | 新版本章节标题 | `## [x.y.z] - YYYY-MM-DD` |
 | `CHANGELOG.md` | 版本历史表格 | 新增一行 |
 
@@ -130,9 +135,11 @@ grep -r "config" internal/config/
 echo "=== 版本号检查 ==="
 echo "VERSION: $(cat VERSION)"
 echo ".claude-plugin: $(grep '\"version\"' .claude-plugin/marketplace.json | head -1)"
-echo "openclaw install URLs: $(grep 'releases/download/v' platforms/openclaw/md2wechat/SKILL.md | head -1)"
+echo "openclaw install: $(grep '@latest\|module.*md2wechat' platforms/openclaw/md2wechat/SKILL.md | head -1)"
 echo "CHANGELOG.md: $(grep '## \[' CHANGELOG.md | head -1)"
 ```
+
+> **说明**：OpenClaw SKILL.md 使用 `@latest` go 模块安装，无固定版本 URL，每次发布 go 模块后自动生效。
 
 **强制规则：**
 - 发版前必须显式审校 `.claude-plugin/marketplace.json`
@@ -414,6 +421,7 @@ ClawHub 发布跳过。如需手动发布，请稍后执行：
 ### 文档
 - `README.md` - 项目主文档
 - `docs/QUICKSTART.md` - 快速入门
+- `docs/HUMANIZE.md` - 人性化润色保姆级教程（4 种强度 + authentic 模式）
 - `CHANGELOG.md` - 版本变更记录
 - `docs/` - 详细文档目录
 
@@ -430,7 +438,7 @@ ClawHub 发布跳过。如需手动发布，请稍后执行：
 make build
 
 # 测试
-go test ./...
+GOCACHE=/tmp/md2wechat-go-build go test ./...
 
 # 检查代码风格
 go vet ./...
@@ -439,10 +447,10 @@ gofmt -l .
 # 查看当前版本
 cat VERSION
 
-# 创建 GitHub Release
-git tag v1.x.x
+# 创建 GitHub Release（推 tag 后 GitHub Actions 自动创建，无需 gh CLI）
+git tag v{VERSION}
 git push origin main --tags
-gh release create v1.x.x --generate-notes
+# → GitHub Actions release.yml 自动触发：构建 → smoke 测试 → 创建 Release
 
 # ClawHub 发布
 clawhub login                           # 首次使用需登录
@@ -450,7 +458,7 @@ clawhub whoami                          # 检查登录状态
 clawhub publish ./platforms/openclaw/md2wechat \    # 发布 OpenClaw 技能
   --slug md2wechat \
   --name "md2wechat" \
-  --version 1.x.x \
+  --version {VERSION} \
   --tags latest
 clawhub search "md2wechat"              # 验证发布
 ```
