@@ -1,0 +1,68 @@
+schema_version: "1"
+name: series
+version: "1.0.0"
+since: "1.5.0"
+category: brand
+serves: [memorability, conversion]
+content_types: [opinion, tutorial, brand]
+industry: [general]
+tags: [brand, series, newsletter, episode, sequence]
+position: opening
+when_to_use: |
+  告诉读者这是一组连续内容，建立系列感。
+  适合专栏系列、连载内容、主题合集。
+when_not_to_use: |
+  单篇独立文章不需要系列标识；
+  只有 2 篇以内的内容不建议使用。
+pairs_well_with: [hero, author-card, subscribe]
+avoid_combining_with: [series]
+anti_pattern: |
+  缺少 name 或 title 导致渲染失败；
+  tags 超过 4 个（只显示前 4 个）；
+  issue 写成非数字格式。
+fields:
+  required:
+    - name: name
+      description: 系列名称
+      example: "内容产品手记"
+    - name: title
+      description: 本期标题
+      example: "让每篇文章都像同一个品牌写出来"
+  optional:
+    - name: issue
+      description: 期号（如 07、08）
+      example: "07"
+    - name: desc
+      description: 系列简介
+      example: "这个系列记录从排版、结构到自动化发布的完整打磨过程。"
+    - name: tags
+      description: 系列标签，用 | 分隔（最多显示 4 个）
+      example: "公众号 | 品牌排版 | 内容系统"
+    - name: next
+      description: 下一篇预告
+      example: "下一篇：个人品牌模块怎么搭"
+    - name: index
+      description: 当前期在系列中的序号
+      example: "07"
+    - name: total
+      description: 系列总期数
+      example: "12"
+    - name: label
+      description: 系列标签词
+      example: "系列文章"
+    - name: description
+      description: 系列描述（desc 的别名）
+      example: "这个系列记录从排版、结构到自动化发布的完整打磨过程。"
+example: |
+  :::series
+  name: 内容产品手记
+  issue: 07
+  title: 让每篇文章都像同一个品牌写出来
+  desc: 这个系列记录从排版、结构到自动化发布的完整打磨过程。
+  tags: 公众号 | 品牌排版 | 内容系统
+  next: 下一篇：个人品牌模块怎么搭
+  :::
+metadata:
+  author: md2wechat
+  provenance: builtin
+  inspired_by: "advanced-layout-modules-guide.md#series"

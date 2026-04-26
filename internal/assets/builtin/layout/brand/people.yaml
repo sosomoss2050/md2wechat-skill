@@ -1,0 +1,44 @@
+schema_version: "1"
+name: people
+version: "1.0.0"
+since: "1.5.0"
+category: brand
+serves: [memorability, readability]
+content_types: [announcement, brand, report]
+industry: [general]
+tags: [brand, people, team, roles, contributors]
+position: body
+when_to_use: |
+  展示团队、角色、嘉宾、服务对象。
+  适合团队介绍、项目成员、活动嘉宾展示。
+when_not_to_use: |
+  单人介绍用 author-card；
+  案例展示用 cases 模块。
+pairs_well_with: [author-card, cases, subscribe]
+avoid_combining_with: []
+anti_pattern: |
+  没有任何满足 3 列的行导致渲染失败；
+  风格字段写错（只允许 accent 或 default）；
+  每行都用 accent 失去重点突出效果。
+rows:
+  delimiter: "|"
+  min_columns: 3
+  schema:
+    - name: name
+      description: 姓名或角色名称
+    - name: role
+      description: 身份或职位
+    - name: bio
+      description: 说明，介绍这个人的职责或贡献
+    - name: style
+      description: "风格：accent 或 default（可省略）"
+      enum: [accent, default]
+example: |
+  :::people[核心角色]
+  内容负责人 | 内容策略 | 负责把文章重点和节奏定下来 | accent
+  设计负责人 | 视觉把关 | 负责保证气质和细节不掉价 | default
+  :::
+metadata:
+  author: md2wechat
+  provenance: builtin
+  inspired_by: "advanced-layout-modules-guide.md#people"

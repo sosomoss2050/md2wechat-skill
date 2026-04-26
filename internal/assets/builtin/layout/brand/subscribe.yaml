@@ -1,0 +1,65 @@
+schema_version: "1"
+name: subscribe
+version: "1.0.0"
+since: "1.5.0"
+category: brand
+serves: [conversion, memorability]
+content_types: [opinion, tutorial, announcement, brand]
+industry: [general]
+tags: [brand, subscribe, follow, cta, closing]
+position: closing
+when_to_use: |
+  文章结尾的关注、收藏、转发引导。
+  适合需要建立持续读者关系的内容。
+when_not_to_use: |
+  文章中间不要放关注引导；
+  纯商业转化用 cta 模块。
+pairs_well_with: [author-card, cta, series]
+avoid_combining_with: [subscribe]
+anti_pattern: |
+  缺少 title 导致渲染失败；
+  primary 和 secondary 不写时默认显示"继续关注"和"收藏这篇"；
+  引导语写太弱（"可以关注一下"）失去转化效果。
+fields:
+  required:
+    - name: title
+      description: 关注引导主标题
+      example: "如果这篇对你有帮助，可以把这个系列收藏起来"
+  optional:
+    - name: label
+      description: 标签词（如"持续更新"）
+      example: "持续更新"
+    - name: subtitle
+      description: 副标题，说明订阅价值
+      example: "我会持续更新公众号排版、AI 内容工作流和产品化复盘。"
+    - name: primary
+      description: 主要行动文案（默认"继续关注"）
+      example: "关注公众号"
+    - name: secondary
+      description: 次要行动文案（默认"收藏这篇"）
+      example: "转发给正在写长文的人"
+    - name: note
+      description: 底部说明
+      example: "下一篇继续拆个人品牌模块"
+    - name: qrcode
+      description: 二维码图片 URL
+      example: "https://example.com/qrcode.png"
+    - name: description
+      description: 额外说明文字
+      example: "每周更新，不拖延"
+    - name: cta
+      description: 行动文案（title 的别名，title 或 cta 至少填一个）
+      example: "关注获取最新内容"
+example: |
+  :::subscribe
+  label: 持续更新
+  title: 如果这篇对你有帮助，可以把这个系列收藏起来
+  subtitle: 我会持续更新公众号排版、AI 内容工作流和产品化复盘。
+  primary: 关注公众号
+  secondary: 转发给正在写长文的人
+  note: 下一篇继续拆个人品牌模块
+  :::
+metadata:
+  author: md2wechat
+  provenance: builtin
+  inspired_by: "advanced-layout-modules-guide.md#subscribe"
