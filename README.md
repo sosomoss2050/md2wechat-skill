@@ -454,6 +454,27 @@ md2wechat prompts render cover-default \
   --json
 ```
 
+### Layout module discovery (advanced :::block syntax)
+
+```bash
+# List all layout modules
+md2wechat layout list --json
+
+# Filter by purpose
+md2wechat layout list --serves attention --json
+md2wechat layout list --serves conversion --json
+
+# Show full spec for a module
+md2wechat layout show hero --json
+
+# Render a module block
+md2wechat layout render hero --var eyebrow=深度观察 --var title="真问题" --json
+
+# Validate :::block usage in a file
+md2wechat layout validate --file article.md --json
+md2wechat layout validate --stdin --json < article.md
+```
+
 详细说明见 [docs/DISCOVERY.md](docs/DISCOVERY.md)。
 
 图片 prompt 的底层统一归类为 `kind=image`。`cover` 和 `infographic` 是主要用途分组，不是两套独立系统。判断某个 preset 能否兼作封面或信息图时，优先看 `prompts show --json` 返回的 `primary_use_case`、`compatible_use_cases`、`recommended_aspect_ratios` 和 `default_aspect_ratio`。

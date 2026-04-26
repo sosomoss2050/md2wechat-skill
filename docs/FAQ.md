@@ -763,6 +763,49 @@ md2wechat prompts list --json
 
 ---
 
+### How do I discover layout modules supported in API mode?
+
+```bash
+md2wechat layout list --json           # all 43 modules
+md2wechat layout list --serves attention --json   # attention-grabbing modules
+md2wechat layout show hero --json      # full spec with fields and example
+```
+
+Use `layout render` to generate a valid :::block, then pass it in the markdown body to `/api/convert`.
+
+### What does "unknown layout module" in validate output mean?
+
+`layout validate` warns (does not error) for `:::module-name` blocks it does not recognize. This is intentional — it allows forward-compatible documents. If the module name is a typo, fix it by checking `md2wechat layout list --json`. If it's a new custom module, add a YAML spec to `~/.config/md2wechat/layout/<category>/<name>.yaml`.
+
+### How do I add a custom layout module so the CLI recognizes it?
+
+Create a YAML file following the schema:
+
+```yaml
+schema_version: "1"
+name: my-module
+version: "1.0.0"
+category: custom
+serves: [attention]
+fields:
+  required:
+    - name: title
+      description: "Main heading"
+      example: "Hello"
+metadata:
+  author: yourname
+  provenance: custom
+  inspired_by: "my-design-system#my-module"
+example: |
+  :::my-module
+  title: Hello
+  :::
+```
+
+Save it to `~/.config/md2wechat/layout/custom/my-module.yaml`. The CLI picks it up on next run — no restart needed.
+
+---
+
 ### Q19：CI / GitHub Actions 里能直接调微信吗？
 
 可以，但前提是你解决了**白名单和固定出口 IP**问题。

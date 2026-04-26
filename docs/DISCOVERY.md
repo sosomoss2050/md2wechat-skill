@@ -224,6 +224,70 @@ Prompt catalog 的加载优先级为：
 
 后续扩展更多封面、信息图、配图 archetype 时，应优先新增 `prompts/image/*.yaml`，而不是直接把大段提示词写进 Go 代码。
 
+## Layout Module Discovery (:::block Syntax)
+
+The `layout` subcommand exposes the built-in catalog of 43 advanced WeChat layout modules (:::block syntax) for AI agents.
+
+### Commands
+
+```bash
+# List all built-in modules
+md2wechat layout list --json
+
+# Filter by purpose (serves one of: attention | readability | memorability | conversion)
+md2wechat layout list --serves attention --json
+md2wechat layout list --category opening --json
+md2wechat layout list --tag brand --json
+
+# Show full spec (fields, serves, when_to_use, example, metadata)
+md2wechat layout show hero --json
+
+# Render a :::block from structured vars
+md2wechat layout render hero \
+  --var eyebrow=深度观察 \
+  --var title="公众号排版的真问题" \
+  --json
+
+# Validate :::block usage in a Markdown file
+md2wechat layout validate --file article.md --json
+md2wechat layout validate --stdin --json < article.md
+```
+
+### `--serves` Filter Values
+
+| Value | Purpose |
+|-------|---------|
+| `attention` | 让读者知道值不值得读（hero, cards, verdict, audience-fit） |
+| `readability` | 让手机阅读不累（part, toc, steps, label-title） |
+| `memorability` | 让读者记住一个判断/品牌（verdict, manifesto, author-card） |
+| `conversion` | 让读者收藏/关注/咨询/转发/购买（cta, subscribe, faq, cases） |
+
+### Module Override (4-Level)
+
+Custom module YAMLs are merged in this order (later wins):
+
+1. **Builtin** — 43 embedded modules (shipped with binary)
+2. `~/.config/md2wechat/layout/` — user-global overrides
+3. `./layout/` — project-local overrides
+4. `$MD2WECHAT_LAYOUT_DIR` — env var (highest priority)
+
+To add or override a module, create `<category>/<name>.yaml` in any override directory with `schema_version: "1"`.
+
+### Unknown Module Strategy
+
+`layout validate` reports **warnings** (not errors) for unknown module names. This allows forward-compatible documents where new modules are used before a CLI upgrade. Only known modules with missing required fields produce **errors** (exit 1).
+
+### JSON Error Codes
+
+| Code | Meaning |
+|------|---------|
+| `LAYOUT_MODULE_NOT_FOUND` | Named module does not exist in catalog |
+| `LAYOUT_INVALID_FILTER` | Missing required input (e.g., neither --file nor --stdin) |
+| `LAYOUT_MISSING_REQUIRED_FIELD` | Required field absent in render call |
+| `LAYOUT_INVALID_FIELD_VALUE` | Field value not in allowed enum |
+| `LAYOUT_VALIDATE_HAS_ERRORS` | Validation found errors (exit 1) |
+| `LAYOUT_VALIDATED` | Validation passed clean (exit 0) |
+
 ## 与配置的关系
 
 发现命令不会替代配置文件，但会帮助 Agent 确认：
