@@ -125,6 +125,31 @@ func TestLayoutShowNotFound(t *testing.T) {
 	}
 }
 
+func TestRenderCmdRowsJSONInput(t *testing.T) {
+	oldJSON := jsonOutput
+	oldVars := append([]string(nil), layoutRenderVars...)
+	t.Cleanup(func() {
+		jsonOutput = oldJSON
+		layoutRenderVars = oldVars
+		layoutcatalog.ResetDefaultCatalogForTests()
+	})
+
+	jsonOutput = true
+	layoutcatalog.ResetDefaultCatalogForTests()
+	// toc rows schema: number | title | description (min_columns: 2)
+	layoutRenderVars = []string{`rows=[["01","第一章","概述"]]`}
+
+	stdout := captureStdout(t, func() {
+		if err := layoutRenderCmd.RunE(layoutRenderCmd, []string{"toc"}); err != nil {
+			t.Fatalf("layoutRenderCmd.RunE() error = %v", err)
+		}
+	})
+
+	if !strings.Contains(string(stdout), ":::toc") {
+		t.Errorf("expected :::toc in output:\n%s", stdout)
+	}
+}
+
 func TestLayoutRenderMissingRequiredField(t *testing.T) {
 	oldJSON := jsonOutput
 	oldVars := append([]string(nil), layoutRenderVars...)

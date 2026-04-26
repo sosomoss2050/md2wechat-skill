@@ -17,7 +17,7 @@ type ValidationReport struct {
 	Warnings []ValidationIssue `json:"warnings"`
 }
 
-var blockOpenRE = regexp.MustCompile(`^:::([a-z][a-z0-9_-]*)\s*$`)
+var blockOpenRE = regexp.MustCompile(`^:::([a-z][a-z0-9_-]*)(?:\[[^\]]*\])?\s*$`)
 
 func (c *Catalog) Validate(markdown string) ValidationReport {
 	var r ValidationReport
@@ -74,6 +74,25 @@ func (c *Catalog) validateBlock(name string, body []string, line int, r *Validat
 		k := strings.TrimSpace(ln[:idx])
 		v := strings.TrimSpace(ln[idx+1:])
 		present[k] = v
+	}
+	if spec.Rows != nil {
+		rowCount := 0
+		for _, ln := range body {
+			ln = strings.TrimRight(ln, "\r")
+			if strings.TrimSpace(ln) == "" {
+				continue
+			}
+			if idx := strings.Index(ln, ":"); idx <= 0 {
+				rowCount++
+			}
+		}
+		if rowCount == 0 {
+			r.Errors = append(r.Errors, ValidationIssue{
+				Module:  name,
+				Line:    line,
+				Message: "rows module requires at least one data row",
+			})
+		}
 	}
 	if spec.Fields != nil {
 		for _, f := range spec.Fields.Required {

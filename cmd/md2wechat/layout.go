@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -109,6 +110,14 @@ var layoutRenderCmd = &cobra.Command{
 					"invalid var")
 			}
 			vars[kv[:i]] = kv[i+1:]
+		}
+		if raw, ok := vars["rows"]; ok {
+			if s, isStr := raw.(string); isStr && strings.HasPrefix(s, "[") {
+				var parsed []any
+				if err := json.Unmarshal([]byte(s), &parsed); err == nil {
+					vars["rows"] = parsed
+				}
+			}
 		}
 		out, err := c.Render(args[0], vars)
 		if err != nil {
