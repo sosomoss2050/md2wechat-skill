@@ -1,0 +1,47 @@
+schema_version: "1"
+name: image-steps
+version: "1.0.0"
+since: "1.5.0"
+category: evidence
+serves: [readability]
+content_types: [tutorial]
+industry: [general]
+tags: [evidence, image, steps, tutorial, how-to]
+position: body
+when_to_use: |
+  带图片的教学步骤。
+  适合操作教程、软件使用说明、有截图的流程演示。
+when_not_to_use: |
+  无图片步骤用 steps；
+  图片标注用 image-annotate；
+  单张图片说明用 image-text。
+pairs_well_with: [steps, image-text, part]
+avoid_combining_with: []
+anti_pattern: |
+  没有任何满足 4 列的行导致渲染失败；
+  图片 URL 放在第三列而非第四列（顺序：序号|标题|说明|图片URL）；
+  图片 URL 无效或不可访问。
+rows:
+  delimiter: "|"
+  min_columns: 4
+  schema:
+    - name: number
+      description: 步骤序号（如 01、02、03）
+    - name: title
+      description: 步骤标题
+    - name: description
+      description: 步骤说明，解释具体操作
+    - name: image
+      description: 图片 URL（第四列）
+    - name: note
+      description: 步骤备注（可省略）
+example: |
+  :::image-steps[操作步骤]
+  01 | 打开编辑器 | 先确定主题和文章结构，再开始写内容。 | https://example.com/step-1.png | 适合放后台、编辑器或操作截图
+  02 | 插入图片模块 | 用图文双栏、对比图或标注图，把截图和解释放在一起。 | https://example.com/step-2.png | 适合教程、产品介绍、案例拆解
+  03 | 检查手机阅读 | 最后确认在窄屏里仍然清楚、稳定、不拥挤。 | https://example.com/step-3.png | 适合做发布前核对
+  :::
+metadata:
+  author: md2wechat
+  provenance: builtin
+  inspired_by: "advanced-layout-modules-guide.md#image-steps"
