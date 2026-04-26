@@ -38,6 +38,9 @@ fields:
     - name: alt
       description: 图片替代文字
       example: "图片标注卡示例"
+    - name: point
+      description: 标注点（可多次重复添加），格式：序号 | X百分比(0-100) | Y百分比(0-100) | 标签 | 说明
+      example: "01 | 24 | 24 | 主信息区 | 一进入页面先看到的核心判断和主标题"
 example: |
   :::image-annotate
   eyebrow: 拆解说明

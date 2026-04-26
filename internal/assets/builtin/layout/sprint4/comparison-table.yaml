@@ -17,21 +17,26 @@ when_not_to_use: |
 pairs_well_with: [compare, verdict, specs]
 avoid_combining_with: []
 anti_pattern: |
+  内容必须写成 JSON 对象格式：{"left":{"title":"...","items":[...]},"right":{"title":"...","items":[...]}}，不支持 pipe 分隔行；
   缺少 left 或 right 任何一个导致渲染失败；
+  items 必须是字符串数组，不是字符串；
   优点列写成中性描述而非真实优势；
   缺点列写得太轻描淡写失去可信度。
-rows:
-  delimiter: "|"
-  min_columns: 2
-  schema:
-    - name: feature
-      description: 对比维度或特性名称
-    - name: option-a
-      description: 方案 A / 左侧选项的表现
-    - name: option-b
-      description: 方案 B / 右侧选项的表现
-    - name: note
-      description: 补充说明（可省略）
+fields:
+  required: []
+  optional:
+    - name: left.title
+      description: 左侧栏标题（JSON path：left.title）
+      example: "优点"
+    - name: left.items
+      description: 左侧条目列表（JSON path：left.items，字符串数组）
+      example: '["快速部署","低成本","易上手"]'
+    - name: right.title
+      description: 右侧栏标题（JSON path：right.title）
+      example: "缺点"
+    - name: right.items
+      description: 右侧条目列表（JSON path：right.items，字符串数组）
+      example: '["扩展性差","依赖第三方"]'
 example: |
   :::comparison-table
   {"left":{"title":"优点","items":["快速部署","低成本","易上手"]},"right":{"title":"缺点","items":["扩展性差","依赖第三方"]}}

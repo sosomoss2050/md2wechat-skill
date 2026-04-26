@@ -17,19 +17,32 @@ when_not_to_use: |
 pairs_well_with: [timeline, specs, notice]
 avoid_combining_with: []
 anti_pattern: |
+  内容必须写成 JSON 对象格式：{"version":"...","date":"...","added":[...],"changed":[...],"fixed":[...],"removed":[...]}，不支持 pipe 分隔行；
   缺少 version 导致渲染不完整；
-  added/changed/fixed/removed 各类别不分，全部混在一起；
+  added/changed/fixed/removed 的值必须是字符串数组，不是字符串；
+  各类别不分，全部混在一起；
   变更条目写太长失去日志简洁性。
-rows:
-  delimiter: "|"
-  min_columns: 1
-  schema:
+fields:
+  required:
     - name: version
-      description: 版本号（如 v2.0.0）
+      description: 版本号（JSON key：version，如 "v2.0.0"）
+      example: "v2.0.0"
+  optional:
     - name: date
-      description: 发布日期（可省略）
-    - name: changes
-      description: 变更摘要（可省略）
+      description: 发布日期（JSON key：date）
+      example: "2026-01-01"
+    - name: added
+      description: 新增内容列表（JSON key：added，字符串数组）
+      example: '["新增高级模块","支持主题切换"]'
+    - name: changed
+      description: 变更内容列表（JSON key：changed，字符串数组）
+      example: '["优化渲染性能"]'
+    - name: fixed
+      description: 修复内容列表（JSON key：fixed，字符串数组）
+      example: '["修复移动端布局问题"]'
+    - name: removed
+      description: 移除内容列表（JSON key：removed，字符串数组）
+      example: '["废弃旧版 API"]'
 example: |
   :::changelog
   {"version":"v2.0.0","date":"2026-01-01","added":["新增高级模块","支持主题切换"],"changed":["优化渲染性能"],"fixed":["修复移动端布局问题"],"removed":["废弃旧版 API"]}

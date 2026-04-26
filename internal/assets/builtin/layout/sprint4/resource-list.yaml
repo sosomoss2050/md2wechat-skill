@@ -17,21 +17,25 @@ when_not_to_use: |
 pairs_well_with: [toolbox, checklist, cta]
 avoid_combining_with: []
 anti_pattern: |
-  缺少 name 或 url 导致行无效；
+  内容必须写成 JSON 数组格式：[{"name":"...","url":"..."}]，不支持 pipe 分隔行；
+  JSON key 是 desc（不是 description），写错 key 会导致简介消失；
   url 不以 http:// 或 https:// 开头则不会渲染成链接；
   资源名称写太长（简洁命名，说明放 desc）。
-rows:
-  delimiter: "|"
-  min_columns: 2
-  schema:
+fields:
+  required: []
+  optional:
     - name: name
-      description: 资源名称
+      description: 资源名称（JSON key：name）
+      example: "md2wechat 官网"
     - name: url
-      description: 链接地址（需以 http:// 或 https:// 开头）
-    - name: description
-      description: 资源简介（可省略）
+      description: 链接地址（JSON key：url，需以 http:// 或 https:// 开头）
+      example: "https://md2wechat.com"
+    - name: desc
+      description: 资源简介（JSON key：desc，不是 description，可省略）
+      example: "在线 Markdown 转公众号工具"
     - name: icon
-      description: 图标（emoji 或文字，可省略，无则显示首字母）
+      description: 图标 emoji（JSON key：icon，可省略，无则显示首字母）
+      example: "🛠"
 example: |
   :::resource-list
   [{"name":"md2wechat 官网","url":"https://md2wechat.com","desc":"在线 Markdown 转公众号工具","icon":"🛠"},{"name":"模块指南","url":"https://github.com/geekjourneyx/md2wechat-skill","desc":"高级排版模块完整文档","icon":"📖"}]

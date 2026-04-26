@@ -11,13 +11,15 @@ position: body
 when_to_use: |
   重要提示、警告、成功确认、危险操作说明。
   适合在正文中插入需要读者特别注意的信息。
+  类型修饰符写在开块标签后：:::callout info（默认）/ tip / warning / success / danger。
 when_not_to_use: |
   多条注意事项用 notice；
   文章前提说明用 notice 或 audience-fit。
 pairs_well_with: [notice, steps, checklist]
 avoid_combining_with: []
 anti_pattern: |
-  缺少 content 导致渲染失败；
+  类型修饰符只能是 info / tip / warning / success / danger（默认 info），写在 ::: 后如 :::callout warning；
+  缺少内容导致渲染失败；
   danger 类型用于非危险场景失去警示意义；
   内容写太长应该拆成正文段落。
 rows:
@@ -26,8 +28,24 @@ rows:
       description: 提示内容（纯文本或 Markdown 行内语法）
   min_cols: 1
 example: |
+  :::callout
+  这是默认（info）样式的提示，适合一般说明。
+  :::
+
+  :::callout tip
+  这是 tip 样式，适合小技巧。
+  :::
+
   :::callout warning
-  这是一条警告提示，请在操作前确认已备份数据。
+  这是 warning 样式，适合注意事项。
+  :::
+
+  :::callout success
+  这是 success 样式，适合成功确认。
+  :::
+
+  :::callout danger
+  这是 danger 样式，适合危险操作说明。请在操作前确认已备份数据。
   :::
 metadata:
   author: md2wechat

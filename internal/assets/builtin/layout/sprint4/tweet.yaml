@@ -17,29 +17,30 @@ when_not_to_use: |
 pairs_well_with: [quote, verdict, cases]
 avoid_combining_with: []
 anti_pattern: |
-  缺少 content 导致渲染失败；
+  缺少 text（JSON key 是 text，不是 content）导致渲染失败；
+  author 的 JSON key 是 name，date 的 JSON key 是 timestamp，写错 key 不会渲染；
   handle 不加 @ 前缀影响视觉识别；
   内容写成第三人称描述而非直接引用。
 fields:
   required:
-    - name: content
-      description: 推文内容（正文引用）
+    - name: text
+      description: 推文内容（JSON key：text，不是 content）
       example: "这套模块系统真的让我的内容制作效率提升了不止一倍。"
   optional:
-    - name: author
-      description: 发推者姓名
+    - name: name
+      description: 发推者姓名（JSON key：name，不是 author）
       example: "内容创作者"
     - name: handle
-      description: 账号（@xxx 格式）
+      description: 账号（JSON key：handle，@xxx 格式）
       example: "@creator"
-    - name: date
-      description: 时间戳文字
+    - name: timestamp
+      description: 时间戳文字（JSON key：timestamp，不是 date）
       example: "2026-01-01"
     - name: likes
-      description: 点赞数（显示在右下角）
+      description: 点赞数（JSON key：likes，显示在右下角）
       example: "1.2K"
     - name: avatar
-      description: 头像 URL（无则显示姓名首字母）
+      description: 头像 URL（JSON key：avatar，无则显示姓名首字母）
       example: "https://example.com/avatar.png"
 example: |
   :::tweet

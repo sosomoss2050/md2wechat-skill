@@ -17,24 +17,21 @@ when_not_to_use: |
 pairs_well_with: [hero, verdict, infographic]
 avoid_combining_with: []
 anti_pattern: |
-  缺少 quote 或 content 导致渲染失败；
+  缺少 text（JSON key 是 text，不是 quote 或 content）导致渲染失败；
   内容超过 2 句话失去金句的冲击力；
   source 写太长（应该简短）。
 fields:
   required: []
   optional:
-    - name: quote
-      description: 引用正文（quote 或 content 至少填一个）
-      example: "金句内容"
-    - name: content
-      description: 引用正文别名（quote 或 content 至少填一个）
-      example: "金句内容"
-    - name: author
-      description: 作者姓名
-      example: "极客旅程"
+    - name: text
+      description: 金句内容（JSON key：text，必填。写成单行 JSON 对象：{"text":"...","source":"..."}）
+      example: "结构先于风格，骨架决定气质"
     - name: source
-      description: 来源说明
+      description: 来源说明（JSON key：source）
       example: "内容设计原则"
+    - name: author
+      description: 作者姓名（JSON key：author，与 source 互补）
+      example: "极客旅程"
 example: |
   :::quote-card
   {"text":"结构先于风格，骨架决定气质","source":"内容设计原则"}

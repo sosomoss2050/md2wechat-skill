@@ -17,9 +17,22 @@ when_not_to_use: |
 pairs_well_with: [callout, specs, steps]
 avoid_combining_with: []
 anti_pattern: |
-  缺少 term 或 definition 导致渲染失败；
-  definition 写太长失去术语卡片的简洁性；
+  缺少 term 或 def（JSON 中 key 是 def，不是 definition）导致渲染失败；
+  definition 字段名写错为 definition 而非 def 是最常见错误；
+  def 写太长失去术语卡片的简洁性；
   term 写成句子而非简短词汇。
+fields:
+  required:
+    - name: term
+      description: 术语名称（JSON key：term）
+      example: "OKR"
+    - name: def
+      description: 术语定义（JSON key：def，不是 definition）
+      example: "目标与关键结果"
+  optional:
+    - name: termLabel
+      description: 术语标签说明（JSON key：termLabel，可省略）
+      example: "术语"
 
 example: |
   :::definition

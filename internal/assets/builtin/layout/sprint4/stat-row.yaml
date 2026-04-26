@@ -17,21 +17,25 @@ when_not_to_use: |
 pairs_well_with: [metrics, infographic, compare]
 avoid_combining_with: []
 anti_pattern: |
+  内容必须写成 JSON 数组格式：[{"label":"...","value":"..."}]，不支持 pipe 分隔行；
   缺少 value 或 label 导致行渲染不完整；
   单行超过 4 个指标在窄屏显示拥挤；
-  unit 写在 value 里（应单独填写 unit 字段）。
-rows:
-  delimiter: "|"
-  min_columns: 2
-  schema:
+  unit 写在 value 里（应单独填写 unit 字段，JSON key：unit）。
+fields:
+  required: []
+  optional:
     - name: label
-      description: 指标名称（如"满意度"、"用户"）
+      description: 指标名称（JSON key：label）
+      example: "满意度"
     - name: value
-      description: 数值（如"99%"、"12K"）
+      description: 数值（JSON key：value，如 "99%"、"12K"）
+      example: "99%"
     - name: unit
-      description: 单位（渲染在数字后方，字号更小，可省略）
+      description: 单位，渲染在数字后方字号更小（JSON key：unit，可省略）
+      example: "人"
     - name: note
-      description: 补充说明（可省略）
+      description: 补充说明（JSON key：note，可省略）
+      example: "环比上周"
 example: |
   :::stat-row
   [{"value":"99%","label":"满意度"},{"value":"12K","label":"用户","unit":"人"}]
