@@ -1,0 +1,40 @@
+schema_version: "1"
+name: changelog
+version: "1.0.0"
+since: "1.5.0"
+category: sprint4
+serves: [readability, memorability]
+content_types: [announcement, report]
+industry: [general]
+tags: [sprint4, changelog, release-notes, version, updates]
+position: body
+when_to_use: |
+  产品迭代说明、开源项目日志、版本说明。
+  适合记录和展示版本变更历史。
+when_not_to_use: |
+  时间线展示用 timeline；
+  步骤说明用 steps。
+pairs_well_with: [timeline, specs, notice]
+avoid_combining_with: []
+anti_pattern: |
+  缺少 version 导致渲染不完整；
+  added/changed/fixed/removed 各类别不分，全部混在一起；
+  变更条目写太长失去日志简洁性。
+rows:
+  delimiter: "|"
+  min_columns: 1
+  schema:
+    - name: version
+      description: 版本号（如 v2.0.0）
+    - name: date
+      description: 发布日期（可省略）
+    - name: changes
+      description: 变更摘要（可省略）
+example: |
+  :::changelog
+  {"version":"v2.0.0","date":"2026-01-01","added":["新增高级模块","支持主题切换"],"changed":["优化渲染性能"],"fixed":["修复移动端布局问题"],"removed":["废弃旧版 API"]}
+  :::
+metadata:
+  author: md2wechat
+  provenance: builtin
+  inspired_by: "advanced-layout-modules-guide.md#changelog"

@@ -1,0 +1,38 @@
+schema_version: "1"
+name: question
+version: "1.0.0"
+since: "1.5.0"
+category: sprint4
+serves: [readability, conversion]
+content_types: [tutorial, report]
+industry: [general]
+tags: [sprint4, question, qa, faq-inline, interactive]
+position: body
+when_to_use: |
+  FAQ、读者问题、学习测验。
+  适合在正文中嵌入问答，比 faq 更轻量。
+when_not_to_use: |
+  商业转化场景的顾虑处理用 faq；
+  单个问题直接写正文。
+pairs_well_with: [faq, callout, summary]
+avoid_combining_with: []
+anti_pattern: |
+  缺少 question 或 answer 导致行无效；
+  问题写成陈述句而非疑问句；
+  回答写太长应该拆成正文段落。
+rows:
+  delimiter: "|"
+  min_columns: 2
+  schema:
+    - name: question
+      description: 问题（以问句形式表达）
+    - name: answer
+      description: 回答（简洁直接）
+example: |
+  :::question
+  [{"q":"模块是否支持所有主题？","a":"是的，所有主题都会渲染这些模块。"}]
+  :::
+metadata:
+  author: md2wechat
+  provenance: builtin
+  inspired_by: "advanced-layout-modules-guide.md#question"

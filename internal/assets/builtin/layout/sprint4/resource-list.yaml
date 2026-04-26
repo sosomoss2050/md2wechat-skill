@@ -1,0 +1,42 @@
+schema_version: "1"
+name: resource-list
+version: "1.0.0"
+since: "1.5.0"
+category: sprint4
+serves: [readability, conversion]
+content_types: [tutorial, report]
+industry: [general]
+tags: [sprint4, resource-list, links, references, reading-list]
+position: closing
+when_to_use: |
+  延伸阅读、工具推荐、参考资料整理。
+  适合文章结尾的资源汇总，比 toolbox 更轻量。
+when_not_to_use: |
+  需要分类说明的资源用 toolbox；
+  单纯列清单用 checklist。
+pairs_well_with: [toolbox, checklist, cta]
+avoid_combining_with: []
+anti_pattern: |
+  缺少 name 或 url 导致行无效；
+  url 不以 http:// 或 https:// 开头则不会渲染成链接；
+  资源名称写太长（简洁命名，说明放 desc）。
+rows:
+  delimiter: "|"
+  min_columns: 2
+  schema:
+    - name: name
+      description: 资源名称
+    - name: url
+      description: 链接地址（需以 http:// 或 https:// 开头）
+    - name: description
+      description: 资源简介（可省略）
+    - name: icon
+      description: 图标（emoji 或文字，可省略，无则显示首字母）
+example: |
+  :::resource-list
+  [{"name":"md2wechat 官网","url":"https://md2wechat.com","desc":"在线 Markdown 转公众号工具","icon":"🛠"},{"name":"模块指南","url":"https://github.com/geekjourneyx/md2wechat-skill","desc":"高级排版模块完整文档","icon":"📖"}]
+  :::
+metadata:
+  author: md2wechat
+  provenance: builtin
+  inspired_by: "advanced-layout-modules-guide.md#resource-list"

@@ -1,0 +1,42 @@
+schema_version: "1"
+name: comparison-table
+version: "1.0.0"
+since: "1.5.0"
+category: sprint4
+serves: [readability, attention]
+content_types: [opinion, tutorial, report]
+industry: [general]
+tags: [sprint4, comparison-table, pros-cons, tradeoff, evaluation]
+position: body
+when_to_use: |
+  方案对比、选型分析、优缺点梳理。
+  适合需要并排展示正反两面的场景。
+when_not_to_use: |
+  多行多维度对比用 compare；
+  纯数据对比用 metrics。
+pairs_well_with: [compare, verdict, specs]
+avoid_combining_with: []
+anti_pattern: |
+  缺少 left 或 right 任何一个导致渲染失败；
+  优点列写成中性描述而非真实优势；
+  缺点列写得太轻描淡写失去可信度。
+rows:
+  delimiter: "|"
+  min_columns: 2
+  schema:
+    - name: feature
+      description: 对比维度或特性名称
+    - name: option-a
+      description: 方案 A / 左侧选项的表现
+    - name: option-b
+      description: 方案 B / 右侧选项的表现
+    - name: note
+      description: 补充说明（可省略）
+example: |
+  :::comparison-table
+  {"left":{"title":"优点","items":["快速部署","低成本","易上手"]},"right":{"title":"缺点","items":["扩展性差","依赖第三方"]}}
+  :::
+metadata:
+  author: md2wechat
+  provenance: builtin
+  inspired_by: "advanced-layout-modules-guide.md#comparison-table"
