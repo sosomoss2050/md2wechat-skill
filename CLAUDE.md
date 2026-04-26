@@ -51,6 +51,48 @@ md2wechat prompts render <name> --kind <kind> --var KEY=VALUE --json
 
 发布新版本时，**必须**按以下顺序执行检查：
 
+### 0. 真实环境 E2E 渲染验证（必须第一个执行）
+
+**在任何文档检查、版本号更新、git 操作之前**，先用真实 API 验证高级排版语法渲染正常。
+
+```bash
+# 确认本地 API 服务已启动（http://localhost:3000）
+curl -s http://localhost:3000/ > /dev/null || echo "⚠️ 本地服务未启动，请先启动再发布"
+
+# 构建最新 CLI
+make build
+
+# 运行高级排版渲染验证
+./md2wechat convert /tmp/layout-e2e-test.md --mode api --output /tmp/layout-smoke.html
+
+# 检查所有核心模块是否正常渲染（无 ::: 原始语法残留）
+python3 -c "
+modules = ['hero','toc','verdict','audience-fit','myth-fact','metrics','compare','steps',
+           'timeline','quote','callout','faq','checklist','cta','notice','summary']
+html = open('/tmp/layout-smoke.html').read()
+failed = [m for m in modules if ':::' + m in html]
+ok = [m for m in modules if ':::' + m not in html]
+print(f'✅ 渲染成功: {len(ok)}/{len(modules)}')
+if failed: print(f'❌ 未渲染模块: {failed}')
+else: print('全部通过，可以继续发布流程')
+"
+
+# 用 layout validate 检查测试文件语法正确性
+./md2wechat layout validate --file /tmp/layout-e2e-test.md --json
+```
+
+**E2E 测试文件**：保存在 `examples/layout-e2e-test.md`，覆盖 6 大类模块的正确语法示例。每次发布前用此文件验证。
+
+**通过标准**（两项都必须满足才能继续）：
+- `convert` 输出 HTML 中，所有已知模块无 `:::name` 原始语法残留
+- `layout validate` 返回 `LAYOUT_VALIDATED`（errors: 0，warnings: 0）
+
+**如果 E2E 验证失败**：
+- 检查是否是测试文件的语法问题（字段名、格式）
+- 检查是否是 API 服务版本不兼容
+- 检查是否是 YAML 模块定义的 `example` 示例有误
+- **不允许跳过这一步继续发布**
+
 ### 1. 代码与文档一致性检查
 
 ```bash

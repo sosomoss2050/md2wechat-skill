@@ -19,6 +19,7 @@ Before assuming a feature, resource, or prompt exists, inspect the running CLI:
 2. `md2wechat providers list --json`
 3. `md2wechat themes list --json`
 4. `md2wechat prompts list --json`
+5. `md2wechat layout list --json`
 
 Use `show` or `render` only when a task depends on a specific resource:
 
@@ -26,12 +27,16 @@ Use `show` or `render` only when a task depends on a specific resource:
 2. `md2wechat themes show <name> --json`
 3. `md2wechat prompts show <name> --kind <kind> --json`
 4. `md2wechat prompts render <name> --kind <kind> --var KEY=VALUE --json`
+5. `md2wechat layout show <name> --json`
+6. `md2wechat layout render <name> --var KEY=VALUE`
+7. `md2wechat layout validate --file <file.md> --json`
 
 Treat these commands as the source of truth for:
 
 - currently supported image providers
 - currently visible themes after override resolution
 - bundled and overridden prompt catalog entries
+- available advanced layout modules (43 built-in modules, 6 categories)
 
 ## Verification Order
 
@@ -45,6 +50,29 @@ Treat these commands as the source of truth for:
 8. If the task touches release or installer paths, keep the documented primary path versioned and non-`latest`.
 9. If the task touches Homebrew distribution, verify the tap formula is generated from the same release bundle and points only to versioned release assets.
 10. If the task publishes a new npm version, manually trigger `npx cnpm sync @geekjourneyx/md2wechat` after npm publish so `npmmirror` users do not get a stale tarball 404 on the fresh release.
+11. **Before every release**, run a real rendering E2E smoke test against the local API to verify advanced layout modules render correctly:
+
+```bash
+# 1. 确认本地 API 服务已启动（默认 http://localhost:3000）
+# 2. 创建包含核心语法类别的测试文件，运行转换
+./md2wechat convert <layout-test.md> --mode api --output /tmp/layout-smoke.html
+
+# 3. 检查 HTML 中没有残留的原始 ::: 语法
+python3 -c "
+modules = ['hero','toc','verdict','metrics','compare','steps','quote','callout','faq','checklist','cta','summary']
+html = open('/tmp/layout-smoke.html').read()
+failed = [m for m in modules if ':::' + m in html]
+print('FAIL (raw syntax not rendered):', failed) if failed else print('PASS: all modules rendered')
+"
+
+# 4. 用 validate 命令检查语法正确性
+./md2wechat layout validate --file <layout-test.md> --json
+```
+
+**通过标准**：
+- `convert` 输出的 HTML 中，所有已知模块均无 `:::name` 原始语法残留
+- `layout validate` 返回 `LAYOUT_VALIDATED`（errors: 0）
+- 两项都通过才可继续打 tag 和发布
 
 ## Test Discipline
 
