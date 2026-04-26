@@ -1,0 +1,44 @@
+schema_version: "1"
+name: toolbox
+version: "1.0.0"
+since: "1.5.0"
+category: conversion
+serves: [conversion, readability]
+content_types: [tutorial, report]
+industry: [general]
+tags: [conversion, toolbox, resources, tools, links]
+position: body
+when_to_use: |
+  资源、模板、工具链接展示。
+  适合文章结尾的延伸阅读、工具推荐、资源汇总。
+when_not_to_use: |
+  纯链接列表用 resource-list（sprint4）；
+  参数说明用 specs 模块。
+pairs_well_with: [checklist, steps, cta]
+avoid_combining_with: []
+anti_pattern: |
+  没有任何满足 3 列的行导致渲染失败；
+  URL 不以 http:// 或 https:// 开头则不会渲染成链接；
+  分类列写太多重复（如全部写"工具"）。
+rows:
+  delimiter: "|"
+  min_columns: 3
+  schema:
+    - name: category
+      description: 分类标签（如"模板"、"工具"、"资料"）
+    - name: name
+      description: 资源名称（有 URL 时会渲染成链接）
+    - name: description
+      description: 说明，简述这个资源的用途
+    - name: url
+      description: 链接地址（可省略，需以 http:// 或 https:// 开头）
+example: |
+  :::toolbox[资源工具箱]
+  模板 | 选题模板 | 适合日常内容策划和快速开稿 | https://md2wechat.com
+  资料 | 品牌素材库 | 放封面图、Logo 和活动物料 | https://github.com/geekjourneyx/md2wechat-skill
+  工具 | Markdown 转换 API | 适合接进自动化工作流 | https://md2wechat.com/api/convert
+  :::
+metadata:
+  author: md2wechat
+  provenance: builtin
+  inspired_by: "advanced-layout-modules-guide.md#toolbox"

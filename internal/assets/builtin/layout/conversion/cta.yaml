@@ -1,0 +1,52 @@
+schema_version: "1"
+name: cta
+version: "1.0.0"
+since: "1.5.0"
+category: conversion
+serves: [conversion]
+content_types: [opinion, tutorial, announcement, product-launch]
+industry: [general]
+tags: [conversion, cta, action, closing, engagement]
+position: closing
+when_to_use: |
+  结尾互动区，提示保存、套用、继续体验。
+  适合文章结尾引导读者采取下一步行动。
+when_not_to_use: |
+  关注引导用 subscribe；
+  章节过渡用 bridge。
+pairs_well_with: [subscribe, summary, author-card]
+avoid_combining_with: [cta]
+anti_pattern: |
+  缺少 title 导致渲染失败；
+  三个固定按钮文字不能通过字段修改；
+  note 写成完整段落（应简短）。
+fields:
+  required:
+    - name: title
+      description: 行动引导主文案，说明为什么读者应该采取行动
+      example: "如果你想把公众号内容做成稳定可复用的结构，可以直接从这套高级模块开始。"
+  optional:
+    - name: note
+      description: 底部说明（如品牌语或签名）
+      example: "BUILD WITH STRUCTURE"
+    - name: subtitle
+      description: 副标题
+      example: "三分钟上手，立刻开始"
+    - name: link
+      description: 跳转链接
+      example: "https://md2wechat.com"
+    - name: qrcode
+      description: 二维码图片 URL
+      example: "https://example.com/qrcode.png"
+    - name: action
+      description: 主行动文案（title 的别名，title 或 action 至少填一个）
+      example: "立即开始"
+example: |
+  :::cta
+  title: 如果你想把公众号内容做成稳定可复用的结构，可以直接从这套高级模块开始。
+  note: BUILD WITH STRUCTURE
+  :::
+metadata:
+  author: md2wechat
+  provenance: builtin
+  inspired_by: "advanced-layout-modules-guide.md#cta"

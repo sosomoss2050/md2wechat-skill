@@ -1,0 +1,42 @@
+schema_version: "1"
+name: specs
+version: "1.0.0"
+since: "1.5.0"
+category: conversion
+serves: [readability, conversion]
+content_types: [report, announcement, product-launch]
+industry: [general]
+tags: [conversion, specs, parameters, config, technical]
+position: body
+when_to_use: |
+  参数、交付范围、配置说明。
+  适合产品规格说明、服务范围、技术参数展示。
+when_not_to_use: |
+  功能对比用 compare；
+  发布前核对用 checklist。
+pairs_well_with: [pricing, compare, checklist]
+avoid_combining_with: []
+anti_pattern: |
+  没有任何满足 2 列的行导致渲染失败；
+  参数名写太长影响对齐；
+  值列和说明列混用（值应简洁，说明可展开）。
+rows:
+  delimiter: "|"
+  min_columns: 2
+  schema:
+    - name: spec
+      description: 参数名称
+    - name: value
+      description: 参数值
+    - name: note
+      description: 补充说明（可省略）
+example: |
+  :::specs[参数信息]
+  适用对象 | 内容团队 / 自媒体 / 企业市场 | 更适合长文和专题稿
+  交付方式 | 在线编辑器 + API | 既能手工写，也能接自动化
+  更新频率 | 持续迭代 | 主题和模块会一起升级
+  :::
+metadata:
+  author: md2wechat
+  provenance: builtin
+  inspired_by: "advanced-layout-modules-guide.md#specs"

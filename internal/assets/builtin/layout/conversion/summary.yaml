@@ -1,0 +1,53 @@
+schema_version: "1"
+name: summary
+version: "1.0.0"
+since: "1.5.0"
+category: conversion
+serves: [memorability, readability]
+content_types: [opinion, tutorial, report]
+industry: [general]
+tags: [conversion, summary, conclusion, highlight, closing]
+position: closing
+when_to_use: |
+  一句话总结，适合章节末尾或文章结尾。
+  帮助读者带走最重要的一个判断。
+when_not_to_use: |
+  需要多点总结时用 checklist；
+  需要展开说明时写正文段落。
+pairs_well_with: [verdict, cta, subscribe]
+avoid_combining_with: []
+anti_pattern: |
+  缺少 highlight 导致渲染失败；
+  highlight 写成描述性语句而非判断；
+  body 写太长变成第二个正文段落。
+fields:
+  required:
+    - name: highlight
+      description: 核心判断，一句话总结最重要的结论
+      example: "先把结构搭稳，再让主题接管气质"
+  optional:
+    - name: eyebrow
+      description: 标签词（如"一句话总结"）
+      example: "一句话总结"
+    - name: body
+      description: 展开说明，补充 highlight 的背景
+      example: "这样同一篇内容切到不同主题时，重点和节奏仍然清楚。"
+    - name: title
+      description: 摘要标题（highlight 的别名，highlight 优先）
+      example: "先把结构搭稳，再让主题接管气质"
+    - name: content
+      description: 摘要内容（body 的别名）
+      example: "同一篇内容切到不同主题时，重点和节奏仍然清楚。"
+    - name: points
+      description: 多条要点，用 | 分隔（content 的补充）
+      example: "结构先于风格 | 模块服务阅读 | 主题定义气质"
+example: |
+  :::summary
+  eyebrow: 一句话总结
+  highlight: 先把结构搭稳，再让主题接管气质
+  body: 这样同一篇内容切到不同主题时，重点和节奏仍然清楚。
+  :::
+metadata:
+  author: md2wechat
+  provenance: builtin
+  inspired_by: "advanced-layout-modules-guide.md#summary"
