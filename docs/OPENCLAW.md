@@ -205,10 +205,10 @@ wechat:
   appid: "你的AppID"
   secret: "你的Secret"
 api:
-  image_provider: "modelscope"
-  image_key: "ms-your-token-here"
-  image_base_url: "https://api-inference.modelscope.cn"
-  image_model: "Tongyi-MAI/Z-Image-Turbo"
+  image_provider: "volcengine"
+  image_key: "your-ark-api-key"
+  image_model: "seedream-3-0"
+  image_size: "2K"
 ```
 
 ---

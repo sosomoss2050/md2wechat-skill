@@ -424,9 +424,10 @@ wechat:
   secret: "your_wechat_secret"
 
 api:
-  image_key: "your_image_api_key"
-  image_provider: "modelscope"
-  image_base_url: "https://api-inference.modelscope.cn"
+  image_key: "your-ark-api-key"
+  image_provider: "volcengine"
+  image_model: "seedream-3-0"
+  image_size: "2K"
 ```
 
 补充说明：
