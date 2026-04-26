@@ -119,3 +119,21 @@ metadata:
 		t.Errorf("env override should win, got version %q", spec.Version)
 	}
 }
+
+func TestAllBuiltinModulesLoadCleanly(t *testing.T) {
+	c := NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatalf("Load failed: %v", err)
+	}
+	if got := len(c.modules); got < 38 {
+		t.Errorf("expected at least 38 modules, got %d", got)
+	}
+	for name, m := range c.modules {
+		if m.Metadata.Provenance == "" {
+			t.Errorf("%s missing provenance", name)
+		}
+		if m.Metadata.InspiredBy == "" && m.Metadata.Provenance == "builtin" {
+			t.Errorf("%s builtin module missing inspired_by", name)
+		}
+	}
+}
