@@ -41,7 +41,6 @@ Treat these commands as the source of truth for:
 
 **高级排版模块约束**：`layout` 模块（`:::block` 语法）仅在 **API 模式**（`convert` 默认）下渲染。
 AI 模式（`--mode ai`）不解析此语法，`:::block` 块将以普通段落输出。
-如需 API 访问权限，请访问 **https://www.md2wechat.cn/** 联系作者咨询。
 
 ## Verification Order
 
