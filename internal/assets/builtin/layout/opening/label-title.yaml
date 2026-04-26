@@ -1,0 +1,39 @@
+schema_version: "1"
+name: label-title
+version: "1.0.0"
+since: "1.5.0"
+category: opening
+serves: [readability]
+content_types: [opinion, tutorial, report]
+industry: [general]
+tags: [opening, label, section-header, lightweight]
+position: body
+when_to_use: |
+  小节入口，适合在正文中轻量切换主题。
+  当章节感不需要那么强时，比 part 更轻巧。
+when_not_to_use: |
+  需要明显章节分割感时用 part；
+  内容已有自然的段落划分时不需要额外标记。
+pairs_well_with: [part, hero, toc]
+avoid_combining_with: []
+anti_pattern: |
+  缺少 label 或 title 导致渲染失败；
+  label 写太长失去标签的简洁感；
+  在每个自然段前都加 label-title 导致节奏混乱。
+fields:
+  required:
+    - name: label
+      description: 短标签，定位当前小节的类别或角色（如"引导"、"背景"）
+      example: "引导"
+    - name: title
+      description: 小节主题句，直接说明这一段的核心内容
+      example: "模块的任务，是把内容拆成更好读的层次"
+example: |
+  :::label-title
+  label: 引导
+  title: 模块的任务，是把内容拆成更好读的层次
+  :::
+metadata:
+  author: md2wechat
+  provenance: builtin
+  inspired_by: "advanced-layout-modules-guide.md#label-title"

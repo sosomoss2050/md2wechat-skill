@@ -1,0 +1,51 @@
+schema_version: "1"
+name: verdict
+version: "1.0.0"
+since: "1.5.0"
+category: judgment
+serves: [attention, memorability]
+content_types: [opinion, report, announcement]
+industry: [general]
+tags: [judgment, verdict, conclusion, standpoint]
+position: body
+when_to_use: |
+  把作者立场单独拎出来，适合观点文、复盘、方案结论。
+  当需要明确告诉读者作者的最终判断时使用。
+when_not_to_use: |
+  纯数据报告不需要作者立场框；
+  FAQ 和教程类文章结论应直接嵌入正文。
+pairs_well_with: [hero, bridge, audience-fit, summary]
+avoid_combining_with: [verdict]
+anti_pattern: |
+  title 和 body 都没有导致渲染失败；
+  title 写成中性的陈述而非判断；
+  缺少 eyebrow 时不会显示标签（默认显示"最终判断"）。
+fields:
+  required: []
+  optional:
+    - name: title
+      description: 判断主标题，写一句鲜明的立场（title 或 body 至少填一个）
+      example: "真正的护城河不是模块数量，而是品牌表达系统"
+    - name: body
+      description: 判断说明，展开 title 的核心论据（title 或 body 至少填一个）
+      example: "模块必须解决新的阅读任务，否则只是换皮。"
+    - name: eyebrow
+      description: 标签词，默认显示"最终判断"
+      example: "最终判断"
+    - name: note
+      description: 底部补充说明
+      example: "适合观点文、复盘、方案结论"
+    - name: meta
+      description: 底部元信息，与 note 一起作为说明显示
+      example: "2026-01-01"
+example: |
+  :::verdict
+  eyebrow: 最终判断
+  title: 真正的护城河不是模块数量，而是品牌表达系统
+  body: 模块必须解决新的阅读任务，否则只是换皮。
+  note: 适合观点文、复盘、方案结论
+  :::
+metadata:
+  author: md2wechat
+  provenance: builtin
+  inspired_by: "advanced-layout-modules-guide.md#verdict"

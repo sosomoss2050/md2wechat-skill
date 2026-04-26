@@ -1,0 +1,59 @@
+schema_version: "1"
+name: manifesto
+version: "1.0.0"
+since: "1.5.0"
+category: judgment
+serves: [attention, memorability]
+content_types: [opinion, announcement, manifesto]
+industry: [general]
+tags: [judgment, manifesto, brand, belief, position]
+position: opening
+when_to_use: |
+  建立作者长期主张，适合个人品牌、专栏开头或结尾。
+  当需要向读者传达核心信念和立场时使用。
+when_not_to_use: |
+  纯教程或数据报告不适合加主张宣言；
+  短文或快讯用 verdict 代替。
+pairs_well_with: [hero, author-card, subscribe]
+avoid_combining_with: [manifesto]
+anti_pattern: |
+  title、believe、against 都没有导致渲染失败；
+  believe 和 against 用逗号分隔（应该用 |）；
+  写成宣传稿而非真实的个人立场。
+fields:
+  required: []
+  optional:
+    - name: title
+      description: 核心主张标题（title、believe、against 至少填一个）
+      example: "我相信普通人也应该拥有自己的内容系统"
+    - name: believe
+      description: 正面信念，用 | 分隔多个条目（title、believe、against 至少填一个）
+      example: "结构先于风格 | 文字永远是主角 | 主题负责气质"
+    - name: against
+      description: 反对立场，用 | 分隔多个条目（title、believe、against 至少填一个）
+      example: "大字报式排版 | 随机堆模板 | 为装饰牺牲阅读"
+    - name: label
+      description: 标签词，默认显示"我的长期判断"
+      example: "我的长期判断"
+    - name: body
+      description: 展开说明，解释主张的背景和意义
+      example: "排版系统的价值，是让不懂设计的人也能稳定输出有识别度的文章。"
+    - name: subtitle
+      description: 副标题，对 title 补充说明
+      example: "个人品牌的内容原则"
+    - name: note
+      description: 底部说明
+      example: "适合个人品牌、专栏开头或结尾"
+example: |
+  :::manifesto
+  label: 我的长期判断
+  title: 我相信普通人也应该拥有自己的内容系统
+  body: 排版系统的价值，是让不懂设计的人也能稳定输出有识别度的文章。
+  believe: 结构先于风格 | 文字永远是主角 | 主题负责气质
+  against: 大字报式排版 | 随机堆模板 | 为装饰牺牲阅读
+  note: 适合个人品牌、专栏开头或结尾
+  :::
+metadata:
+  author: md2wechat
+  provenance: builtin
+  inspired_by: "advanced-layout-modules-guide.md#manifesto"

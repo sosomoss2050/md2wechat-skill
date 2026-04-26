@@ -1,0 +1,48 @@
+schema_version: "1"
+name: bridge
+version: "1.0.0"
+since: "1.5.0"
+category: judgment
+serves: [readability]
+content_types: [opinion, tutorial, report]
+industry: [general]
+tags: [judgment, bridge, transition, context]
+position: body
+when_to_use: |
+  解释下一段为什么重要，避免从观点突然跳到证据、价格或行动。
+  适合在章节之间建立逻辑连接。
+when_not_to_use: |
+  内容本身逻辑连贯时不需要额外的过渡；
+  文章结尾不要用 bridge，改用 summary 或 cta。
+pairs_well_with: [verdict, part, steps]
+avoid_combining_with: [bridge]
+anti_pattern: |
+  title、body、next 都没有导致渲染失败；
+  body 写太长变成正文而非过渡；
+  每个段落之间都加 bridge 导致节奏臃肿。
+fields:
+  required: []
+  optional:
+    - name: title
+      description: 过渡标题，说明下一段的重点（title、body、next 至少填一个）
+      example: "看完判断后，必须看到证据"
+    - name: body
+      description: 过渡说明，解释为什么要继续读（title、body、next 至少填一个）
+      example: "没有证据的观点只是态度，下一段用数据和案例把它撑住。"
+    - name: next
+      description: 引导文字，提示读者继续（title、body、next 至少填一个）
+      example: "继续看证据模块"
+    - name: label
+      description: 标签词，默认显示"下一段为什么重要"
+      example: "下一段为什么重要"
+example: |
+  :::bridge
+  label: 下一段为什么重要
+  title: 看完判断后，必须看到证据
+  body: 没有证据的观点只是态度，下一段用数据和案例把它撑住。
+  next: 继续看证据模块
+  :::
+metadata:
+  author: md2wechat
+  provenance: builtin
+  inspired_by: "advanced-layout-modules-guide.md#bridge"

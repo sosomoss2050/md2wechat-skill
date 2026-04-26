@@ -1,0 +1,41 @@
+schema_version: "1"
+name: myth-fact
+version: "1.0.0"
+since: "1.5.0"
+category: judgment
+serves: [attention, readability]
+content_types: [opinion, tutorial, announcement]
+industry: [general]
+tags: [judgment, myth, fact, correction, misconception]
+position: body
+when_to_use: |
+  纠正常见误区，适合观点文章、产品解释和方案说服。
+  当读者可能带着错误预设来阅读时使用。
+when_not_to_use: |
+  没有明确误区要纠正时不要强行使用；
+  数据对比用 compare；步骤说明用 steps。
+pairs_well_with: [verdict, bridge, infographic]
+avoid_combining_with: []
+anti_pattern: |
+  没有任何满足 2 列的行导致渲染失败；
+  误区写成客观事实而不是真正的误解；
+  事实列写得和误区差别不大。
+rows:
+  delimiter: "|"
+  min_columns: 2
+  schema:
+    - name: myth
+      description: 常见误区，读者可能持有的错误观点
+    - name: fact
+      description: 真实情况，对误区的正确纠正
+    - name: supplement
+      description: 补充说明，解释为什么事实是这样（可省略）
+example: |
+  :::myth-fact[常见误区]
+  模块越多越高级 | 模块越准越高级 | 数量只是覆盖面，准确才决定阅读体验
+  信息图必须像海报 | 信息图首先是一句话判断 | 图片和编号都不是必要内容
+  :::
+metadata:
+  author: md2wechat
+  provenance: builtin
+  inspired_by: "advanced-layout-modules-guide.md#myth-fact"

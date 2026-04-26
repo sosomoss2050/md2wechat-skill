@@ -1,0 +1,42 @@
+schema_version: "1"
+name: toc
+version: "1.0.0"
+since: "1.5.0"
+category: opening
+serves: [readability]
+content_types: [opinion, tutorial, report, announcement]
+industry: [general]
+tags: [opening, toc, navigation, outline]
+position: opening
+when_to_use: |
+  长文开头给读者阅读路径，适合 3 章节以上的文章。
+  帮助读者快速判断哪部分和自己最相关。
+when_not_to_use: |
+  短文（2 章节以内）不需要目录；
+  信息流型文章不需要导航。
+pairs_well_with: [hero, part, cards]
+avoid_combining_with: [toc]
+anti_pattern: |
+  每行少于 2 列导致渲染失败；
+  序号不统一（有的用 01 有的用 1）；
+  说明写太长变成正文而不是导览。
+rows:
+  delimiter: "|"
+  min_columns: 2
+  schema:
+    - name: number
+      description: 序号（如 01、02、03）
+    - name: title
+      description: 章节标题
+    - name: description
+      description: 一句话说明这一章节讲什么（可省略）
+example: |
+  :::toc[阅读导航]
+  01 | 先看模块定位 | 这套结构解决什么问题
+  02 | 再看基础元素 | 标题、表格、代码怎么共存
+  03 | 最后看行动区域 | 如何把文章收得更完整
+  :::
+metadata:
+  author: md2wechat
+  provenance: builtin
+  inspired_by: "advanced-layout-modules-guide.md#toc"

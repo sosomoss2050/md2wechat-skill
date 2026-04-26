@@ -1,0 +1,51 @@
+schema_version: "1"
+name: audience-fit
+version: "1.0.0"
+since: "1.5.0"
+category: judgment
+serves: [attention, readability]
+content_types: [opinion, tutorial, report, announcement]
+industry: [general]
+tags: [judgment, audience, fit, targeting]
+position: opening
+when_to_use: |
+  告诉读者这篇适合谁、不适合谁，适合放在文章前段。
+  帮助读者快速判断要不要继续往下读。
+when_not_to_use: |
+  受众非常明确的垂直内容不需要额外说明；
+  内容太短时不必单独拆出适合人群。
+pairs_well_with: [hero, verdict, bridge]
+avoid_combining_with: []
+anti_pattern: |
+  fit 和 avoid 都没有导致渲染失败；
+  条目写太模糊（"对你有帮助的人"）失去筛选价值；
+  把 fit 和 avoid 都写成同一类人。
+fields:
+  required: []
+  optional:
+    - name: fit
+      description: 适合阅读的人群，用 | 分隔多个对象（fit 或 avoid 至少填一个）
+      example: "正在写长文的人 | 想建立个人品牌的人 | 需要稳定交付内容的人"
+    - name: avoid
+      description: 不适合阅读的人群，用 | 分隔多个对象（fit 或 avoid 至少填一个）
+      example: "只发短讯的人 | 不需要结构化表达的人"
+    - name: title
+      description: 模块标题
+      example: "这篇适合谁"
+    - name: subtitle
+      description: 副标题，帮读者理解判断的目的
+      example: "先帮读者判断要不要继续往下读"
+    - name: note
+      description: 补充说明
+      example: "不符合条件的读者可以先收藏，以后用到时再回来看"
+example: |
+  :::audience-fit
+  title: 这篇适合谁
+  subtitle: 先帮读者判断要不要继续往下读
+  fit: 正在写长文的人 | 想建立个人品牌的人 | 需要稳定交付内容的人
+  avoid: 只发短讯的人 | 不需要结构化表达的人
+  :::
+metadata:
+  author: md2wechat
+  provenance: builtin
+  inspired_by: "advanced-layout-modules-guide.md#audience-fit"

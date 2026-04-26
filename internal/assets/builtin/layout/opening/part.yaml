@@ -1,0 +1,47 @@
+schema_version: "1"
+name: part
+version: "1.0.0"
+since: "1.5.0"
+category: opening
+serves: [readability]
+content_types: [opinion, tutorial, report]
+industry: [general]
+tags: [opening, part, section, chapter]
+position: body
+when_to_use: |
+  大段落切换，建立章节感。
+  适合多章节长文、系列文章的段落划分。
+when_not_to_use: |
+  短文不需要章节划分；
+  单一主题的文章直接用 label-title 代替。
+pairs_well_with: [hero, toc, label-title]
+avoid_combining_with: []
+anti_pattern: |
+  缺少 index 或 title 导致渲染失败；
+  label 写英文（PART/LAST/SECTION/CHAPTER 会被自动忽略）；
+  每个自然段都加 part 导致节奏感消失。
+fields:
+  required:
+    - name: index
+      description: 章节序号（如 01、02、03）
+      example: "02"
+    - name: title
+      description: 章节标题，直接说明这一段的主题
+      example: "旧能力也要接进同一套系统"
+  optional:
+    - name: label
+      description: 显示标签，写中文（英文标签如 PART/SECTION 会被忽略）
+      example: "第二部分"
+    - name: subtitle
+      description: 副标题，补充章节说明
+      example: "系统模块 · 列表 / 代码 / 表格"
+example: |
+  :::part
+  index: 02
+  title: 旧能力也要接进同一套系统
+  subtitle: 系统模块 · 列表 / 代码 / 表格
+  :::
+metadata:
+  author: md2wechat
+  provenance: builtin
+  inspired_by: "advanced-layout-modules-guide.md#part"
