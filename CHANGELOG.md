@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-04-27
+
+### Added
+- **`md2wechat layout` command tree**: 4 new CLI subcommands for AI-agent-friendly discovery of 43 advanced WeChat layout modules (:::block syntax)
+  - `layout list [--category] [--serves] [--content-type] [--industry] [--tag] --json` — filtered module discovery
+  - `layout show <name> --json` — full spec with fields, when_to_use, example, metadata
+  - `layout render <name> --var KEY=VALUE --json` — generate :::block syntax from structured inputs
+  - `layout validate [--file | --stdin] --json` — validate :::block usage, unknown modules warn not error
+- **43 built-in layout modules** across 7 categories (opening, judgment, infographic, evidence, brand, conversion, sprint4)
+- **4-level module override**: builtin → ~/.config/md2wechat/layout/ → ./layout/ → $MD2WECHAT_LAYOUT_DIR
+- **`internal/layoutcatalog` package**: schema, loader, renderer, validator with 20+ unit tests
+- **Integration test fixtures**: 3 article shapes (opinion-piece, data-report, mixed-with-unknown)
+- **E2E test suite**: gated by MD2WECHAT_E2E=1, validates each module's example against /api/convert
+
+### Technical Details
+- **New Package**: `internal/layoutcatalog` (schema.go, loader.go, renderer.go, validator.go)
+- **New Files**: `internal/assets/builtin/layout/**/*.yaml` (43 module definitions)
+- **New Commands**: `cmd/md2wechat/layout.go`, `cmd/md2wechat/layout_test.go`, `cmd/md2wechat/layout_e2e_test.go`
+- **New Test Data**: `internal/layoutcatalog/testdata/integration/`
+- **Error Codes**: LAYOUT_MODULE_NOT_FOUND, LAYOUT_INVALID_FILTER, LAYOUT_MISSING_REQUIRED_FIELD, LAYOUT_INVALID_FIELD_VALUE, LAYOUT_VALIDATE_HAS_ERRORS, LAYOUT_VALIDATED
+
+### Migration Guide
+No migration required. Layout commands are purely additive. Existing workflows and config files are unchanged.
+
 ## [2.0.7] - 2026-03-30
 
 ### Added
