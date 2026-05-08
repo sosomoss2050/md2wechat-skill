@@ -63,7 +63,7 @@
 稳定的中转站推荐：[codesome](https://fk.codesome.cn/?aff=EBM1nw30)
 
 <p align="center">
-<img width="160" alt="image" src="https://github.com/user-attachments/assets/af6437e2-c5fd-44e0-84f9-f6f4981706b9" />
+<img width="160" alt="image" src="https://github.com/user-attachments/assets/ec0135fc-68e8-463e-8b4c-6348ff9631c3" />
 <img src="assets/wechat.png" alt="公众号：极客杰尼" width="160" />
 </p>
 
