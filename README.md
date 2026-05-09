@@ -341,6 +341,19 @@ AI 模式返回一个结构化排版 prompt，需要 Claude / Codex 继续处理
 
 ---
 
+## 🌐 md2wechat 生态
+
+围绕 md2wechat 打造的工具和资源矩阵，持续扩展中：
+
+| 仓库 | 说明 |
+|------|------|
+| [md2wechat](https://github.com/md2wechat) | 品牌主页，所有工具和资源的入口 |
+| [md2wechat-guide](https://github.com/md2wechat/md2wechat-guide) | 从入门到 API 的完整使用指南 |
+| [awesome-wechat-markdown](https://github.com/md2wechat/awesome-wechat-markdown) | 微信公众号 Markdown 工具精选列表 |
+| [md2wechat-templates](https://github.com/md2wechat/md2wechat-templates) | 开箱即用的排版模板库 |
+
+---
+
 ## 关于作者
 
 **极客杰尼** — 独立开发者 / AI Builder / AI 科技领域博主
@@ -393,7 +406,7 @@ AI 模式返回一个结构化排版 prompt，需要 Claude / Codex 继续处理
 
 **让公众号创作回归写作本身**
 
-[主页](https://github.com/geekjourneyx/md2wechat-skill) · [文档](docs) · [反馈](https://github.com/geekjourneyx/md2wechat-skill/issues)
+[主页](https://github.com/geekjourneyx/md2wechat-skill) · [文档](docs) · [生态](https://github.com/md2wechat) · [反馈](https://github.com/geekjourneyx/md2wechat-skill/issues)
 
 Made with ♥ by [geekjourneyx](https://jieni.ai) · [Source Available License](LICENSE) · Personal use free · [Commercial licensing](mailto:skrphper@gmail.com)
 
