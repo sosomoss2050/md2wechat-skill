@@ -7,54 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [2.2.1] - 2026-05-11
-
-### Changed
-- **Brand Profile 格式**：从 YAML 改为 Markdown（`brand.yaml` → `brand.md`）
-  - Markdown 对 AI Agent 更友好：自然语言比结构化字段更具表达力
-  - Agent 读取原始文本，无需 YAML 解析
-  - `brand show` 响应：`data.profile`（解析后 map）→ `data.content`（原始文本）
-  - `brand init` 创建带注释的 Markdown 模板（含基本信息、语气风格、排版约束等章节）
-  - 移除 `gopkg.in/yaml.v3` 在 brand.go 的依赖
-
-### Added
-- **`docs/BRAND-PROFILE.md`**：新增品牌档案配置保姆级指南
-  - 说明为什么选择 Markdown 格式
-  - 逐章节解释配置含义
-  - 最佳实践（具体 vs 抽象、写反例）
-  - 好与坏配置对比案例
-  - FAQ（6 个常见问题）
-
-### Technical Details
-- **Modified Files**: `cmd/md2wechat/brand.go`, `cmd/md2wechat/brand_test.go`
-- **New Files**: `docs/BRAND-PROFILE.md`
-- **Dependency changes**: Removed `gopkg.in/yaml.v3` from brand.go
-
-### Migration Guide
-如果你已有 `~/.config/md2wechat/brand.yaml`，请手动迁移：
-```bash
-# 初始化新的 Markdown 档案
-md2wechat brand init
-
-# 将 YAML 中的内容以自然语言形式填入 brand.md
-open ~/.config/md2wechat/brand.md
-```
-旧的 brand.yaml 文件不会被自动删除，可手动清理。
-
 ## [2.2.0] - 2026-05-11
 
 ### Added
-- **Brand Profile（品牌档案）**: 新增 `brand init` 和 `brand show` 命令，支持在 `~/.config/md2wechat/brand.yaml` 存储品牌档案
-  - `brand init`：幂等初始化，创建带注释的模板文件；目录不存在时自动创建
-  - `brand show`：以 JSON envelope 返回当前品牌档案和文件路径
+- **Brand Profile（品牌档案）**: 新增 `brand init` 和 `brand show` 命令，支持在 `~/.config/md2wechat/brand.md` 存储品牌档案
+  - `brand init`：幂等初始化，创建带注释的 Markdown 模板文件；目录不存在时自动创建
+  - `brand show`：以 JSON envelope 返回当前品牌档案原始文本（`data.content`）和文件路径（`data.path`）
   - 支持 `BRAND_INITIALIZED` / `BRAND_SHOWN` / `BRAND_NOT_FOUND` / `BRAND_READ_FAILED` 四个状态码
-  - Brand Profile 由 Agent 读取，CLI 不解析此文件（两种工具职责分离）
+  - Brand Profile 由 Agent 读取原始文本，CLI 完全不解析此文件（工具职责分离）
+  - **格式选择 Markdown 而非 YAML**：LLM 理解自然语言优于结构化字段；Markdown 可写反例、具体示例，信息密度更高
 - **Markdown Expression Diagnosis（排版诊断层）**: `skills/md2wechat/SKILL.md` 新增三步诊断框架
   - Step 1 意图识别：目标读者、conversion goal、memorability anchor
   - Step 2 内容映射：四目标框架（attention / readability / memorability / conversion）
   - Step 3 模块选择：结合 Brand Profile limits 和 layout.opening 从 43 个模块选择最优组合
 - **Brand Profile 协议**: `SKILL.md` 新增完整 Agent 读取协议
-  - 优先级链：CLI flag → brand.yaml → config.yaml → Layout Policy 推荐 → 硬编码默认
+  - 优先级链：CLI flag → brand.md → config.yaml → Layout Policy 推荐 → 硬编码默认
   - 降级规则：文件不存在/字段缺失时各字段的回退行为
   - Sanity Caps：max_modules(43) / max_cta(2) / max_quotes(10) / max_hero(1)，超出自动截断并 warn
   - style_ref：支持指向单个 .md 文件或目录（遍历目录下所有文件）
@@ -73,11 +40,10 @@ open ~/.config/md2wechat/brand.md
 - `docs/CONFIG.md`：新增 Brand Profile 完整章节（Schema / 字段说明表 / 降级行为 / 配置对比表）
 
 ### Technical Details
-- **New Files**: `cmd/md2wechat/brand.go`, `cmd/md2wechat/brand_test.go`, `docs/AGENT-GUIDE.md`
-- **Modified Files**: `cmd/md2wechat/main.go`, `docs/CONFIG.md`, `skills/md2wechat/SKILL.md`, `platforms/openclaw/md2wechat/SKILL.md`
+- **New Files**: `cmd/md2wechat/brand.go`, `cmd/md2wechat/brand_test.go`, `docs/AGENT-GUIDE.md`, `docs/BRAND-PROFILE.md`
+- **Modified Files**: `cmd/md2wechat/main.go`, `docs/CONFIG.md`, `skills/md2wechat/SKILL.md`, `platforms/openclaw/md2wechat/SKILL.md`, `docs/AGENT-GUIDE.md`
 - **New code constants**: `BRAND_INITIALIZED`, `BRAND_INIT_FAILED`, `BRAND_SHOWN`, `BRAND_NOT_FOUND`, `BRAND_READ_FAILED`
-- **Tests**: 9 contract tests in `brand_test.go`（init×4 + show×5），全部通过 `t.Setenv(HOME)` + `t.TempDir()` 隔离
-- **YAML library**: `gopkg.in/yaml.v3`（已有依赖，无新增）
+- **Tests**: 8 contract tests in `brand_test.go`（init×4 + show×4），全部通过 `t.Setenv(HOME)` + `t.TempDir()` 隔离
 
 ### Migration Guide
 无需迁移。Brand Profile 为可选配置，Agent 专用，不影响任何现有 CLI 工作流。
