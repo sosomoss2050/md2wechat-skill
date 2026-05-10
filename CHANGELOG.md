@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-05-11
+
+### Added
+- **Brand Profile（品牌档案）**: 新增 `brand init` 和 `brand show` 命令，支持在 `~/.config/md2wechat/brand.yaml` 存储品牌档案
+  - `brand init`：幂等初始化，创建带注释的模板文件；目录不存在时自动创建
+  - `brand show`：以 JSON envelope 返回当前品牌档案和文件路径
+  - 支持 `BRAND_INITIALIZED` / `BRAND_SHOWN` / `BRAND_NOT_FOUND` / `BRAND_READ_FAILED` 四个状态码
+  - Brand Profile 由 Agent 读取，CLI 不解析此文件（两种工具职责分离）
+- **Markdown Expression Diagnosis（排版诊断层）**: `skills/md2wechat/SKILL.md` 新增三步诊断框架
+  - Step 1 意图识别：目标读者、conversion goal、memorability anchor
+  - Step 2 内容映射：四目标框架（attention / readability / memorability / conversion）
+  - Step 3 模块选择：结合 Brand Profile limits 和 layout.opening 从 43 个模块选择最优组合
+- **Brand Profile 协议**: `SKILL.md` 新增完整 Agent 读取协议
+  - 优先级链：CLI flag → brand.yaml → config.yaml → Layout Policy 推荐 → 硬编码默认
+  - 降级规则：文件不存在/字段缺失时各字段的回退行为
+  - Sanity Caps：max_modules(43) / max_cta(2) / max_quotes(10) / max_hero(1)，超出自动截断并 warn
+  - style_ref：支持指向单个 .md 文件或目录（遍历目录下所有文件）
+  - 3 问引导流程：BRAND_NOT_FOUND 时 Agent 主动引导用户配置品牌档案
+- **`docs/AGENT-GUIDE.md`**: AI Agent 操作手册，12 大章节 685 行，覆盖
+  - 能力发现（5 条 discovery 命令）
+  - Brand Profile 操作（check / init / 读取 / 降级）
+  - Markdown 排版诊断（三步法 + 四目标框架）
+  - 文章转换、发布流程、高级排版模块操作
+  - 异常处理与降级（4 种常见故障场景）
+  - 决策优先级链、完整场景示例（5 个）、快速参考表
+
+### Changed
+- `skills/md2wechat/SKILL.md`：追加两大章节（Markdown Expression Diagnosis + Brand Profile 协议），从 199 行扩展至 ~400 行
+- `platforms/openclaw/md2wechat/SKILL.md`：与 Claude Code 版本完全同步（同步新增章节，199 → ~400 行）
+- `docs/CONFIG.md`：新增 Brand Profile 完整章节（Schema / 字段说明表 / 降级行为 / 配置对比表）
+
+### Technical Details
+- **New Files**: `cmd/md2wechat/brand.go`, `cmd/md2wechat/brand_test.go`, `docs/AGENT-GUIDE.md`
+- **Modified Files**: `cmd/md2wechat/main.go`, `docs/CONFIG.md`, `skills/md2wechat/SKILL.md`, `platforms/openclaw/md2wechat/SKILL.md`
+- **New code constants**: `BRAND_INITIALIZED`, `BRAND_INIT_FAILED`, `BRAND_SHOWN`, `BRAND_NOT_FOUND`, `BRAND_READ_FAILED`
+- **Tests**: 9 contract tests in `brand_test.go`（init×4 + show×5），全部通过 `t.Setenv(HOME)` + `t.TempDir()` 隔离
+- **YAML library**: `gopkg.in/yaml.v3`（已有依赖，无新增）
+
+### Migration Guide
+无需迁移。Brand Profile 为可选配置，Agent 专用，不影响任何现有 CLI 工作流。
+
 ### Changed
 - **License**: Upgraded from MIT to Source Available License (BUSL 1.1 base + custom Additional Use Grant)
   - Personal use, learning, evaluation, non-profit, and contributions remain free without authorization
