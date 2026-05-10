@@ -207,7 +207,7 @@ Draft behavior:
 ### Step 0：读取品牌档案
 
 ```bash
-test -f ~/.config/md2wechat/brand.yaml   && cat ~/.config/md2wechat/brand.yaml   || echo "no brand profile — using system defaults"
+test -f ~/.config/md2wechat/brand.md   && cat ~/.config/md2wechat/brand.md   || echo "no brand profile — using system defaults"
 ```
 
 如有 `voice.style_ref`，一并读取作为风格上下文。
@@ -218,7 +218,7 @@ test -f ~/.config/md2wechat/brand.yaml   && cat ~/.config/md2wechat/brand.yaml  
 |---|---|---|
 | **这篇文章想让读者做什么？** | 关注 / 收藏 / 咨询 / 转发 / 购买 | conversion 模块配置 |
 | **这篇文章最应该被记住的是什么？** | 一个判断 / 一个数字 / 一个品牌 | memorability 模块选择 |
-| **这是系列内容还是独立文章？** | 系列 → 强化品牌锚点；独立 → 内容权威即可 | brand.yaml 应用力度 |
+| **这是系列内容还是独立文章？** | 系列 → 强化品牌锚点；独立 → 内容权威即可 | brand.md 应用力度 |
 
 ### Step 2：四目标模块选择
 
@@ -230,7 +230,7 @@ test -f ~/.config/md2wechat/brand.yaml   && cat ~/.config/md2wechat/brand.yaml  
 | **conversion** | 我下一步做什么？ | 行动路径清晰可见 | cta / subscribe / faq |
 
 选模块顺序：attention（1–2 个）→ readability（1–3 个）→ memorability（1–2 个）→ conversion（1 个）。
-总数受 `brand.yaml limits.max_modules` 约束（默认 6）。
+总数受 `brand.md limits.max_modules` 约束（默认 6）。
 
 ### Step 3：核心原则
 
@@ -240,21 +240,21 @@ test -f ~/.config/md2wechat/brand.yaml   && cat ~/.config/md2wechat/brand.yaml  
 
 ## Brand Profile（品牌档案）
 
-品牌档案存储在 `~/.config/md2wechat/brand.yaml`（可选文件，用户创建）。
+品牌档案存储在 `~/.config/md2wechat/brand.md`（可选文件，用户创建）。
 
 ### 读取协议
 
 每次正式排版任务前检测并读取：
 
 ```bash
-test -f ~/.config/md2wechat/brand.yaml   && cat ~/.config/md2wechat/brand.yaml   || echo "no brand profile"
+test -f ~/.config/md2wechat/brand.md   && cat ~/.config/md2wechat/brand.md   || echo "no brand profile"
 ```
 
 ### 优先级链（从高到低）
 
 ```
 CLI flag (--theme 等)
-  > brand.yaml 字段
+  > brand.md 字段
   > config.yaml api.* 字段
   > Layout Policy 推荐默认值
   > 工具硬编码默认值
@@ -264,7 +264,7 @@ CLI flag (--theme 等)
 
 | 情况 | Agent 行为 |
 |---|---|
-| brand.yaml 不存在 | 静默跳过，继续用 config.yaml 默认值 |
+| brand.md 不存在 | 静默跳过，继续用 config.yaml 默认值 |
 | YAML 语法错误 | 警告具体行号，降级，不中断任务 |
 | 字段缺失 | 该字段用默认值 |
 | theme 值无效 | 降级到 api.default_theme，警告 |
@@ -294,26 +294,30 @@ style_ref_dir=$(python3 -c "import os; print(os.path.expanduser('~/Documents/bra
 ### Sanity Cap（读取后立即应用）
 
 ```python3
-import yaml, os
-content = open(os.path.expanduser('~/.config/md2wechat/brand.yaml')).read()
-profile = yaml.safe_load(content) or {}
-limits = profile.get('limits', {})
+import os
+
+brand_path = os.path.expanduser('~/.config/md2wechat/brand.md')
+if os.path.exists(brand_path):
+    with open(brand_path) as f:
+        brand_content = f.read()
+else:
+    brand_content = ""
+
+# Agent contextually extracts limits from brand_content (natural language)
+# Example limits in brand.md:
+#   max_modules: 6 (出现频率限制)
+#   max_cta: 1 (单篇CTA上限)
+#
+# Supported ranges:
 caps = {'max_modules': (43, 6), 'max_cta': (2, 1), 'max_quotes': (10, 2), 'max_hero': (1, 1)}
-for k, (cap, default) in caps.items():
-    v = limits.get(k, default)
-    if v > cap:
-        print(f"WARNING: limits.{k}={v} 超出上限 {cap}，已 cap")
-        limits[k] = cap
-    elif v <= 0:
-        print(f"WARNING: limits.{k}={v} 无效，使用默认值 {default}")
-        limits[k] = default
+# Agent respects these caps regardless of brand.md content
 ```
 
 ### 触发行为
 
 **A'（任务前一句话提示，不阻塞）**
 
-当用户进行正式排版/发布任务且 brand.yaml 不存在时：
+当用户进行正式排版/发布任务且 brand.md 不存在时：
 > 在任务开始前说一句："我注意到你还没有品牌档案，这次用系统默认设置。如需固定 CTA 和作者信息，告诉我。"
 > → 不等用户回复，立刻开始任务。本次会话不再重复提示。
 
@@ -341,7 +345,7 @@ Q4（可跳过）: "你有写作风格参考文件吗？（输入路径，或直
 
 ```bash
 mkdir -p ~/.config/md2wechat
-cat > ~/.config/md2wechat/brand.yaml << 'BRAND_EOF'
+cat > ~/.config/md2wechat/brand.md << 'BRAND_EOF'
 schema_version: 1
 name: [Q1答案]
 
@@ -376,23 +380,23 @@ BRAND_EOF
 写入后验证：
 
 ```bash
-cat ~/.config/md2wechat/brand.yaml
+cat ~/.config/md2wechat/brand.md
 
 python3 -c "
-content = open('$HOME/.config/md2wechat/brand.yaml').read()
+content = open('$HOME/.config/md2wechat/brand.md').read()
 checks = ['schema_version', 'cta:', 'author_card:', 'limits:']
 missing = [c for c in checks if c not in content]
 if missing:
     print('WARNING: 字段不完整:', missing)
 else:
-    print('brand.yaml 写入成功，字段完整。')
+    print('brand.md 写入成功，字段完整。')
 "
 ```
 
-### 更新 brand.yaml（局部修改）
+### 更新 brand.md（局部修改）
 
 当用户只想更新某个字段（如 CTA）时，重新生成整个文件而非手术式编辑：
-1. 读取现有 brand.yaml，展示当前对应字段值
+1. 读取现有 brand.md，展示当前对应字段值
 2. 询问新值
-3. 将变更合并后重新生成完整 brand.yaml
+3. 将变更合并后重新生成完整 brand.md
 4. 展示关键 diff（echo 对比）后写入
