@@ -41,7 +41,7 @@
 
 <a id="api"></a>
 
-## 🔑 API 模式 — 解锁完整体验
+## API 模式 — 解锁完整体验
 
 > **AI 模式**（免费）：生成排版 prompt，由你的 Claude / Codex 继续处理，3 个基础主题。
 >
@@ -59,8 +59,6 @@
 扫描下方二维码关注 **极客杰尼** 公众号 → 备注 **「API咨询」** 联系作者；或备注 **「交流群」** 申请加入用户交流群，和同类创作者一起探索 AI 驱动的公众号创作。
 
 **限时加入下面👇的公众号创作交流群获取第一时间更新资讯（人满200为止），谢绝一切广告，推广等信息，一律踢出**
-
-稳定的中转站推荐：[codesome](https://fk.codesome.cn/?aff=EBM1nw30)
 
 <p align="center">
 <img width="160" alt="image" src="https://github.com/user-attachments/assets/ec0135fc-68e8-463e-8b4c-6348ff9631c3" />
@@ -341,7 +339,7 @@ AI 模式返回一个结构化排版 prompt，需要 Claude / Codex 继续处理
 
 ---
 
-## 🌐 md2wechat 生态
+## md2wechat 生态
 
 围绕 md2wechat 打造的工具和资源矩阵，持续扩展中：
 
