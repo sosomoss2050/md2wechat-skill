@@ -206,7 +206,7 @@ func runBrandShow() error {
 		responseWith(cliResponse{
 			Success:       false,
 			Code:          codeBrandNotFound,
-			Message:       fmt.Sprintf("Brand Profile not found. Run 'md2wechat brand init' to create one."),
+			Message:       "Brand Profile not found. Run 'md2wechat brand init' to create one.",
 			SchemaVersion: action.SchemaVersion,
 			Status:        action.StatusActionRequired,
 			Retryable:     false,

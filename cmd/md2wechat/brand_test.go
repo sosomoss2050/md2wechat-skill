@@ -300,7 +300,7 @@ func TestBrandShow_UnreadableFile(t *testing.T) {
 	if err := os.Chmod(brandFile, 0000); err != nil {
 		t.Fatalf("failed to chmod brand.md: %v", err)
 	}
-	defer os.Chmod(brandFile, 0644) // restore for cleanup
+	defer func() { _ = os.Chmod(brandFile, 0644) }() // restore for cleanup
 
 	stdout := captureStdout(t, func() {
 		if err := runBrandShow(); err != nil {
