@@ -70,6 +70,12 @@ const (
 	codeLayoutMissingRequiredField = "LAYOUT_MISSING_REQUIRED_FIELD"
 	codeLayoutInvalidFieldValue    = "LAYOUT_INVALID_FIELD_VALUE"
 	codeLayoutValidateHasErrors    = "LAYOUT_VALIDATE_HAS_ERRORS"
+
+	codeBrandInitialized = "BRAND_INITIALIZED"
+	codeBrandInitFailed  = "BRAND_INIT_FAILED"
+	codeBrandShown       = "BRAND_SHOWN"
+	codeBrandNotFound    = "BRAND_NOT_FOUND"
+	codeBrandReadFailed  = "BRAND_READ_FAILED"
 )
 
 type cliResponse struct {
@@ -313,6 +319,9 @@ Examples:
 
 	// layout command
 	rootCmd.AddCommand(layoutCmd)
+
+	// brand command
+	rootCmd.AddCommand(brandCmd)
 
 	// Execute
 	if err := rootCmd.Execute(); err != nil {
