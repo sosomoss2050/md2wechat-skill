@@ -58,10 +58,10 @@
 
 扫描下方二维码关注 **极客杰尼** 公众号 → 备注 **「API咨询」** 联系作者；或备注 **「交流群」** 申请加入用户交流群，和同类创作者一起探索 AI 驱动的公众号创作。
 
-**限时加入下面👇的公众号创作交流群获取第一时间更新资讯（人满200为止），谢绝一切广告，购买 API 服务限时免费送[杰尼·AI 实战圈](https://wx.zsxq.com/group/15554121258152)，每周分享 AI 实战精华内容**
+**限时加入下面👇的公众号创作交流群获取第一时间更新资讯（人满200为止），谢绝一切广告**
 
 <p align="center">
-<img width="160" alt="image" src="https://github.com/user-attachments/assets/ec0135fc-68e8-463e-8b4c-6348ff9631c3" />
+<img width="160" alt="image"src="https://github.com/user-attachments/assets/77f4db55-d1dd-43eb-a807-122cf1ac25c1" />
 <img src="assets/wechat.png" alt="公众号：极客杰尼" width="160" />
 </p>
 
