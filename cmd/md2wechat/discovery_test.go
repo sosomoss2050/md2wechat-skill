@@ -30,13 +30,13 @@ func TestBuildProviderViewsIncludesBuiltinProviders(t *testing.T) {
 			if !provider.SupportsSize {
 				t.Fatalf("expected openai SupportsSize")
 			}
-			if provider.DefaultModel != "gpt-image-1.5" {
-				t.Fatalf("openai default model = %q, want gpt-image-1.5", provider.DefaultModel)
+			if provider.DefaultModel != "gpt-image-2" {
+				t.Fatalf("openai default model = %q, want gpt-image-2", provider.DefaultModel)
 			}
 			if len(provider.SupportedModels) == 0 {
 				t.Fatal("expected openai supported models")
 			}
-			if provider.SupportedModels[0].Name != "gpt-image-1.5" || !provider.SupportedModels[0].Default {
+			if provider.SupportedModels[0].Name != "gpt-image-2" || !provider.SupportedModels[0].Default {
 				t.Fatalf("unexpected openai supported models: %#v", provider.SupportedModels)
 			}
 		}

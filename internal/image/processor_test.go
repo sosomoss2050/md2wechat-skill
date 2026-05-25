@@ -146,3 +146,42 @@ func TestGenerateAndUploadUsesInjectedHelpers(t *testing.T) {
 		t.Fatalf("downloaded file should be cleaned up, stat err = %v", err)
 	}
 }
+
+func TestGenerateAndUploadRejectsEmptyProviderURL(t *testing.T) {
+	downloadCalled := false
+	p := &Processor{
+		cfg: &config.Config{
+			WechatAppID:    "appid",
+			WechatSecret:   "secret",
+			ImageAPIKey:    "image-key",
+			CompressImages: false,
+		},
+		log:        zap.NewNop(),
+		compressor: NewCompressor(zap.NewNop(), 0, 0),
+		downloadFile: func(url string) (string, error) {
+			downloadCalled = true
+			return "", nil
+		},
+		uploadMaterial: func(filePath string) (*UploadResult, error) {
+			return &UploadResult{}, nil
+		},
+		provider: &fakeProvider{
+			result: &GenerateResult{
+				URL:   "",
+				Model: "fake-model",
+				Size:  "auto",
+			},
+		},
+	}
+
+	_, err := p.GenerateAndUpload("draw a fox")
+	if err == nil {
+		t.Fatal("expected error for empty provider URL")
+	}
+	if downloadCalled {
+		t.Fatal("download helper should not be called for empty provider URL")
+	}
+	if got := err.Error(); got != "generate image: provider returned empty image URL/path" {
+		t.Fatalf("error = %q", got)
+	}
+}

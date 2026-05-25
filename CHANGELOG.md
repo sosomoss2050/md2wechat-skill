@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.1] - 2026-05-25
+
+### Fixed
+- Fixed OpenAI GPT Image generation for `generate_image`, `generate_cover`, and `generate_infographic` when GPT Image models return `b64_json` instead of a downloadable URL.
+- Added fail-closed validation so empty provider image results stop at the image layer instead of surfacing as `download generated image: local file not found:`.
+
+### Changed
+- Updated the OpenAI default image model to `gpt-image-2` and the default OpenAI image size to `auto` according to current OpenAI Image API guidance.
+
 ## [2.2.0] - 2026-05-11
 
 ### Added

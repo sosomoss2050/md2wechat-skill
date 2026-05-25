@@ -3,10 +3,13 @@ package image
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/geekjourneyx/md2wechat-skill/internal/config"
@@ -30,7 +33,7 @@ func NewOpenAIProvider(cfg *config.Config) (*OpenAIProvider, error) {
 
 	size := cfg.ImageSize
 	if size == "" {
-		size = "1024x1024" // 默认尺寸
+		size = "auto"
 	}
 
 	return &OpenAIProvider{
@@ -107,8 +110,10 @@ func (p *OpenAIProvider) Generate(ctx context.Context, prompt string) (*Generate
 	// 解析响应
 	var result struct {
 		Data []struct {
+			B64JSON       string `json:"b64_json,omitempty"`
 			URL           string `json:"url"`
 			RevisedPrompt string `json:"revised_prompt,omitempty"`
+			OutputFormat  string `json:"output_format,omitempty"`
 		} `json:"data"`
 	}
 
@@ -130,12 +135,92 @@ func (p *OpenAIProvider) Generate(ctx context.Context, prompt string) (*Generate
 		}
 	}
 
+	image := result.Data[0]
+	imagePath := strings.TrimSpace(image.URL)
+	if imagePath == "" && strings.TrimSpace(image.B64JSON) != "" {
+		imagePath, err = p.saveBase64Image(image.B64JSON, image.OutputFormat)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if imagePath == "" {
+		return nil, &GenerateError{
+			Provider: p.Name(),
+			Code:     "no_image",
+			Message:  "未生成图片",
+			Hint:     "OpenAI 响应中没有可下载 URL 或 base64 图片数据，请检查模型与响应格式",
+		}
+	}
+
 	return &GenerateResult{
-		URL:           result.Data[0].URL,
-		RevisedPrompt: result.Data[0].RevisedPrompt,
+		URL:           imagePath,
+		RevisedPrompt: image.RevisedPrompt,
 		Model:         p.model,
 		Size:          p.size,
 	}, nil
+}
+
+func (p *OpenAIProvider) saveBase64Image(b64, outputFormat string) (string, error) {
+	imageData, err := base64.StdEncoding.DecodeString(b64)
+	if err != nil {
+		return "", &GenerateError{
+			Provider: p.Name(),
+			Code:     "decode_error",
+			Message:  "OpenAI 图片数据解析失败",
+			Original: err,
+		}
+	}
+	if len(imageData) == 0 {
+		return "", &GenerateError{
+			Provider: p.Name(),
+			Code:     "empty_data",
+			Message:  "OpenAI 图片数据为空",
+		}
+	}
+
+	var ext string
+	switch strings.ToLower(strings.TrimSpace(outputFormat)) {
+	case "jpeg", "jpg":
+		ext = ".jpg"
+	case "webp":
+		ext = ".webp"
+	case "png", "":
+		ext = ".png"
+	default:
+		ext = ".png"
+	}
+
+	tmpFile, err := os.CreateTemp("", "md2wechat-openai-*"+ext)
+	if err != nil {
+		return "", &GenerateError{
+			Provider: p.Name(),
+			Code:     "write_error",
+			Message:  "图片保存失败",
+			Original: err,
+		}
+	}
+	tmpPath := tmpFile.Name()
+	if _, err := tmpFile.Write(imageData); err != nil {
+		_ = tmpFile.Close()
+		_ = os.Remove(tmpPath)
+		return "", &GenerateError{
+			Provider: p.Name(),
+			Code:     "write_error",
+			Message:  "图片保存失败",
+			Original: err,
+		}
+	}
+	if err := tmpFile.Close(); err != nil {
+		_ = os.Remove(tmpPath)
+		return "", &GenerateError{
+			Provider: p.Name(),
+			Code:     "write_error",
+			Message:  "图片保存失败",
+			Original: err,
+		}
+	}
+
+	return tmpPath, nil
 }
 
 // handleErrorResponse 处理错误响应

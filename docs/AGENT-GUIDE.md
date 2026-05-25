@@ -43,7 +43,7 @@ md2wechat providers list --json
 ```
 
 列出所有支持的图片生成 provider：
-- `openai` — OpenAI DALL-E
+- `openai` — OpenAI GPT Image / DALL·E
 - `tuzi` — 图子 AI
 - `modelscope` / `ms` — ModelScope
 - `openrouter` / `or` — OpenRouter

@@ -170,10 +170,10 @@ func applyImageProviderDefaults(cfg *Config) {
 			cfg.ImageAPIBase = "https://api.openai.com/v1"
 		}
 		if cfg.ImageModel == "" {
-			cfg.ImageModel = "gpt-image-1.5"
+			cfg.ImageModel = "gpt-image-2"
 		}
 		if cfg.ImageSize == "" {
-			cfg.ImageSize = "1024x1024"
+			cfg.ImageSize = "auto"
 		}
 	case "tuzi":
 		if cfg.ImageModel == "" {

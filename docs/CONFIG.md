@@ -317,8 +317,8 @@ image:
 | `api.image_key` | AI 图片时需要 | 图片生成 API Key | - |
 | `api.image_provider` | 否 | 图片服务提供方 | `openai` |
 | `api.image_base_url` | 否 | 图片服务地址 | `https://api.openai.com/v1` |
-| `api.image_model` | 否 | 图片模型 | `gpt-image-1.5` |
-| `api.image_size` | 否 | 默认图片执行尺寸/宽高比 | 跟随当前 provider，例如 `openai=1024x1024`、`volcengine=2K` |
+| `api.image_model` | 否 | 图片模型 | `gpt-image-2` |
+| `api.image_size` | 否 | 默认图片执行尺寸/宽高比 | 跟随当前 provider，例如 `openai=auto`、`volcengine=2K` |
 
 当前内置 provider：`openai`、`tuzi`、`modelscope` (`ms`)、`openrouter` (`or`)、`gemini` (`google`)、`volcengine` (`volc`)。
 

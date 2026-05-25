@@ -285,7 +285,7 @@ curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.
 | Volcengine Ark | ⭐ 主推荐 | 豆包 Seedream 系列，高质量，国内直连 |
 | ModelScope | 次推荐 | 有免费额度，国内访问稳定 |
 | OpenRouter | 通用 | 多模型聚合，支持 Gemini / Flux |
-| OpenAI | 通用 | 官方 DALL-E |
+| OpenAI | 通用 | 官方 GPT Image / DALL·E |
 | Google Gemini | 通用 | 官方 Gemini 图片生成 |
 
 配置方式详见 [图片服务配置指南](docs/IMAGE_PROVISIONERS.md)。

@@ -34,9 +34,10 @@ var providerRegistry = []ProviderMeta{
 		RequiredConfig: []string{"IMAGE_API_KEY"},
 		OptionalConfig: []string{"IMAGE_API_BASE", "IMAGE_MODEL", "IMAGE_SIZE"},
 		DefaultBaseURL: "https://api.openai.com/v1",
-		DefaultModel:   "gpt-image-1.5",
+		DefaultModel:   "gpt-image-2",
 		SupportedModels: []ProviderModelMeta{
-			{Name: "gpt-image-1.5", Description: "OpenAI current primary image model", Default: true},
+			{Name: "gpt-image-2", Description: "OpenAI current primary image model", Default: true},
+			{Name: "gpt-image-1.5", Description: "Previous state-of-the-art OpenAI image model"},
 			{Name: "gpt-image-1", Description: "Previous generation general image model"},
 			{Name: "gpt-image-1-mini", Description: "Lower-cost OpenAI image model"},
 			{Name: "dall-e-3", Description: "Legacy compatibility model"},

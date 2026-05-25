@@ -224,10 +224,16 @@ func (p *Processor) generateAndUploadWithProvider(prompt string, provider Provid
 	if err != nil {
 		return nil, fmt.Errorf("generate image: %w", err)
 	}
+	if result == nil {
+		return nil, fmt.Errorf("generate image: provider returned no result")
+	}
 	p.log.Info("image generated",
 		zap.String("url", result.URL),
 		zap.String("provider", result.Model),
 		zap.String("size", result.Size))
+	if result.URL == "" {
+		return nil, fmt.Errorf("generate image: provider returned empty image URL/path")
+	}
 
 	// 下载生成的图片
 	tmpPath, err := p.download(result.URL)
