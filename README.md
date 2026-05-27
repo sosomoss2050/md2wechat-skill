@@ -7,7 +7,7 @@
 
 <img src="assets/readme-header.gif" alt="md2wechat — 公众号创作全流程 CLI" width="720" />
 
-**专为 AI 时代设计的公众号创作工作台**
+**面向 AI Agent 的公众号创作与发布 CLI**
 
 写 Markdown · 43 个高级排版模块 · 40+ 专业主题 · AI 配图 · 推送草稿箱<br/>
 全流程 CLI，Agent-native — Claude Code · Codex · OpenClaw 原生支持
