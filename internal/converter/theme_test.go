@@ -49,6 +49,48 @@ func TestThemeManagerParsesStyleMetadata(t *testing.T) {
 	}
 }
 
+func TestThemeManagerExpandsAPICollectionThemes(t *testing.T) {
+	t.Chdir(t.TempDir())
+
+	tm := NewThemeManager()
+	theme, err := tm.GetTheme("elegant-green")
+	if err != nil {
+		t.Fatalf("GetTheme(elegant-green) error = %v", err)
+	}
+	if theme.Type != "api" || theme.APITheme != "elegant-green" || !theme.Selectable() {
+		t.Fatalf("unexpected expanded API theme: %#v", theme)
+	}
+	if theme.Style.Series != "elegant" || theme.Style.Color != "green" || theme.Style.Layout == "" {
+		t.Fatalf("unexpected expanded API theme style: %#v", theme.Style)
+	}
+}
+
+func TestThemeManagerExpandsAPICollectionFeaturedThemes(t *testing.T) {
+	t.Chdir(t.TempDir())
+
+	tm := NewThemeManager()
+	tests := []struct {
+		name  string
+		color string
+	}{
+		{name: "sspai-red", color: "red"},
+		{name: "wechat-native", color: "green"},
+	}
+
+	for _, tt := range tests {
+		theme, err := tm.GetTheme(tt.name)
+		if err != nil {
+			t.Fatalf("GetTheme(%s) error = %v", tt.name, err)
+		}
+		if theme.Type != "api" || theme.APITheme != tt.name || !theme.Selectable() {
+			t.Fatalf("unexpected expanded featured theme: %#v", theme)
+		}
+		if theme.Style.Series != "featured" || theme.Style.Color != tt.color {
+			t.Fatalf("unexpected expanded featured theme style: %#v", theme.Style)
+		}
+	}
+}
+
 func TestThemeSelectabilityMarksAPICollectionFalse(t *testing.T) {
 	t.Chdir(t.TempDir())
 

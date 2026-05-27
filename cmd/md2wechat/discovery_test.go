@@ -129,6 +129,38 @@ func TestListThemeViewsExposeSelectionMetadata(t *testing.T) {
 	}
 }
 
+func TestListThemeViewsExposeExpandedAPICollectionThemes(t *testing.T) {
+	themes, err := listThemeViews()
+	if err != nil {
+		t.Fatalf("listThemeViews() error = %v", err)
+	}
+
+	want := map[string]string{
+		"elegant-green": "elegant",
+		"sspai-red":     "featured",
+		"wechat-native": "featured",
+	}
+	for _, theme := range themes {
+		series, ok := want[theme.Name]
+		if !ok {
+			continue
+		}
+		if theme.Type != "api" || !theme.Selectable {
+			t.Fatalf("unexpected expanded theme metadata for %s: %#v", theme.Name, theme)
+		}
+		if theme.APITheme != theme.Name {
+			t.Fatalf("APITheme = %q, want %q", theme.APITheme, theme.Name)
+		}
+		if theme.Style.Series != series {
+			t.Fatalf("%s Style.Series = %q, want %q", theme.Name, theme.Style.Series, series)
+		}
+		delete(want, theme.Name)
+	}
+	if len(want) != 0 {
+		t.Fatalf("missing expanded API collection themes: %#v", want)
+	}
+}
+
 func TestListThemeViewsMarksAPICollectionNotSelectable(t *testing.T) {
 	themes, err := listThemeViews()
 	if err != nil {

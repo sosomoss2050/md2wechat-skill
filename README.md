@@ -9,7 +9,7 @@
 
 **面向 AI Agent 的公众号创作与发布 CLI**
 
-写 Markdown · 43 个高级排版模块 · 40+ 专业主题 · AI 配图 · 推送草稿箱<br/>
+写 Markdown · 43 个高级排版模块 · 40 个专业主题 · AI 配图 · 推送草稿箱<br/>
 全流程 CLI，Agent-native — Claude Code · Codex · OpenClaw 原生支持
 
 [![Go Version](https://img.shields.io/badge/Go-1.26.1+-00ADD8?logo=go)](https://golang.org)
@@ -33,7 +33,7 @@
 |---|---|---|
 | **输出一致性** | LLM 每次不同 | API 模式确定性输出，同样 Markdown 永远相同 |
 | **排版系统** | 靠 prompt 碰运气 | 43 个结构化排版模块（`:::module` 语法），API 专属 |
-| **主题数量** | 无 / 寥寥几个 | 40+ 专业主题，微信渲染精调 |
+| **主题数量** | 无 / 寥寥几个 | 40 个专业主题，微信渲染精调 |
 | **全流程** | 只做格式转换 | 写作 → 去 AI 痕 → 排版 → AI 配图 → 上传 → 推送草稿 |
 | **Agent 集成** | 无结构约定 | JSON envelope、capabilities 端点、discovery 命令 |
 
@@ -45,12 +45,12 @@
 
 > **AI 模式**（免费）：生成排版 prompt，由你的 Claude / Codex 继续处理，3 个基础主题。
 >
-> **API 模式**（专业服务）：秒级响应，40+ 主题，43 个高级排版模块，确定性输出，团队协作与自动化发布首选。
+> **API 模式**（专业服务）：秒级响应，40 个专业主题，43 个高级排版模块，确定性输出，团队协作与自动化发布首选。
 
 **API 模式专属能力：**
 
 - ✦ **43 个高级排版模块** — `:::hero`、`:::callout`、`:::timeline`… 结构化公众号内容设计语言，详见 [高级排版指南](#layout)
-- ✦ **40+ 专业主题** — Minimal · Focus · Elegant · Bold 四大系列，微信渲染精调，完整预览 [theme-gallery](https://md2wechat.app/theme-gallery)
+- ✦ **40 个专业主题** — Basic · Minimal · Focus · Elegant · Bold · 精选系列，微信渲染精调，完整预览 [theme-gallery](https://md2wechat.app/theme-gallery)
 - ✦ **确定性输出** — 同样 Markdown 每次结果完全一致，适合团队协作和自动化发布
 - ✦ **秒级响应** — 无需等待 LLM 生成，适合高频发布场景
 
@@ -177,6 +177,20 @@ subtitle: 为什么你需要重新定义「好内容」
 :::
 ```
 
+### 五个主题渲染效果
+
+同一篇 Markdown，包含一级标题、二级标题、引用、加粗、列表，以及 `hero` / `cards` / `quote` / `summary` / `cta` 等高级排版模块。
+
+<table>
+  <tr>
+    <td align="center" width="20%"><strong>default</strong><br><img src="assets/theme-showcase/theme-showcase-default.png" alt="default 主题高级排版效果" width="180"></td>
+    <td align="center" width="20%"><strong>bytedance</strong><br><img src="assets/theme-showcase/theme-showcase-bytedance.png" alt="bytedance 主题高级排版效果" width="180"></td>
+    <td align="center" width="20%"><strong>elegant-gold</strong><br><img src="assets/theme-showcase/theme-showcase-elegant-gold.png" alt="elegant-gold 主题高级排版效果" width="180"></td>
+    <td align="center" width="20%"><strong>elegant-green</strong><br><img src="assets/theme-showcase/theme-showcase-elegant-green.png" alt="elegant-green 主题高级排版效果" width="180"></td>
+    <td align="center" width="20%"><strong>sspai-red</strong><br><img src="assets/theme-showcase/theme-showcase-sspai-red.png" alt="sspai-red 主题高级排版效果" width="180"></td>
+  </tr>
+</table>
+
 ### 发现与验证命令
 
 ```bash
@@ -225,7 +239,7 @@ Agent 排版时应保持原始 Markdown 只读：把文章复制到临时 Markdo
 |---|---|---|
 | **是否需要 API Key** | 不需要 | 需要（扫码联系作者申请） |
 | **输出方式** | 生成 prompt，由外部 LLM 继续处理 HTML | 直接返回最终 HTML |
-| **主题数量** | 3 个（autumn-warm / spring-fresh / ocean-calm） | 40+ 个 |
+| **主题数量** | 3 个（autumn-warm / spring-fresh / ocean-calm） | 40 个专业主题 |
 | **高级排版模块** | ❌ | ✅ 43 个 |
 | **输出一致性** | 每次不同 | 确定性，同样输入同样输出 |
 | **响应速度** | 取决于外部 LLM | 秒级 |
@@ -275,7 +289,7 @@ npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
 OpenClaw 用户可以通过 ClawHub 直接安装：[clawhub.ai/geekjourneyx/md2wechat](https://clawhub.ai/geekjourneyx/md2wechat)
 
 ```bash
-curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.3.0/install-openclaw.sh | bash
+curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.3.1/install-openclaw.sh | bash
 ```
 
 ---
@@ -329,7 +343,7 @@ curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.
 
 **Q: AI 模式和 API 模式有什么本质区别？**
 
-AI 模式返回一个结构化排版 prompt，需要 Claude / Codex 继续处理才能得到 HTML。API 模式直接返回最终 HTML，40+ 主题，确定性输出，无需额外 LLM。
+AI 模式返回一个结构化排版 prompt，需要 Claude / Codex 继续处理才能得到 HTML。API 模式直接返回最终 HTML，40 个专业主题，确定性输出，无需额外 LLM。
 
 **Q: 必须会编程才能用吗？**
 

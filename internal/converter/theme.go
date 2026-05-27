@@ -49,6 +49,21 @@ type ThemeStyleInfo struct {
 	BestFor string `yaml:"best_for"`
 }
 
+type themeCollection struct {
+	BasicThemes    []themeCollectionEntry `yaml:"basic_themes"`
+	MinimalThemes  []themeCollectionEntry `yaml:"minimal_themes"`
+	FocusThemes    []themeCollectionEntry `yaml:"focus_themes"`
+	ElegantThemes  []themeCollectionEntry `yaml:"elegant_themes"`
+	BoldThemes     []themeCollectionEntry `yaml:"bold_themes"`
+	FeaturedThemes []themeCollectionEntry `yaml:"featured_themes"`
+}
+
+type themeCollectionEntry struct {
+	Name        string `yaml:"name"`
+	Version     string `yaml:"version"`
+	Description string `yaml:"description"`
+}
+
 func (t Theme) Selectable() bool {
 	switch t.Type {
 	case "api":
@@ -174,7 +189,131 @@ func (tm *ThemeManager) loadThemeData(data []byte) error {
 	}
 
 	tm.themes[theme.Name] = theme
+	if err := tm.loadThemeCollectionData(data); err != nil {
+		return err
+	}
 	return nil
+}
+
+func (tm *ThemeManager) loadThemeCollectionData(data []byte) error {
+	var collection themeCollection
+	if err := yaml.Unmarshal(data, &collection); err != nil {
+		return fmt.Errorf("parse theme collection yaml: %w", err)
+	}
+
+	tm.loadThemeCollectionGroup("basic", collection.BasicThemes)
+	tm.loadThemeCollectionGroup("minimal", collection.MinimalThemes)
+	tm.loadThemeCollectionGroup("focus", collection.FocusThemes)
+	tm.loadThemeCollectionGroup("elegant", collection.ElegantThemes)
+	tm.loadThemeCollectionGroup("bold", collection.BoldThemes)
+	tm.loadThemeCollectionGroup("featured", collection.FeaturedThemes)
+	return nil
+}
+
+func (tm *ThemeManager) loadThemeCollectionGroup(series string, entries []themeCollectionEntry) {
+	for _, entry := range entries {
+		name := strings.TrimSpace(entry.Name)
+		if name == "" {
+			continue
+		}
+		tm.themes[name] = Theme{
+			Name:        name,
+			Type:        "api",
+			Description: firstNonEmpty(entry.Description, name),
+			Version:     firstNonEmpty(entry.Version, collectionThemeVersion(series)),
+			APITheme:    name,
+			Style:       collectionThemeStyle(series, name, entry.Description),
+		}
+	}
+}
+
+func collectionThemeVersion(series string) string {
+	if series == "basic" || series == "featured" {
+		return "1.0"
+	}
+	return "2.0"
+}
+
+func collectionThemeStyle(series, name, description string) ThemeStyle {
+	color := themeColorFromName(name)
+	style := ThemeStyle{
+		Series:      series,
+		Color:       color,
+		Mood:        firstNonEmpty(collectionThemeMood(series), description),
+		BestFor:     collectionThemeBestFor(series),
+		Layout:      collectionThemeLayout(series),
+		APIRequired: "https://md2wechat.app",
+	}
+	if series == "featured" && name == "sspai-red" {
+		style.Layout = "清晰标题 + 红色强调"
+		style.Mood = "利落醒目"
+		style.BestFor = "工具评测、效率教程、产品说明"
+	}
+	if series == "featured" && name == "wechat-native" {
+		style.Color = "green"
+		style.Layout = "官方绿底纹"
+		style.Mood = "原生稳妥"
+		style.BestFor = "传统阅读习惯、稳妥发布内容"
+	}
+	return style
+}
+
+func themeColorFromName(name string) string {
+	if idx := strings.LastIndex(name, "-"); idx >= 0 && idx < len(name)-1 {
+		return name[idx+1:]
+	}
+	return ""
+}
+
+func collectionThemeMood(series string) string {
+	switch series {
+	case "minimal":
+		return "干净克制"
+	case "focus":
+		return "平衡和谐"
+	case "elegant":
+		return "层次丰富"
+	case "bold":
+		return "视觉冲击"
+	case "featured":
+		return "经典精选"
+	default:
+		return "通用"
+	}
+}
+
+func collectionThemeLayout(series string) string {
+	switch series {
+	case "minimal":
+		return "纯色文字无装饰"
+	case "focus":
+		return "居中对称，标题上下双横线"
+	case "elegant":
+		return "左边框递减 + 渐变背景"
+	case "bold":
+		return "标题满底色 + 圆角投影"
+	case "featured":
+		return "明确气质判断"
+	default:
+		return "基础 API 主题"
+	}
+}
+
+func collectionThemeBestFor(series string) string {
+	switch series {
+	case "minimal":
+		return "技术文档、简洁风格"
+	case "focus":
+		return "商务内容、正式文章"
+	case "elegant":
+		return "深度文章、情感故事"
+	case "bold":
+		return "标题党、热点文章"
+	case "featured":
+		return "传统阅读习惯、工具评测、稳妥发布内容"
+	default:
+		return "通用公众号内容"
+	}
 }
 
 func (tm *ThemeManager) loadThemesFromDir(themeDir string) error {

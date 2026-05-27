@@ -360,7 +360,7 @@ title: 公众号创作者正在经历什么
 ```
 :::timeline[发展历程]
 2023.01 | 初版上线 | 支持基础 Markdown 转换
-2023.09 | 主题系统 | 推出 38 套主题
+2023.09 | 主题系统 | 推出 40 个专业主题
 2024.03 | Prompt Catalog | AI 图片生成集成
 2025.01 | Layout Catalog | 43 个高级排版模块发布
 :::
@@ -592,7 +592,7 @@ note: 联系作者咨询 API 服务
 
 ```
 :::faq[常见问题]
-这些模块只能在某个主题里用吗？ | 不是，所有 38 套主题都支持高级排版模块。
+这些模块只能在某个主题里用吗？ | 不是，40 个专业主题都支持高级排版模块。
 API 模式和 AI 模式有什么区别？ | API 模式直接转换输出 HTML，AI 模式生成提示词给外部 AI。
 我的文章需要用几个模块？ | 按 4 件事原则选，hero 1 个，verdict 1 个，cta 1 个，不要堆。
 :::
@@ -819,7 +819,7 @@ topic: 高级排版模块实战指南
 
 ```
 :::stat-row
-[{"label":"完读率","value":"79%"},{"label":"制作时间","value":"35","unit":"分钟"},{"label":"主题可选","value":"38","unit":"套"}]
+[{"label":"完读率","value":"79%"},{"label":"制作时间","value":"35","unit":"分钟"},{"label":"主题可选","value":"40","unit":"个"}]
 :::
 ```
 
@@ -861,7 +861,7 @@ topic: 高级排版模块实战指南
 
 ```
 :::comparison-table
-{"left":{"title":"AI 模式","items":["灵活度高","支持多种风格","不需要 API Key"]},"right":{"title":"API 模式","items":["稳定一致","支持 43 个排版模块","支持 38 套主题"]}}
+{"left":{"title":"AI 模式","items":["灵活度高","支持多种风格","不需要 API Key"]},"right":{"title":"API 模式","items":["稳定一致","支持 43 个排版模块","支持 40 个专业主题"]}}
 :::
 ```
 
@@ -875,7 +875,7 @@ topic: 高级排版模块实战指南
 
 ```
 :::changelog
-{"version":"v2.3.0","date":"2026-05-27","added":["43 个高级排版模块","layout list/show/render/validate 命令","4 级 override 体系"],"changed":["发现命令增加 layout 系列"],"fixed":["bracket-title 正则修复"]}
+{"version":"v2.3.1","date":"2026-05-28","added":["精选主题 wechat-native","高级排版主题展示图","API 主题集合展开"],"changed":["主题发现与文档口径校准"],"fixed":["api.yaml 中的主题无法被 CLI 发现"]}
 :::
 ```
 

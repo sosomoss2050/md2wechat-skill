@@ -1,11 +1,11 @@
 # md2wechat API 主题配置
-# 版本混合: v1.0 (基础6个) + v2.0 (新系列32个)
-# 更新: 支持内测 API (https://md2wechat.app) 的 38 个主题
+# 版本混合: v1.0 (基础6个 + 精选主题) + v2.0 (新系列32个)
+# 更新: 支持内测 API (https://md2wechat.app) 的 40 个专业主题
 
 name: api-collection
 type: api
 version: "mixed"
-description: "md2wechat API 主题集 - 38 个精美主题"
+description: "md2wechat API 主题集 - 40 个专业主题"
 
 # ============================================
 # v1.0 基础主题 (6 个) - 原生内置
@@ -142,6 +142,19 @@ bold_themes:
 
   - name: bold-sky
     description: "天蓝色系，标题满底色圆角投影"
+
+# ============================================
+# 精选主题
+# ============================================
+# 经典精选：这组主题更强调明确的气质判断，适合拿来拉开内容的第一印象。
+featured_themes:
+  - name: sspai-red
+    version: "1.0"
+    description: "少数派红色风格，利落醒目"
+
+  - name: wechat-native
+    version: "1.0"
+    description: "微信公众号原生，原汁原味的官方绿底纹，满足传统阅读习惯的稳妥之选"
 
 # 使用说明
 # v1.0 主题: 兼容新旧 API

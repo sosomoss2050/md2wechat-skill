@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.1] - 2026-05-28
+
+### Added
+- Added README theme showcase screenshots for `default`, `bytedance`, `elegant-gold`, `elegant-green`, and `sspai-red` under `assets/theme-showcase/`.
+- Added the `wechat-native` featured API theme with the native WeChat green texture style.
+
+### Changed
+- Expanded API theme collection entries from `api.yaml` into selectable runtime themes so collection-defined themes are discoverable through `themes list/show --json`.
+- Renamed the classic curated theme group to 精选主题 / `featured_themes`.
+- Calibrated public docs and command help around 40 professional themes and the current advanced layout theme showcase.
+
+### Fixed
+- Fixed theme discovery drift where themes listed inside `api.yaml`, such as `elegant-green`, were not available to `convert --theme`.
+
 ## [2.3.0] - 2026-05-27
 
 ### Added

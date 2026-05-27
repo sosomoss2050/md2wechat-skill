@@ -133,7 +133,7 @@ md2wechat themes show autumn-warm --json
 - `style`: Agent 选主题时可参考的风格元数据
 - `metadata_incomplete`: 主题缺少稳定风格字段时为 `true`
 
-Collection descriptor 也会出现在发现结果里。例如 `api-collection` 用于描述 API 主题集合，但它不是可执行主题，所以 `selectable: false`。Agent 必须选择 `selectable: true` 且 `type` 匹配当前模式的主题。
+Collection descriptor 也会出现在发现结果里。例如 `api-collection` 用于描述 API 主题集合，但它不是可执行主题，所以 `selectable: false`。`api.yaml` 中的分组条目会展开为可执行 API 主题。Agent 必须选择 `selectable: true` 且 `type` 匹配当前模式的主题。
 
 `convert` 现在会 fail closed：
 

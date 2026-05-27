@@ -53,12 +53,13 @@ Supports two conversion modes:
   - api: Use md2wechat API (stable, requires API key)
   - ai:  Use Claude AI to generate HTML (flexible, requires AI)
 
-Supported themes (38 total):
+Supported professional themes (40 total):
   Basic (6): default, bytedance, apple, sports, chinese, cyber
   Minimal (8): minimal-gold, minimal-green, minimal-blue, minimal-orange, minimal-red, minimal-navy, minimal-gray, minimal-sky
   Focus (8): focus-gold, focus-green, focus-blue, focus-orange, focus-red, focus-navy, focus-gray, focus-sky
   Elegant (8): elegant-gold, elegant-green, elegant-blue, elegant-orange, elegant-red, elegant-navy, elegant-gray, elegant-sky
   Bold (8): bold-gold, bold-green, bold-blue, bold-orange, bold-red, bold-navy, bold-gray, bold-sky
+  Featured (2): sspai-red, wechat-native
 
   AI modes: autumn-warm, spring-fresh, ocean-calm, custom`,
 	Args: cobra.ExactArgs(1),
