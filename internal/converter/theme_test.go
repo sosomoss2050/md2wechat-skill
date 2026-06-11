@@ -75,6 +75,14 @@ func TestThemeManagerExpandsAPICollectionFeaturedThemes(t *testing.T) {
 	}{
 		{name: "sspai-red", color: "red"},
 		{name: "wechat-native", color: "green"},
+		{name: "nyt-classic", color: "black"},
+		{name: "github-readme", color: "blue"},
+		{name: "mint-fresh", color: "green"},
+		{name: "sunset-amber", color: "amber"},
+		{name: "ink-minimal", color: "black"},
+		{name: "lavender-dream", color: "purple"},
+		{name: "coffee-house", color: "brown"},
+		{name: "bauhaus-primary", color: "primary"},
 	}
 
 	for _, tt := range tests {

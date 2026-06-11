@@ -27,6 +27,7 @@
 ```bash
 md2wechat config validate --json
 md2wechat config show --format json
+md2wechat skills read md2wechat --json
 ```
 
 ---
@@ -237,6 +238,7 @@ unsupported file type
 - stdout 只输出 JSON
 - 结构化输出不再混入配置 banner
 - `inspect --json` 的 Agent 决策字段位于 `data.readiness.targets/blockers`
+- `skills read md2wechat --json` 能读取当前二进制内置 SOP，避免 smoke Agent 依赖旧 README 或旧外部 skill
 
 这让 Agent / 脚本可以直接解析 stdout，而不用先清洗杂音。
 

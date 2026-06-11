@@ -135,12 +135,29 @@ func TestListThemeViewsExposeExpandedAPICollectionThemes(t *testing.T) {
 		t.Fatalf("listThemeViews() error = %v", err)
 	}
 
+	selectableAPIThemes := 0
+	selectableFeaturedThemes := 0
 	want := map[string]string{
-		"elegant-green": "elegant",
-		"sspai-red":     "featured",
-		"wechat-native": "featured",
+		"elegant-green":   "elegant",
+		"sspai-red":       "featured",
+		"wechat-native":   "featured",
+		"nyt-classic":     "featured",
+		"github-readme":   "featured",
+		"mint-fresh":      "featured",
+		"sunset-amber":    "featured",
+		"ink-minimal":     "featured",
+		"lavender-dream":  "featured",
+		"coffee-house":    "featured",
+		"bauhaus-primary": "featured",
 	}
 	for _, theme := range themes {
+		if theme.Type == "api" && theme.Selectable {
+			selectableAPIThemes++
+			if theme.Style.Series == "featured" {
+				selectableFeaturedThemes++
+			}
+		}
+
 		series, ok := want[theme.Name]
 		if !ok {
 			continue
@@ -158,6 +175,12 @@ func TestListThemeViewsExposeExpandedAPICollectionThemes(t *testing.T) {
 	}
 	if len(want) != 0 {
 		t.Fatalf("missing expanded API collection themes: %#v", want)
+	}
+	if selectableAPIThemes != 48 {
+		t.Fatalf("selectable API theme count = %d, want 48", selectableAPIThemes)
+	}
+	if selectableFeaturedThemes != 10 {
+		t.Fatalf("selectable featured theme count = %d, want 10", selectableFeaturedThemes)
 	}
 }
 
@@ -265,6 +288,9 @@ func TestBuildCapabilitiesDataIncludesLayoutWithoutUnreleasedFormat(t *testing.T
 	}
 	if !contains(commands, "doctor") {
 		t.Fatalf("commands missing doctor: %#v", commands)
+	}
+	if !contains(commands, "skills") {
+		t.Fatalf("commands missing skills: %#v", commands)
 	}
 	if contains(commands, "format") {
 		t.Fatalf("commands should not include format in Capability Truth phase: %#v", commands)

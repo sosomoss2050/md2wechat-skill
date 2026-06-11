@@ -5,7 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [2.5.0] - 2026-06-11
+
+### Added
+- Added `md2wechat skills list/read` documentation across Agent, install, Obsidian, OpenClaw, and discovery entry points so Agents can read the SOP embedded in the current CLI binary.
+- Added the missing `/theme-gallery` featured API themes to CLI discovery: `nyt-classic`, `github-readme`, `mint-fresh`, `sunset-amber`, `ink-minimal`, `lavender-dream`, `coffee-house`, and `bauhaus-primary`.
+
+### Changed
+- Tightened release-check documentation guards so embedded skill discovery, current-version SOP reads, and OpenClaw installer next steps cannot drift silently.
+- Updated API theme documentation and command help from 40 to 48 professional themes.
 
 ## [2.4.0] - 2026-05-28
 

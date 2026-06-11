@@ -19,13 +19,13 @@ brew install geekjourneyx/tap/md2wechat
 如果你不用 Homebrew，再执行：
 
 ```bash
-curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.4.0/install.sh | bash
+curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.5.0/install.sh | bash
 ```
 
 Windows PowerShell：
 
 ```powershell
-$env:MD2WECHAT_RELEASE_BASE_URL = "https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.4.0"
+$env:MD2WECHAT_RELEASE_BASE_URL = "https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.5.0"
 iex ((New-Object System.Net.WebClient).DownloadString("$env:MD2WECHAT_RELEASE_BASE_URL/install.ps1"))
 ```
 
@@ -33,7 +33,10 @@ iex ((New-Object System.Net.WebClient).DownloadString("$env:MD2WECHAT_RELEASE_BA
 
 ```bash
 md2wechat version --json
+md2wechat skills read md2wechat --json
 ```
+
+`skills read` 会读取当前二进制内置的 Agent SOP。它不是外部 skill 安装步骤，而是确认当前 CLI 自带的操作协议和可执行文件版本一致。
 
 ### 2. 初始化配置
 

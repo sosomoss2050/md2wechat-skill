@@ -1,11 +1,11 @@
 # md2wechat API 主题配置
 # 版本混合: v1.0 (基础6个 + 精选主题) + v2.0 (新系列32个)
-# 更新: 支持内测 API (https://md2wechat.app) 的 40 个专业主题
+# 更新: 支持内测 API (https://md2wechat.app) 的 48 个专业主题
 
 name: api-collection
 type: api
 version: "mixed"
-description: "md2wechat API 主题集 - 40 个专业主题"
+description: "md2wechat API 主题集 - 48 个专业主题"
 
 # ============================================
 # v1.0 基础主题 (6 个) - 原生内置
@@ -155,6 +155,38 @@ featured_themes:
   - name: wechat-native
     version: "1.0"
     description: "微信公众号原生，原汁原味的官方绿底纹，满足传统阅读习惯的稳妥之选"
+
+  - name: nyt-classic
+    version: "1.0"
+    description: "经典米黄色新闻纸，极强的严肃深度报道专业感"
+
+  - name: github-readme
+    version: "1.0"
+    description: "开发者最熟悉的阅读界面，README 即视感"
+
+  - name: mint-fresh
+    version: "1.0"
+    description: "清凉薄荷绿底色，适合生活方式与健康类内容"
+
+  - name: sunset-amber
+    version: "1.0"
+    description: "暖琥珀色调的黄昏意境，散文游记与情感表达"
+
+  - name: ink-minimal
+    version: "1.0"
+    description: "纯粹的黑白水墨风，零色彩干扰的极简阅读"
+
+  - name: lavender-dream
+    version: "1.0"
+    description: "梦幻紫色调的浪漫氛围，诗意与灵感的温柔表达"
+
+  - name: coffee-house
+    version: "1.0"
+    description: "醇厚巧克力棕色调，午后咖啡馆的温暖书卷气"
+
+  - name: bauhaus-primary
+    version: "1.0"
+    description: "包豪斯三原色风格，红蓝黄碰撞的现代主义先锋"
 
 # 使用说明
 # v1.0 主题: 兼容新旧 API

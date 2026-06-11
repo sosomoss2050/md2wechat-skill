@@ -82,6 +82,7 @@ npx cnpm sync @geekjourneyx/md2wechat
 
 ```bash
 md2wechat version --json
+md2wechat skills read md2wechat --json
 ```
 
 ---
@@ -91,7 +92,7 @@ md2wechat version --json
 如果你的机器上已经有稳定可用的 Go 环境，也可以直接执行：
 
 ```bash
-go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v2.4.0
+go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v2.5.0
 ```
 
 这是一个可选路径，不是默认推荐路径。
@@ -111,13 +112,13 @@ go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v2.4.0
 ### macOS / Linux
 
 ```bash
-curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.4.0/install.sh | bash
+curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.5.0/install.sh | bash
 ```
 
 ### Windows PowerShell
 
 ```powershell
-$env:MD2WECHAT_RELEASE_BASE_URL = "https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.4.0"
+$env:MD2WECHAT_RELEASE_BASE_URL = "https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.5.0"
 iex ((New-Object System.Net.WebClient).DownloadString("$env:MD2WECHAT_RELEASE_BASE_URL/install.ps1"))
 ```
 
@@ -134,6 +135,7 @@ iex ((New-Object System.Net.WebClient).DownloadString("$env:MD2WECHAT_RELEASE_BA
 ```bash
 export PATH="$HOME/.local/bin:$PATH"
 md2wechat version --json
+md2wechat skills read md2wechat --json
 ```
 
 如果 Windows 当前 PowerShell 会话里仍然找不到命令，直接运行安装器输出的绝对路径验证命令即可。
@@ -161,7 +163,7 @@ md2wechat version --json
 #### Linux / macOS
 
 ```bash
-VERSION=v2.4.0
+VERSION=v2.5.0
 ASSET=md2wechat-linux-amd64
 # macOS 请改成 md2wechat-darwin-amd64 或 md2wechat-darwin-arm64
 curl -LO https://github.com/geekjourneyx/md2wechat-skill/releases/download/${VERSION}/${ASSET}

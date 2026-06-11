@@ -131,6 +131,7 @@ try {
 $verifyCmd = "& `"$outputFile`" version --json"
 $initCmd = "& `"$outputFile`" config init"
 $capCmd = "& `"$outputFile`" capabilities --json"
+$skillCmd = "& `"$outputFile`" skills read md2wechat --json"
 
 if ($skipPathUpdate) {
     Write-Host "ℹ️  跳过 PATH 更新（CI / non-interactive 模式）" -ForegroundColor Yellow
@@ -149,6 +150,7 @@ Write-Host "Next steps:" -ForegroundColor Yellow
 Write-Host "  1. md2wechat version --json" -ForegroundColor White
 Write-Host "  2. md2wechat config init" -ForegroundColor White
 Write-Host "  3. md2wechat capabilities --json" -ForegroundColor White
+Write-Host "  4. md2wechat skills read md2wechat --json" -ForegroundColor White
 Write-Host ""
 Write-Host "Skill installed to: $skillDir" -ForegroundColor White
 Write-Host "CLI installed to:   $outputFile" -ForegroundColor White
@@ -157,6 +159,7 @@ Write-Host "If the current shell still cannot find md2wechat, run:" -ForegroundC
 Write-Host "  $verifyCmd" -ForegroundColor White
 Write-Host "  $initCmd" -ForegroundColor White
 Write-Host "  $capCmd" -ForegroundColor White
+Write-Host "  $skillCmd" -ForegroundColor White
 Write-Host ""
 
 if (-not $nonInteractive) {

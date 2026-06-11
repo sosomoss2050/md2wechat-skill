@@ -13,6 +13,7 @@
 - 文章排版且用户未指定主题或模块：`md2wechat themes list --json`、`md2wechat layout list --json`
 - 已指定某个资源：使用对应的 `providers show`、`themes show`、`prompts show` 或 `layout show`
 - 图片生成或图片 prompt 选择：`md2wechat providers list --json`、`md2wechat prompts list --kind image --json`
+- Agent SOP 不确定或需要读取当前版本 skill：`md2wechat skills list --json`、`md2wechat skills read md2wechat --json`
 - 简单本地操作，例如 `preview`、`humanize` 或用户已给完整命令和 flags：不要运行无关的 catalog discovery
 
 ## 能力总览
@@ -30,6 +31,7 @@ md2wechat capabilities --json
 - 当前可枚举的 theme
 - 当前可枚举的 prompt catalog
 - `layout` catalog 是否可用、模块数量、schema version、是否仅 API 模式渲染
+- `skills` 是否作为当前二进制的内置 Agent SOP 入口开放
 
 示例片段：
 
@@ -42,11 +44,23 @@ md2wechat capabilities --json
     "api_mode_only": true,
     "schema_version": "1"
   },
-  "commands": ["convert", "inspect", "preview", "layout", "themes"]
+  "commands": ["convert", "inspect", "preview", "layout", "themes", "skills"]
 }
 ```
 
 未出现在 `commands` 中的命令不应被 Agent 当成可执行能力。未来工作流不通过 `capabilities` 预告。
+
+## 内置 Skill SOP
+
+```bash
+md2wechat skills list --json
+md2wechat skills read md2wechat
+md2wechat skills read md2wechat --json
+```
+
+`skills` 命令把 `skills/md2wechat/SKILL.md` 随二进制一起嵌入，供 Agent 在离线或只拿到二进制的环境中读取当前版本 SOP。这样 Agent 不需要猜 README、联网拉仓库，或读取一个可能和当前 CLI 版本不一致的本地 skill 副本。
+
+`skills list` 始终返回标准 JSON envelope，包含可用 skill、数量和 frontmatter 摘要。`skills read` 默认输出原始 Markdown，适合直接喂给 Agent；加 `--json` 时会返回标准 JSON envelope，并把 Markdown 放在 `data.content`。
 
 ## 本地体检
 

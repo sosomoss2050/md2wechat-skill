@@ -336,6 +336,9 @@ Examples:
 	// doctor command
 	rootCmd.AddCommand(doctorCmd)
 
+	// embedded agent skills
+	rootCmd.AddCommand(skillsCmd)
+
 	// Execute
 	if err := rootCmd.Execute(); err != nil {
 		responseError(err)

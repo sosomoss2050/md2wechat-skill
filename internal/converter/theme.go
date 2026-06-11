@@ -244,18 +244,86 @@ func collectionThemeStyle(series, name, description string) ThemeStyle {
 		Layout:      collectionThemeLayout(series),
 		APIRequired: "https://md2wechat.app",
 	}
-	if series == "featured" && name == "sspai-red" {
-		style.Layout = "清晰标题 + 红色强调"
-		style.Mood = "利落醒目"
-		style.BestFor = "工具评测、效率教程、产品说明"
-	}
-	if series == "featured" && name == "wechat-native" {
-		style.Color = "green"
-		style.Layout = "官方绿底纹"
-		style.Mood = "原生稳妥"
-		style.BestFor = "传统阅读习惯、稳妥发布内容"
+	if series == "featured" {
+		if override, ok := featuredThemeStyles[name]; ok {
+			override.APIRequired = style.APIRequired
+			return override
+		}
 	}
 	return style
+}
+
+var featuredThemeStyles = map[string]ThemeStyle{
+	"wechat-native": {
+		Series:  "featured",
+		Color:   "green",
+		Layout:  "官方绿底纹",
+		Mood:    "原生稳妥",
+		BestFor: "传统阅读习惯、稳妥发布内容",
+	},
+	"nyt-classic": {
+		Series:  "featured",
+		Color:   "black",
+		Layout:  "新闻纸排版 + 严肃分隔线",
+		Mood:    "报刊严肃",
+		BestFor: "深度报道、评论、知识型长文",
+	},
+	"github-readme": {
+		Series:  "featured",
+		Color:   "blue",
+		Layout:  "README 文档式结构",
+		Mood:    "技术结构化",
+		BestFor: "开发者说明、教程、产品文档",
+	},
+	"sspai-red": {
+		Series:  "featured",
+		Color:   "red",
+		Layout:  "清晰标题 + 红色强调",
+		Mood:    "利落醒目",
+		BestFor: "工具评测、效率教程、产品说明",
+	},
+	"mint-fresh": {
+		Series:  "featured",
+		Color:   "green",
+		Layout:  "薄荷绿底色 + 圆角信息块",
+		Mood:    "清新生活方式",
+		BestFor: "生活方式、健康、轻内容表达",
+	},
+	"sunset-amber": {
+		Series:  "featured",
+		Color:   "amber",
+		Layout:  "暖琥珀叙事排版",
+		Mood:    "温暖叙事",
+		BestFor: "散文、旅行、故事化表达",
+	},
+	"ink-minimal": {
+		Series:  "featured",
+		Color:   "black",
+		Layout:  "黑白水墨极简",
+		Mood:    "克制鲜明",
+		BestFor: "纯文本表达、重排版、观点文章",
+	},
+	"lavender-dream": {
+		Series:  "featured",
+		Color:   "purple",
+		Layout:  "柔和紫色调 + 梦幻圆角",
+		Mood:    "柔和浪漫",
+		BestFor: "诗意表达、品牌感内容、情绪型文章",
+	},
+	"coffee-house": {
+		Series:  "featured",
+		Color:   "brown",
+		Layout:  "咖啡馆书卷感排版",
+		Mood:    "温暖人文",
+		BestFor: "访谈、随笔、叙事栏目",
+	},
+	"bauhaus-primary": {
+		Series:  "featured",
+		Color:   "primary",
+		Layout:  "三原色几何现代主义",
+		Mood:    "先锋实验",
+		BestFor: "发布、策展、强视觉记忆内容",
+	},
 }
 
 func themeColorFromName(name string) string {
