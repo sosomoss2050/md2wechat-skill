@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/geekjourneyx/md2wechat-skill/internal/config"
 )
 
 func captureStderr(t *testing.T, fn func()) []byte {
@@ -205,5 +207,60 @@ func TestConfigInitWritesSampleVolcengineImageSettings(t *testing.T) {
 		if !strings.Contains(content, snippet) {
 			t.Fatalf("expected generated config to contain %q, got:\n%s", snippet, content)
 		}
+	}
+	for _, forbidden := range []string{"default_account:", "accounts:"} {
+		if strings.Contains(content, forbidden) {
+			t.Fatalf("generated single-account config should not contain %q:\n%s", forbidden, content)
+		}
+	}
+}
+
+func TestConfigWechatAccountsJSONDirectOnly(t *testing.T) {
+	oldJSON := jsonOutput
+	t.Cleanup(func() { jsonOutput = oldJSON })
+
+	t.Setenv("WECHAT_APPID", "wx-direct")
+	t.Setenv("WECHAT_SECRET", "direct-secret")
+	t.Setenv("WECHAT_ACCOUNT", "")
+	jsonOutput = true
+
+	stdout := captureStdout(t, func() {
+		configCmd.SetArgs([]string{"wechat-accounts"})
+		if err := configCmd.Execute(); err != nil {
+			t.Fatalf("configCmd.Execute() error = %v", err)
+		}
+	})
+
+	var response map[string]any
+	if err := json.Unmarshal(stdout, &response); err != nil {
+		t.Fatalf("unmarshal response: %v\n%s", err, stdout)
+	}
+	if response["code"] != "WECHAT_ACCOUNTS_SHOWN" {
+		t.Fatalf("unexpected response: %#v", response)
+	}
+	data := response["data"].(map[string]any)
+	if len(data["accounts"].([]any)) != 0 {
+		t.Fatalf("expected no named accounts: %#v", data)
+	}
+	current := data["current"].(map[string]any)
+	if current["name"] != "" || current["appid"] != "wx-direct" {
+		t.Fatalf("unexpected current: %#v", current)
+	}
+}
+
+func TestConfigWechatAccountsDoesNotExposeSecrets(t *testing.T) {
+	data := buildWechatAccountsData(&config.Config{
+		WechatDefaultAccount: "main",
+		WechatAccounts: map[string]config.WechatAccount{
+			"main": {AppID: "wx-main", Secret: "secret-main"},
+		},
+		WechatAccount:      "main",
+		WechatAccountNamed: true,
+		WechatAppID:        "wx-main",
+		WechatSecret:       "secret-main",
+	})
+	encoded, _ := json.Marshal(data)
+	if strings.Contains(string(encoded), "secret") {
+		t.Fatalf("secrets leaked: %s", encoded)
 	}
 }

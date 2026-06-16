@@ -10,6 +10,7 @@
 
 - 版本、能力或行为不确定：`md2wechat version --json`、`md2wechat capabilities --json`
 - API、草稿、上传或配置 readiness：`md2wechat doctor --json`，必要时再 `md2wechat config show --format json`
+- 多公众号本地配置检查：`md2wechat config wechat-accounts --json`
 - 文章排版且用户未指定主题或模块：`md2wechat themes list --json`、`md2wechat layout list --json`
 - 已指定某个资源：使用对应的 `providers show`、`themes show`、`prompts show` 或 `layout show`
 - 图片生成或图片 prompt 选择：`md2wechat providers list --json`、`md2wechat prompts list --kind image --json`
@@ -73,6 +74,16 @@ md2wechat doctor --json
 它不会调用远程 API，不会验证 live auth，不会上传图片，也不会创建草稿。JSON 输出中的 `data.live` 固定为 `false`，`data.readiness.format_api` / `data.readiness.advanced_layout` / `data.readiness.draft` 用来帮助 Agent 判断下一步能不能执行 API 转换、高级排版渲染或草稿创建。
 
 注意：`doctor` 的 `data.readiness.*` 是本地配置可尝试性；`inspect` 的 `data.readiness.targets/blockers` 是单篇文章的执行目标状态。
+
+## 多公众号发现
+
+```bash
+md2wechat config wechat-accounts --json
+```
+
+`config wechat-accounts` 是本地只读命令，用来列出配置文件中的命名公众号账号、当前解析到的账号和 `default_account`。它不调用 `/api/auth/validate`，不要求 `MD2WECHAT_API_KEY`，也不会输出 secret。
+
+命名账号只在上传、生成并上传图片、创建草稿、创建图片消息，以及 `convert --upload` / `convert --draft` 等有微信副作用的路径上触发 API-key 校验。
 
 ## 确认层命令
 

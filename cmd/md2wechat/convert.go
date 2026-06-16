@@ -308,6 +308,10 @@ func validateConvertConfig() error {
 		}
 	}
 
+	if err := resolveExplicitWeChatAccountIfProvided(); err != nil {
+		return err
+	}
+
 	if strings.TrimSpace(convertCoverImage) != "" && strings.TrimSpace(convertCoverMediaID) != "" {
 		return newCLIError(codeConvertInvalid, "--cover and --cover-media-id are mutually exclusive")
 	}
@@ -320,8 +324,8 @@ func validateConvertConfig() error {
 	}
 
 	if convertUpload || convertDraft {
-		if err := cfg.ValidateForWeChat(); err != nil {
-			return wrapCLIError(codeConfigInvalid, err, err.Error())
+		if err := prepareWeChatSideEffectWithAPIKey(convertAPIKey); err != nil {
+			return err
 		}
 	}
 	return nil

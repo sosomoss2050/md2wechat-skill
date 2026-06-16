@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.0] - 2026-06-16
+
+### Added
+- Added gated multi-account WeChat configuration with named accounts, `--wechat-account` selection, and the local-only `config wechat-accounts` discovery command.
+- Added API-key validation for named-account WeChat side effects using `HEAD /api/auth/validate` before uploads, image generation uploads, draft creation, and image post creation.
+- Added regression coverage for named-account selection, API-key gate failures, direct legacy account compatibility, and secret-free account discovery output.
+
+### Changed
+- Preserved legacy single-account `wechat.appid` / `wechat.secret` behavior without requiring `MD2WECHAT_API_KEY`.
+- Documented multi-account configuration, selection order, API-key validation boundaries, and local-only account discovery across user and Agent entry points.
+
 ## [2.5.0] - 2026-06-11
 
 ### Added

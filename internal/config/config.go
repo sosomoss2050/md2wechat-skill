@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -17,6 +18,11 @@ type Config struct {
 	// 微信公众号配置
 	WechatAppID  string `json:"wechat_appid" yaml:"wechat_appid" env:"WECHAT_APPID"`
 	WechatSecret string `json:"wechat_secret" yaml:"wechat_secret" env:"WECHAT_SECRET"`
+	// 多公众号配置
+	WechatDefaultAccount string                   `json:"wechat_default_account" yaml:"wechat_default_account"`
+	WechatAccounts       map[string]WechatAccount `json:"wechat_accounts" yaml:"wechat_accounts"`
+	WechatAccount        string                   `json:"wechat_account" yaml:"wechat_account"`
+	WechatAccountNamed   bool                     `json:"wechat_account_named" yaml:"wechat_account_named"`
 
 	// md2wechat.cn API 配置
 	MD2WechatAPIKey       string `json:"md2wechat_api_key" yaml:"md2wechat_api_key" env:"MD2WECHAT_API_KEY"`
@@ -44,11 +50,18 @@ type Config struct {
 	configFile string
 }
 
+type WechatAccount struct {
+	AppID  string `json:"appid" yaml:"appid"`
+	Secret string `json:"secret" yaml:"secret"`
+}
+
 // ConfigFile 配置文件结构（YAML/JSON）
 type configFile struct {
 	Wechat struct {
-		AppID  string `json:"appid" yaml:"appid"`
-		Secret string `json:"secret" yaml:"secret"`
+		AppID          string                   `json:"appid,omitempty" yaml:"appid,omitempty"`
+		Secret         string                   `json:"secret,omitempty" yaml:"secret,omitempty"`
+		DefaultAccount string                   `json:"default_account,omitempty" yaml:"default_account,omitempty"`
+		Accounts       map[string]WechatAccount `json:"accounts,omitempty" yaml:"accounts,omitempty"`
 	} `json:"wechat" yaml:"wechat"`
 
 	API struct {
@@ -75,6 +88,8 @@ type configFile struct {
 var (
 	statusWriter io.Writer = os.Stderr
 	quietOutput  bool
+
+	wechatAccountNamePattern = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,63}$`)
 )
 
 // SetQuiet suppresses non-essential configuration status messages.
@@ -140,15 +155,23 @@ func LoadWithDefaults(configPath string) (*Config, error) {
 	// 2. 环境变量覆盖配置文件
 	loadFromEnv(cfg)
 
-	// 3. 按当前 provider 填充图片相关默认值，避免 OpenAI 通用默认值误伤其他 provider。
+	// 3. 校验并解析 WeChat account selection.
+	if err := cfg.validateWechatAccounts(); err != nil {
+		return nil, err
+	}
+	if err := cfg.ResolveWeChatAccount(""); err != nil && !IsWechatAccountAmbiguous(err) {
+		return nil, err
+	}
+
+	// 4. 按当前 provider 填充图片相关默认值，避免 OpenAI 通用默认值误伤其他 provider。
 	applyImageProviderDefaults(cfg)
 
-	// 4. 验证通用配置
+	// 5. 验证通用配置
 	if err := cfg.validateCommon(); err != nil {
 		return nil, err
 	}
 
-	// 5. 处理 MaxImageSize (配置文件中是 MB)
+	// 6. 处理 MaxImageSize (配置文件中是 MB)
 	if cfg.configFile != "" && cfg.MaxImageSize < 1024*1024 {
 		// 如果值小于 1MB，可能是配置文件使用了 MB 单位
 		cfg.MaxImageSize = cfg.MaxImageSize * 1024 * 1024
@@ -303,6 +326,12 @@ func applyConfigFile(cfg *Config, cf *configFile) {
 	if cf.Wechat.Secret != "" {
 		cfg.WechatSecret = cf.Wechat.Secret
 	}
+	if cf.Wechat.DefaultAccount != "" {
+		cfg.WechatDefaultAccount = strings.TrimSpace(cf.Wechat.DefaultAccount)
+	}
+	if len(cf.Wechat.Accounts) > 0 {
+		cfg.WechatAccounts = cf.Wechat.Accounts
+	}
 	if cf.API.MD2WechatKey != "" {
 		cfg.MD2WechatAPIKey = cf.API.MD2WechatKey
 	}
@@ -354,6 +383,9 @@ func loadFromEnv(cfg *Config) {
 	}
 	if v := os.Getenv("WECHAT_SECRET"); v != "" {
 		cfg.WechatSecret = v
+	}
+	if v := os.Getenv("WECHAT_ACCOUNT"); v != "" {
+		cfg.WechatAccount = strings.TrimSpace(v)
 	}
 	if v := os.Getenv("MD2WECHAT_API_KEY"); v != "" {
 		cfg.MD2WechatAPIKey = v
@@ -443,6 +475,104 @@ func (c *Config) validateCommon() error {
 	return nil
 }
 
+func (c *Config) validateWechatAccounts() error {
+	if c.WechatAccounts == nil {
+		c.WechatAccounts = map[string]WechatAccount{}
+	}
+	for name, account := range c.WechatAccounts {
+		if !wechatAccountNamePattern.MatchString(name) {
+			return &ConfigError{
+				Field:   "WechatAccounts." + name,
+				Message: "WECHAT_ACCOUNT_INVALID: invalid account name",
+			}
+		}
+		if strings.TrimSpace(account.AppID) == "" {
+			return &ConfigError{
+				Field:   "WechatAccounts." + name + ".appid",
+				Message: "named WeChat account AppID is required",
+			}
+		}
+		if strings.TrimSpace(account.Secret) == "" {
+			return &ConfigError{
+				Field:   "WechatAccounts." + name + ".secret",
+				Message: "named WeChat account Secret is required",
+			}
+		}
+	}
+	if c.WechatDefaultAccount != "" {
+		if _, ok := c.WechatAccounts[c.WechatDefaultAccount]; !ok {
+			return &ConfigError{
+				Field:   "WechatDefaultAccount",
+				Message: "WECHAT_ACCOUNT_NOT_FOUND: default account not found",
+			}
+		}
+	}
+	return nil
+}
+
+func (c *Config) ResolveWeChatAccount(explicit string) error {
+	if c == nil {
+		return nil
+	}
+	if c.WechatAccounts == nil {
+		c.WechatAccounts = map[string]WechatAccount{}
+	}
+	selected := strings.TrimSpace(explicit)
+	if selected == "" {
+		selected = strings.TrimSpace(c.WechatAccount)
+	}
+	if selected == "" {
+		selected = strings.TrimSpace(c.WechatDefaultAccount)
+	}
+	if selected != "" {
+		return c.applyNamedWeChatAccount(selected)
+	}
+	if strings.TrimSpace(c.WechatAppID) != "" || strings.TrimSpace(c.WechatSecret) != "" {
+		c.WechatAccount = ""
+		c.WechatAccountNamed = false
+		return nil
+	}
+	if len(c.WechatAccounts) == 1 {
+		for name := range c.WechatAccounts {
+			return c.applyNamedWeChatAccount(name)
+		}
+	}
+	if len(c.WechatAccounts) > 1 {
+		return &ConfigError{
+			Field:   "WechatAccounts",
+			Message: "WECHAT_ACCOUNT_AMBIGUOUS: multiple named accounts require wechat.default_account or WECHAT_ACCOUNT",
+		}
+	}
+	return nil
+}
+
+func IsWechatAccountNotFound(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "WECHAT_ACCOUNT_NOT_FOUND")
+}
+
+func IsWechatAccountInvalid(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "WECHAT_ACCOUNT_INVALID")
+}
+
+func IsWechatAccountAmbiguous(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "WECHAT_ACCOUNT_AMBIGUOUS")
+}
+
+func (c *Config) applyNamedWeChatAccount(name string) error {
+	account, ok := c.WechatAccounts[name]
+	if !ok {
+		return &ConfigError{
+			Field:   "WechatAccount",
+			Message: "WECHAT_ACCOUNT_NOT_FOUND: " + name,
+		}
+	}
+	c.WechatAppID = strings.TrimSpace(account.AppID)
+	c.WechatSecret = strings.TrimSpace(account.Secret)
+	c.WechatAccount = name
+	c.WechatAccountNamed = true
+	return nil
+}
+
 func (c *Config) ValidateForWeChat() error {
 	if c.WechatAppID == "" {
 		return &ConfigError{
@@ -490,6 +620,7 @@ func (c *Config) ToMap(maskSecret bool) map[string]any {
 	result := map[string]any{
 		"wechat_appid":            c.WechatAppID,
 		"wechat_secret":           maskIf(c.WechatSecret, maskSecret),
+		"wechat_account":          c.WechatAccount,
 		"default_convert_mode":    c.DefaultConvertMode,
 		"default_theme":           c.DefaultTheme,
 		"default_background_type": c.DefaultBackgroundType,
@@ -516,6 +647,8 @@ func SaveConfig(path string, cfg *Config) error {
 	cf := configFile{}
 	cf.Wechat.AppID = cfg.WechatAppID
 	cf.Wechat.Secret = cfg.WechatSecret
+	cf.Wechat.DefaultAccount = cfg.WechatDefaultAccount
+	cf.Wechat.Accounts = cfg.WechatAccounts
 	cf.API.MD2WechatKey = cfg.MD2WechatAPIKey
 	cf.API.MD2WechatBaseURL = cfg.MD2WechatBaseURL
 	cf.API.ImageKey = cfg.ImageAPIKey

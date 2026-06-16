@@ -111,6 +111,10 @@ func runCreateImagePost() (any, error) {
 		return nil, newCLIError(codeImagePostInvalid, "--images or --from-markdown is required")
 	}
 
+	if err := resolveExplicitWeChatAccountIfProvided(); err != nil {
+		return nil, err
+	}
+
 	svc := newImagePostService()
 
 	if imagePostDryRun {
@@ -132,8 +136,8 @@ func runCreateImagePost() (any, error) {
 		}, nil
 	}
 
-	if err := cfg.ValidateForWeChat(); err != nil {
-		return nil, wrapCLIError(codeConfigInvalid, err, err.Error())
+	if err := prepareWeChatSideEffect(); err != nil {
+		return nil, err
 	}
 
 	result, err := svc.CreateImagePost(req)

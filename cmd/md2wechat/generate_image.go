@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/geekjourneyx/md2wechat-skill/internal/config"
 	"github.com/geekjourneyx/md2wechat-skill/internal/converter"
 	"github.com/geekjourneyx/md2wechat-skill/internal/promptcatalog"
 )
@@ -69,7 +70,11 @@ func runGeneratePresetImage(archetype, defaultPreset string, input generateImage
 }
 
 func runGenerateImageWithInput(input generateImageInput) error {
-	if err := cfg.ValidateForImageGeneration(); err != nil {
+	if err := prepareWeChatSideEffect(); err != nil {
+		return err
+	}
+	if cfg.ImageAPIKey == "" {
+		err := &config.ConfigError{Field: "ImageAPIKey", Message: "IMAGE_API_KEY is required for image generation"}
 		return wrapCLIError(codeConfigInvalid, err, err.Error())
 	}
 
