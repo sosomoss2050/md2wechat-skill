@@ -41,7 +41,7 @@
 **推荐方式：重新走固定版本安装器**
 
 ```powershell
-$env:MD2WECHAT_RELEASE_BASE_URL = "https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.5.0"
+$env:MD2WECHAT_RELEASE_BASE_URL = "https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.6.0"
 iex ((New-Object System.Net.WebClient).DownloadString("$env:MD2WECHAT_RELEASE_BASE_URL/install.ps1"))
 ```
 
@@ -56,7 +56,7 @@ iex ((New-Object System.Net.WebClient).DownloadString("$env:MD2WECHAT_RELEASE_BA
 #### Mac/Linux 解决方法：
 
 ```bash
-curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.5.0/install.sh | bash
+curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.6.0/install.sh | bash
 export PATH="$HOME/.local/bin:$PATH"
 md2wechat version --json
 ```
@@ -71,6 +71,8 @@ md2wechat version --json
 ---
 
 ## 配置问题
+
+如果你需要从零配置、迁移多公众号，或排查 `WECHAT_ACCOUNT_*` / `API_KEY_*` 错误，先看 [配置保姆级指南](CONFIG-WALKTHROUGH.md)。
 
 ### ❓ 提示 "WECHAT_APPID is required"
 

@@ -19,6 +19,7 @@
 
 - [安装指南](INSTALL.md)
 - [新手快速开始](QUICKSTART.md)
+- [配置保姆级指南](CONFIG-WALKTHROUGH.md)
 - [配置指南](CONFIG.md)
 - [微信凭证与 IP 白名单指南](WECHAT-CREDENTIALS.md)
 - [能力发现与 Prompt Catalog](DISCOVERY.md)
@@ -38,6 +39,7 @@
 ## 能力专题
 
 - [**高级排版模块教程（保姆级）**](LAYOUT.md) ← API 模式专属，43 个模块
+- [配置保姆级指南](CONFIG-WALKTHROUGH.md)
 - [配置说明](CONFIG.md)
 - [微信凭证与 IP 白名单指南](WECHAT-CREDENTIALS.md)
 - [能力发现与 Prompt Catalog](DISCOVERY.md)

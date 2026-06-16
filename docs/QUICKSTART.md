@@ -50,6 +50,8 @@ md2wechat config init
 ~/.config/md2wechat/config.yaml
 ```
 
+完整配置流程，包括单公众号、多公众号和常见错误，见 [配置保姆级指南](CONFIG-WALKTHROUGH.md)。
+
 如果你要创建微信草稿，至少需要配置：
 
 - `wechat.appid`

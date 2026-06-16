@@ -125,7 +125,7 @@ grep -q 'npm install -g @geekjourneyx/md2wechat' README.md || fail "README must 
 grep -q 'npm install -g @geekjourneyx/md2wechat' docs/INSTALL.md || fail "docs/INSTALL.md must document the npm install path"
 grep -q 'npx cnpm sync @geekjourneyx/md2wechat' docs/INSTALL.md || fail "docs/INSTALL.md must document the post-publish npmmirror sync step"
 grep -q 'npx cnpm sync @geekjourneyx/md2wechat' docs/FAQ.md || fail "docs/FAQ.md must document the npmmirror sync recovery path"
-grep -q 'brew install geekjourneyx/tap/md2wechat' README.md || fail "README must document the tap install path"
+! grep -q 'brew install geekjourneyx/tap/md2wechat' README.md || fail "README must keep Homebrew install details in docs/INSTALL.md, not the primary quickstart"
 grep -q 'brew install geekjourneyx/tap/md2wechat' docs/INSTALL.md || fail "docs/INSTALL.md must document the tap install path"
 ! grep -q 'raw.githubusercontent.com/geekjourneyx/md2wechat-skill/main/scripts/install.sh' README.md || fail "README must not point the md2wechat installer at main"
 ! grep -q 'raw.githubusercontent.com/geekjourneyx/md2wechat-skill/main/scripts/install.ps1' README.md || fail "README must not point the md2wechat installer at main"

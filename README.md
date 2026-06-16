@@ -74,17 +74,16 @@
 ### 第一步：安装
 
 ```bash
-# macOS 优先推荐
-brew install geekjourneyx/tap/md2wechat
-```
-
-其他安装方式（npm / go install / install.sh / Windows PowerShell）见 [安装指南](docs/INSTALL.md)。
-
-npm 全局安装也可以直接用：
-
-```bash
 npm install -g @geekjourneyx/md2wechat
 ```
+
+如果 npm 镜像刚发布后短暂 404，使用官方源：
+
+```bash
+npm install -g @geekjourneyx/md2wechat --registry=https://registry.npmjs.org/
+```
+
+macOS Homebrew、Go install、固定版本安装脚本和 Windows PowerShell 安装方式见 [安装指南](docs/INSTALL.md)。
 
 ### 第二步：配置微信（只需一次）
 
@@ -269,7 +268,7 @@ md2wechat 是 CLI-first 工具，天然适合集成进 Coding Agent。
 
 ```bash
 # 安装 CLI（先装这个）
-brew install geekjourneyx/tap/md2wechat
+npm install -g @geekjourneyx/md2wechat
 
 # 发现当前二进制内置的 skill SOP
 md2wechat skills list --json
@@ -278,6 +277,8 @@ md2wechat skills read md2wechat --json
 # 可选：安装 skill（Claude Code / Codex / OpenCode）
 npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
 ```
+
+macOS Homebrew 等其他安装路径见 [安装指南](docs/INSTALL.md)。
 
 安装后在 Claude Code 中直接用自然语言驱动：
 

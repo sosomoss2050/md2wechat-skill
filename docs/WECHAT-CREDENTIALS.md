@@ -158,6 +158,8 @@ md2wechat convert article.md --draft --cover cover.jpg --wechat-account client-a
 md2wechat config wechat-accounts --json
 ```
 
+完整的单账号、多账号、API key 边界和排障流程见 [配置保姆级指南](CONFIG-WALKTHROUGH.md)。
+
 ### 步骤 3：验证配置是否生效
 
 ```bash

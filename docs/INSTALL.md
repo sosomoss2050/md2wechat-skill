@@ -5,8 +5,8 @@
 ## 目录
 
 - [系统要求](#系统要求)
-- [方式一：Homebrew tap](#方式一homebrew-tapmacos--linux)
-- [方式二：NPM 全局安装（已有 Node/npm 环境时可选）](#方式二npm-全局安装已有-nodenpm-环境时可选)
+- [方式一：NPM 全局安装](#方式一npm-全局安装推荐)
+- [方式二：Homebrew tap（macOS / Linux）](#方式二homebrew-tapmacos--linux)
 - [方式三：Go install（已有 Go 环境时可选）](#方式三go-install已有-go-环境时可选)
 - [方式四：安装脚本](#方式四安装脚本固定版本-release-资产)
 - [方式五：预编译二进制](#方式五预编译二进制)
@@ -25,27 +25,9 @@
 
 ---
 
-## 方式一：Homebrew tap（macOS / Linux）
+## 方式一：NPM 全局安装（推荐）
 
-如果你的环境已经装了 Homebrew，直接执行：
-
-```bash
-brew install geekjourneyx/tap/md2wechat
-```
-
-升级：
-
-```bash
-brew upgrade geekjourneyx/tap/md2wechat
-```
-
-这个路径只安装 CLI 本身，不会运行远程 installer。Homebrew formula 会直接下载当前版本对应平台的预编译归档并安装 `md2wechat`。
-
----
-
-## 方式二：NPM 全局安装（已有 Node/npm 环境时可选）
-
-如果你的机器上已经有稳定可用的 Node/npm 环境，也可以直接执行：
+如果你的机器上已经有稳定可用的 Node/npm 环境，推荐直接执行：
 
 ```bash
 npm install -g @geekjourneyx/md2wechat
@@ -87,6 +69,24 @@ md2wechat skills read md2wechat --json
 
 ---
 
+## 方式二：Homebrew tap（macOS / Linux）
+
+如果你的环境已经使用 Homebrew 管理 CLI，也可以执行：
+
+```bash
+brew install geekjourneyx/tap/md2wechat
+```
+
+升级：
+
+```bash
+brew upgrade geekjourneyx/tap/md2wechat
+```
+
+这个路径只安装 CLI 本身，不会运行远程 installer。Homebrew formula 会直接下载当前版本对应平台的预编译归档并安装 `md2wechat`。
+
+---
+
 ## 方式三：Go install（已有 Go 环境时可选）
 
 如果你的机器上已经有稳定可用的 Go 环境，也可以直接执行：
@@ -102,7 +102,7 @@ go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v2.6.0
 - 希望直接用 Go 模块安装 CLI
 - 不依赖 Homebrew
 
-如果你只是普通 mac 用户，仍然优先使用 Homebrew。
+如果你只是普通用户，仍然优先使用 NPM。macOS 用户也可以按团队习惯选择 Homebrew。
 如果你更关心固定版本 release 资产和 checksum，可继续使用下面的安装脚本。
 
 ---

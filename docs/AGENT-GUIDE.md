@@ -687,6 +687,7 @@ md2wechat convert article.md --mode ai --output output.html
 | 验证排版语法 | `md2wechat layout validate --file article.md --json` |
 | 查看配置 | `md2wechat config show --format json` |
 | 验证配置 | `md2wechat config validate` |
+| 查看多公众号账号 | `md2wechat config wechat-accounts --json` |
 | 转换文章（API） | `md2wechat convert article.md --output output.html` |
 | 转换文章（AI） | `md2wechat convert article.md --mode ai --output output.html` |
 | 检查发布就绪 | `md2wechat inspect article.md --draft --json` |
@@ -745,4 +746,4 @@ JSON envelope 格式（v1）：
 
 ---
 
-*最后更新：与 md2wechat v2.5.0 同步*
+*最后更新：与 md2wechat v2.6.0 同步*
