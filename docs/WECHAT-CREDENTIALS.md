@@ -132,11 +132,38 @@ export WECHAT_APPID="你的公众号 AppID"
 export WECHAT_SECRET="你的公众号 AppSecret"
 ```
 
+如果你需要管理多个公众号，可以使用命名账号：
+
+```yaml
+wechat:
+  default_account: main
+  accounts:
+    main:
+      appid: "主公众号 AppID"
+      secret: "主公众号 AppSecret"
+    client-a:
+      appid: "客户 A AppID"
+      secret: "客户 A AppSecret"
+```
+
+执行上传或草稿类命令时可显式选择：
+
+```bash
+md2wechat convert article.md --draft --cover cover.jpg --wechat-account client-a
+```
+
+命名账号属于高级 API 功能。使用命名账号执行微信副作用前，CLI 会要求 `MD2WECHAT_API_KEY` 有效；本地查看命令不联网：
+
+```bash
+md2wechat config wechat-accounts --json
+```
+
 ### 步骤 3：验证配置是否生效
 
 ```bash
 md2wechat config validate
 md2wechat config show --format json
+md2wechat config wechat-accounts --json
 ```
 
 你应该重点确认：

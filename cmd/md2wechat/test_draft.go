@@ -27,8 +27,8 @@ var testHTMLCmd = &cobra.Command{
 }
 
 func runTestDraft(htmlFile, coverImage string) (map[string]any, error) {
-	if err := cfg.ValidateForWeChat(); err != nil {
-		return nil, wrapCLIError(codeConfigInvalid, err, err.Error())
+	if err := prepareWeChatSideEffect(); err != nil {
+		return nil, err
 	}
 
 	html, err := os.ReadFile(htmlFile)

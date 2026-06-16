@@ -65,6 +65,52 @@ md2wechat doctor --json
 
 ---
 
+## 多公众号配置
+
+单账号仍然是默认主路径：
+
+```yaml
+wechat:
+  appid: "你的微信公众号 AppID"
+  secret: "你的微信公众号 Secret"
+```
+
+如果你购买了高级 API 服务并需要管理多个公众号，可以在同一份配置里增加命名账号：
+
+```yaml
+wechat:
+  default_account: main
+  accounts:
+    main:
+      appid: "wx..."
+      secret: "..."
+    client-a:
+      appid: "wx..."
+      secret: "..."
+```
+
+命名账号名称只支持小写字母、数字、`_` 和 `-`，例如 `main`、`client-a`、`brand_2026`。
+
+会调用微信接口的命令按下面顺序选择账号：
+
+1. `--wechat-account`
+2. `WECHAT_ACCOUNT`
+3. `wechat.default_account`
+4. 直接配置的 `wechat.appid` / `wechat.secret`
+5. 唯一的命名账号
+
+命名账号执行上传、生成并上传图片、创建草稿或图片消息时，需要有效的 `MD2WECHAT_API_KEY`。CLI 会在副作用发生前调用 `HEAD /api/auth/validate` 校验 API key。`config show`、`config validate`、`doctor` 和 `config wechat-accounts` 仍然是本地只读命令，不做网络校验。
+
+查看本地已配置的公众号账号：
+
+```bash
+md2wechat config wechat-accounts --json
+```
+
+该命令不会输出 secret，连掩码后的 secret 也不会输出。
+
+---
+
 ## Agent 和用户应该先看哪里
 
 如果你不知道去哪改配置，按这个顺序找：
@@ -341,6 +387,7 @@ image:
 |----------|------------|
 | `WECHAT_APPID` | `wechat.appid` |
 | `WECHAT_SECRET` | `wechat.secret` |
+| `WECHAT_ACCOUNT` | 命名账号选择 |
 | `MD2WECHAT_API_KEY` | `api.md2wechat_key` |
 | `MD2WECHAT_BASE_URL` | `api.md2wechat_base_url` |
 | `IMAGE_API_KEY` | `api.image_key` |
@@ -373,6 +420,7 @@ image:
 |---|---|
 | `wechat_appid` | `wechat.appid` |
 | `wechat_secret` | `wechat.secret` |
+| `wechat_account` | 当前命名账号，直接账号为空字符串 |
 | `md2wechat_api_key` | `api.md2wechat_key` |
 | `md2wechat_base_url` | `api.md2wechat_base_url` |
 | `image_api_key` | `api.image_key` |

@@ -1,13 +1,17 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"os"
+	"strings"
+	"time"
 
 	"github.com/geekjourneyx/md2wechat-skill/internal/action"
+	"github.com/geekjourneyx/md2wechat-skill/internal/apikey"
 	"github.com/geekjourneyx/md2wechat-skill/internal/config"
 	"github.com/geekjourneyx/md2wechat-skill/internal/draft"
 	"github.com/spf13/cobra"
@@ -40,6 +44,13 @@ const (
 	codeConfigShown            = "CONFIG_SHOWN"
 	codeConfigValidated        = "CONFIG_VALIDATED"
 	codeConfigInitialized      = "CONFIG_INITIALIZED"
+	codeWechatAccountNotFound  = "WECHAT_ACCOUNT_NOT_FOUND"
+	codeWechatAccountInvalid   = "WECHAT_ACCOUNT_INVALID"
+	codeWechatAccountAmbiguous = "WECHAT_ACCOUNT_AMBIGUOUS"
+	codeWechatAccountsShown    = "WECHAT_ACCOUNTS_SHOWN"
+	codeAPIKeyRequired         = "API_KEY_REQUIRED"
+	codeAPIKeyInvalid          = "API_KEY_INVALID"
+	codeAPIKeyVerifyFailed     = "API_KEY_VERIFY_FAILED"
 	codeWriteInputInvalid      = "WRITE_INPUT_INVALID"
 	codeWriteReadFailed        = "WRITE_READ_FAILED"
 	codeWriteFailed            = "WRITE_FAILED"
@@ -79,6 +90,13 @@ const (
 
 	codeDoctorCompleted = "DOCTOR_COMPLETED"
 )
+
+var wechatAccountName string
+
+var validateAPIKeyForWeChatAccount = func(apiKey string) error {
+	validator := apikey.NewValidatorWithTimeout(cfg.MD2WechatBaseURL, apiKey, time.Duration(cfg.HTTPTimeout)*time.Second)
+	return validator.Validate(context.Background())
+}
 
 type cliResponse struct {
 	Success       bool           `json:"success"`
@@ -142,6 +160,73 @@ func extractCLIError(err error) (*cliError, bool) {
 	return nil, false
 }
 
+func addWechatAccountFlag(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&wechatAccountName, "wechat-account", "", "Named WeChat account from config")
+}
+
+func prepareWeChatSideEffect() error {
+	return prepareWeChatSideEffectWithAPIKey("")
+}
+
+func prepareWeChatSideEffectWithAPIKey(apiKeyOverride string) error {
+	if err := cfg.ResolveWeChatAccount(wechatAccountName); err != nil {
+		return mapConfigAccountError(err)
+	}
+	if err := cfg.ValidateForWeChat(); err != nil {
+		return wrapCLIError(codeConfigInvalid, err, err.Error())
+	}
+	if !cfg.WechatAccountNamed {
+		return nil
+	}
+	apiKey := strings.TrimSpace(apiKeyOverride)
+	if apiKey == "" {
+		apiKey = strings.TrimSpace(cfg.MD2WechatAPIKey)
+	}
+	if apiKey == "" {
+		return newCLIError(codeAPIKeyRequired, "API_KEY_REQUIRED: MD2WECHAT_API_KEY is required for named WeChat accounts")
+	}
+	if err := validateAPIKeyForWeChatAccount(apiKey); err != nil {
+		switch {
+		case apikey.IsRequired(err), strings.Contains(err.Error(), codeAPIKeyRequired):
+			return newCLIError(codeAPIKeyRequired, err.Error())
+		case apikey.IsInvalid(err), strings.Contains(err.Error(), codeAPIKeyInvalid):
+			return newCLIError(codeAPIKeyInvalid, err.Error())
+		case apikey.IsVerifyFailed(err), strings.Contains(err.Error(), codeAPIKeyVerifyFailed):
+			return newCLIError(codeAPIKeyVerifyFailed, err.Error())
+		default:
+			return newCLIError(codeAPIKeyVerifyFailed, err.Error())
+		}
+	}
+	return nil
+}
+
+func resolveExplicitWeChatAccountIfProvided() error {
+	if strings.TrimSpace(wechatAccountName) == "" {
+		return nil
+	}
+	if err := cfg.ResolveWeChatAccount(wechatAccountName); err != nil {
+		return mapConfigAccountError(err)
+	}
+	return nil
+}
+
+func mapConfigAccountError(err error) error {
+	if err == nil {
+		return nil
+	}
+	message := err.Error()
+	switch {
+	case strings.Contains(message, codeWechatAccountNotFound):
+		return wrapCLIError(codeWechatAccountNotFound, err, message)
+	case strings.Contains(message, codeWechatAccountInvalid):
+		return wrapCLIError(codeWechatAccountInvalid, err, message)
+	case strings.Contains(message, codeWechatAccountAmbiguous):
+		return wrapCLIError(codeWechatAccountAmbiguous, err, message)
+	default:
+		return wrapCLIError(codeConfigInvalid, err, message)
+	}
+}
+
 // initConfig 初始化配置（延迟加载，允许 help 命令无需配置）
 func initConfig() error {
 	if cfg != nil && log != nil {
@@ -152,7 +237,7 @@ func initConfig() error {
 	config.SetQuiet(jsonOutput)
 	cfg, err = config.Load()
 	if err != nil {
-		return err
+		return mapConfigAccountError(err)
 	}
 
 	if jsonOutput {
@@ -205,8 +290,8 @@ Examples:
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			filePath := args[0]
-			if err := cfg.ValidateForWeChat(); err != nil {
-				return wrapCLIError(codeConfigInvalid, err, err.Error())
+			if err := prepareWeChatSideEffect(); err != nil {
+				return err
 			}
 			processor := newRuntimeImageProcessor()
 			result, err := processor.UploadLocalImage(filePath)
@@ -217,6 +302,7 @@ Examples:
 			return nil
 		},
 	}
+	addWechatAccountFlag(uploadImageCmd)
 	rootCmd.AddCommand(uploadImageCmd)
 
 	// download_and_upload command
@@ -229,8 +315,8 @@ Examples:
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			url := args[0]
-			if err := cfg.ValidateForWeChat(); err != nil {
-				return wrapCLIError(codeConfigInvalid, err, err.Error())
+			if err := prepareWeChatSideEffect(); err != nil {
+				return err
 			}
 			processor := newRuntimeImageProcessor()
 			result, err := processor.DownloadAndUpload(url)
@@ -241,6 +327,7 @@ Examples:
 			return nil
 		},
 	}
+	addWechatAccountFlag(downloadAndUploadCmd)
 	rootCmd.AddCommand(downloadAndUploadCmd)
 
 	var generateImageCmd = &cobra.Command{
@@ -263,6 +350,9 @@ Examples:
 	generateImageCmd.Flags().StringVar(&generateImageCmdStyle, "style", "", "Visual style used to render a preset prompt")
 	generateImageCmd.Flags().StringVar(&generateImageCmdAspect, "aspect", "", "Aspect ratio hint used to render a preset prompt, e.g. 16:9 or 3:4")
 	generateImageCmd.Flags().StringVar(&generateImageCmdModel, "model", "", "Image model to use for this command (overrides IMAGE_MODEL and api.image_model)")
+	addWechatAccountFlag(generateImageCmd)
+	addWechatAccountFlag(generateCoverCmd)
+	addWechatAccountFlag(generateInfographicCmd)
 	rootCmd.AddCommand(generateImageCmd)
 	rootCmd.AddCommand(generateCoverCmd)
 	rootCmd.AddCommand(generateInfographicCmd)
@@ -277,8 +367,8 @@ Examples:
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			jsonFile := args[0]
-			if err := cfg.ValidateForWeChat(); err != nil {
-				return wrapCLIError(codeConfigInvalid, err, err.Error())
+			if err := prepareWeChatSideEffect(); err != nil {
+				return err
 			}
 			svc := draft.NewService(cfg, log)
 			result, err := svc.CreateDraftFromFile(jsonFile)
@@ -289,6 +379,7 @@ Examples:
 			return nil
 		},
 	}
+	addWechatAccountFlag(createDraftCmd)
 	rootCmd.AddCommand(createDraftCmd)
 
 	var versionCmd = &cobra.Command{
@@ -302,7 +393,9 @@ Examples:
 	rootCmd.AddCommand(versionCmd)
 
 	// convert command
+	addWechatAccountFlag(convertCmd)
 	rootCmd.AddCommand(convertCmd)
+	addWechatAccountFlag(inspectCmd)
 	rootCmd.AddCommand(inspectCmd)
 	rootCmd.AddCommand(previewCmd)
 
@@ -322,9 +415,11 @@ Examples:
 	rootCmd.AddCommand(humanizeCmd)
 
 	// test-draft command
+	addWechatAccountFlag(testHTMLCmd)
 	rootCmd.AddCommand(testHTMLCmd)
 
 	// create-image-post command (小绿书)
+	addWechatAccountFlag(createImagePostCmd)
 	rootCmd.AddCommand(createImagePostCmd)
 
 	// layout command

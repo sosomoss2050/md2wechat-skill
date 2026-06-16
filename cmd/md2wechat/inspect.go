@@ -68,6 +68,11 @@ func runInspect(markdownFile string) (*inspectpkg.Result, error) {
 	if err != nil {
 		return nil, wrapCLIError(codeConvertReadFailed, err, fmt.Sprintf("read markdown file: %v", err))
 	}
+	if strings.TrimSpace(wechatAccountName) != "" || inspectUpload || inspectDraft {
+		if err := cfg.ResolveWeChatAccount(wechatAccountName); err != nil {
+			return nil, mapConfigAccountError(err)
+		}
+	}
 	return runInspectWithInput(markdownFile, string(markdown), inspectpkg.Input{
 		MarkdownFile:    markdownFile,
 		Markdown:        string(markdown),

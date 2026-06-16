@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/geekjourneyx/md2wechat-skill/internal/config"
@@ -34,8 +35,9 @@ Config file search order:
 }
 
 var (
-	configShowSecret bool
-	configFormat     string
+	configShowSecret     bool
+	configFormat         string
+	wechatAccountsFormat string
 )
 
 func init() {
@@ -67,6 +69,16 @@ func init() {
 		},
 	}
 	configCmd.AddCommand(validateCmd)
+
+	var wechatAccountsCmd = &cobra.Command{
+		Use:   "wechat-accounts",
+		Short: "Show configured WeChat accounts",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runConfigWechatAccounts()
+		},
+	}
+	wechatAccountsCmd.Flags().StringVarP(&wechatAccountsFormat, "format", "f", "json", "Output format: json, text")
+	configCmd.AddCommand(wechatAccountsCmd)
 
 	// init 子命令
 	var initCmd = &cobra.Command{
@@ -157,6 +169,86 @@ func runConfigValidate() error {
 		zap.String("default_theme", cfg.DefaultTheme))
 
 	return nil
+}
+
+func runConfigWechatAccounts() error {
+	config.SetQuiet(jsonOutput || wechatAccountsFormat == "json")
+	cfg, err := config.Load()
+	if err != nil {
+		return mapConfigAccountError(err)
+	}
+
+	data := buildWechatAccountsData(cfg)
+	if jsonOutput || wechatAccountsFormat == "json" {
+		responseSuccessWith(codeWechatAccountsShown, "WeChat accounts shown", data)
+		return nil
+	}
+	printWechatAccounts(data)
+	return nil
+}
+
+func buildWechatAccountsData(cfg *config.Config) map[string]any {
+	if cfg == nil {
+		return map[string]any{
+			"accounts":        []map[string]any{},
+			"current":         nil,
+			"default_account": "",
+		}
+	}
+
+	names := make([]string, 0, len(cfg.WechatAccounts))
+	for name := range cfg.WechatAccounts {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	accounts := make([]map[string]any, 0, len(names))
+	for _, name := range names {
+		account := cfg.WechatAccounts[name]
+		accounts = append(accounts, map[string]any{
+			"name":    name,
+			"appid":   account.AppID,
+			"current": cfg.WechatAccountNamed && cfg.WechatAccount == name,
+		})
+	}
+
+	var current any
+	if cfg.WechatAccountNamed {
+		current = map[string]any{
+			"name":  cfg.WechatAccount,
+			"appid": cfg.WechatAppID,
+		}
+	} else if strings.TrimSpace(cfg.WechatAppID) != "" {
+		current = map[string]any{
+			"name":  "",
+			"appid": cfg.WechatAppID,
+		}
+	}
+
+	return map[string]any{
+		"accounts":        accounts,
+		"current":         current,
+		"default_account": cfg.WechatDefaultAccount,
+	}
+}
+
+func printWechatAccounts(data map[string]any) {
+	fmt.Println("WeChat accounts")
+	if current, ok := data["current"].(map[string]any); ok {
+		fmt.Printf("current: %s %s\n", current["name"], current["appid"])
+	} else {
+		fmt.Println("current: none")
+	}
+	fmt.Printf("default_account: %s\n", data["default_account"])
+	fmt.Println("accounts:")
+	accounts, _ := data["accounts"].([]map[string]any)
+	for _, account := range accounts {
+		marker := " "
+		if account["current"] == true {
+			marker = "*"
+		}
+		fmt.Printf("%s %s %s\n", marker, account["name"], account["appid"])
+	}
 }
 
 func runConfigInit(outputFile string) error {

@@ -130,6 +130,7 @@ md2wechat convert article.md --draft --cover cover.jpg
 | `generate_cover` | AI 生成封面图，内置专业 preset |
 | `generate_infographic` | AI 生成信息图，内置 10+ 风格 preset |
 | `upload_image` | 上传图片到微信永久素材库 |
+| `config wechat-accounts` | 本地只读查看多公众号账号配置，不输出 Secret |
 
 ### 全流程示例
 
@@ -222,6 +223,7 @@ md2wechat layout validate --file article.md --json
 md2wechat themes list --json               # 排版选主题时使用，按 selectable/type 判断能否用于当前模式
 md2wechat layout list --json               # 高级排版选模块时使用
 md2wechat doctor --json                    # API、草稿、上传或配置本地可尝试性排障时使用
+md2wechat config wechat-accounts --json    # 多公众号本地配置检查，不联网、不输出 Secret
 md2wechat prompts list --kind image --json # 图片 prompt 选择时使用
 md2wechat providers list --json            # 图片生成 provider 选择时使用
 md2wechat skills list --json               # 发现二进制内置的 Agent skill

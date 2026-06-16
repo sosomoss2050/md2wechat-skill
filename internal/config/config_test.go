@@ -323,3 +323,181 @@ func TestConfigErrorFormatting(t *testing.T) {
 		t.Fatalf("ConfigError.Error() = %q", err)
 	}
 }
+
+func TestLoadWithDefaultsParsesWechatAccounts(t *testing.T) {
+	t.Setenv("WECHAT_APPID", "")
+	t.Setenv("WECHAT_SECRET", "")
+	t.Setenv("WECHAT_ACCOUNT", "")
+
+	path := writeTempConfig(t, `
+wechat:
+  appid: legacy-appid
+  secret: legacy-secret
+  default_account: main
+  accounts:
+    main:
+      appid: named-appid
+      secret: named-secret
+    client-a:
+      appid: client-appid
+      secret: client-secret
+api:
+  convert_mode: api
+`)
+
+	cfg, err := LoadWithDefaults(path)
+	if err != nil {
+		t.Fatalf("LoadWithDefaults() error = %v", err)
+	}
+	if cfg.WechatAppID != "named-appid" || cfg.WechatSecret != "named-secret" {
+		t.Fatalf("effective WeChat credentials = %q/%q", cfg.WechatAppID, cfg.WechatSecret)
+	}
+	if cfg.WechatAccount != "main" || !cfg.WechatAccountNamed {
+		t.Fatalf("selected account = %q named=%v", cfg.WechatAccount, cfg.WechatAccountNamed)
+	}
+}
+
+func TestLoadWithDefaultsPreservesDirectCredentialsWhenDirectWins(t *testing.T) {
+	t.Setenv("WECHAT_APPID", "")
+	t.Setenv("WECHAT_SECRET", "")
+	t.Setenv("WECHAT_ACCOUNT", "")
+
+	path := writeTempConfig(t, `
+wechat:
+  appid: legacy-appid
+  secret: legacy-secret
+  accounts:
+    client-a:
+      appid: client-appid
+      secret: client-secret
+api:
+  convert_mode: api
+`)
+
+	cfg, err := LoadWithDefaults(path)
+	if err != nil {
+		t.Fatalf("LoadWithDefaults() error = %v", err)
+	}
+	if cfg.WechatAppID != "legacy-appid" || cfg.WechatSecret != "legacy-secret" {
+		t.Fatalf("effective direct credentials = %q/%q", cfg.WechatAppID, cfg.WechatSecret)
+	}
+	if cfg.WechatAccount != "" || cfg.WechatAccountNamed {
+		t.Fatalf("direct path should not be named: %q named=%v", cfg.WechatAccount, cfg.WechatAccountNamed)
+	}
+}
+
+func TestLoadWithDefaultsEnvWechatAccountDoesNotUseDirectEnvCredentials(t *testing.T) {
+	t.Setenv("WECHAT_APPID", "env-direct-appid")
+	t.Setenv("WECHAT_SECRET", "env-direct-secret")
+	t.Setenv("WECHAT_ACCOUNT", "client-a")
+
+	path := writeTempConfig(t, `
+wechat:
+  appid: file-direct-appid
+  secret: file-direct-secret
+  accounts:
+    client-a:
+      appid: client-appid
+      secret: client-secret
+api:
+  convert_mode: api
+`)
+
+	cfg, err := LoadWithDefaults(path)
+	if err != nil {
+		t.Fatalf("LoadWithDefaults() error = %v", err)
+	}
+	if cfg.WechatAppID != "client-appid" || cfg.WechatSecret != "client-secret" {
+		t.Fatalf("named credentials should win over direct env: %#v", cfg)
+	}
+}
+
+func TestLoadWithDefaultsRejectsInvalidWechatAccountConfig(t *testing.T) {
+	cases := []struct {
+		name    string
+		yaml    string
+		wantErr string
+	}{
+		{
+			name: "invalid name",
+			yaml: `
+wechat:
+  accounts:
+    Client.A:
+      appid: appid
+      secret: secret
+`,
+			wantErr: "WECHAT_ACCOUNT_INVALID",
+		},
+		{
+			name: "missing secret",
+			yaml: `
+wechat:
+  accounts:
+    main:
+      appid: appid
+`,
+			wantErr: "WechatAccounts.main.secret",
+		},
+		{
+			name: "missing default",
+			yaml: `
+wechat:
+  default_account: missing
+  accounts:
+    main:
+      appid: appid
+      secret: secret
+`,
+			wantErr: "WECHAT_ACCOUNT_NOT_FOUND",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("WECHAT_APPID", "")
+			t.Setenv("WECHAT_SECRET", "")
+			t.Setenv("WECHAT_ACCOUNT", "")
+			path := writeTempConfig(t, tc.yaml)
+			_, err := LoadWithDefaults(path)
+			if err == nil || !strings.Contains(err.Error(), tc.wantErr) {
+				t.Fatalf("LoadWithDefaults() error = %v, want %q", err, tc.wantErr)
+			}
+		})
+	}
+}
+
+func TestResolveWeChatAccountRejectsAmbiguousNamedAccounts(t *testing.T) {
+	t.Setenv("WECHAT_APPID", "")
+	t.Setenv("WECHAT_SECRET", "")
+	t.Setenv("WECHAT_ACCOUNT", "")
+
+	path := writeTempConfig(t, `
+wechat:
+  accounts:
+    a:
+      appid: a
+      secret: a
+    b:
+      appid: b
+      secret: b
+`)
+
+	cfg, err := LoadWithDefaults(path)
+	if err != nil {
+		t.Fatalf("LoadWithDefaults() error = %v", err)
+	}
+	err = cfg.ResolveWeChatAccount("")
+	if err == nil || !IsWechatAccountAmbiguous(err) {
+		t.Fatalf("ResolveWeChatAccount() error = %v, want ambiguous", err)
+	}
+}
+
+func writeTempConfig(t *testing.T, content string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	if err := os.WriteFile(path, []byte(strings.TrimSpace(content)+"\n"), 0600); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	return path
+}
