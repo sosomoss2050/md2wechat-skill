@@ -299,7 +299,7 @@ npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
 OpenClaw 用户可以通过 ClawHub 直接安装：[clawhub.ai/geekjourneyx/md2wechat](https://clawhub.ai/geekjourneyx/md2wechat)
 
 ```bash
-curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.5.0/install-openclaw.sh | bash
+curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.6.0/install-openclaw.sh | bash
 ```
 
 ---
