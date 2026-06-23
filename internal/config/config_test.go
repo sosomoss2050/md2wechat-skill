@@ -287,6 +287,175 @@ func TestSaveConfigAndLoadRoundTrip(t *testing.T) {
 	}
 }
 
+func TestLoadWithDefaultsParsesWechatProxyURL(t *testing.T) {
+	t.Setenv("WECHAT_PROXY_URL", "")
+
+	path := writeTempConfig(t, `
+wechat:
+  proxy_url: https://proxy.example.com:8443
+api:
+  convert_mode: api
+`)
+
+	cfg, err := LoadWithDefaults(path)
+	if err != nil {
+		t.Fatalf("LoadWithDefaults() error = %v", err)
+	}
+	if cfg.WechatProxyURL != "https://proxy.example.com:8443" {
+		t.Fatalf("WechatProxyURL = %q", cfg.WechatProxyURL)
+	}
+}
+
+func TestLoadWithDefaultsEnvOverridesWechatProxyURL(t *testing.T) {
+	t.Setenv("WECHAT_PROXY_URL", "http://env-user:env-pass@env-proxy.example.com:8080")
+
+	path := writeTempConfig(t, `
+wechat:
+  proxy_url: https://file-proxy.example.com
+api:
+  convert_mode: api
+`)
+
+	cfg, err := LoadWithDefaults(path)
+	if err != nil {
+		t.Fatalf("LoadWithDefaults() error = %v", err)
+	}
+	if cfg.WechatProxyURL != "http://env-user:env-pass@env-proxy.example.com:8080" {
+		t.Fatalf("WechatProxyURL = %q", cfg.WechatProxyURL)
+	}
+}
+
+func TestSaveConfigAndLoadRoundTripPreservesWechatProxyURL(t *testing.T) {
+	t.Setenv("WECHAT_PROXY_URL", "")
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.yaml")
+	cfg := &Config{
+		WechatProxyURL:     "https://user:pass@proxy.example.com:8443",
+		DefaultConvertMode: "api",
+		DefaultTheme:       "default",
+		CompressImages:     true,
+		MaxImageWidth:      1920,
+		MaxImageSize:       5 * 1024 * 1024,
+		HTTPTimeout:        30,
+		MD2WechatBaseURL:   "https://www.md2wechat.cn",
+		ImageProvider:      "openai",
+		ImageAPIBase:       "https://api.openai.com/v1",
+		ImageModel:         "gpt-image-2",
+		ImageSize:          "auto",
+	}
+
+	if err := SaveConfig(path, cfg); err != nil {
+		t.Fatalf("SaveConfig() error = %v", err)
+	}
+
+	loaded, err := LoadWithDefaults(path)
+	if err != nil {
+		t.Fatalf("LoadWithDefaults() error = %v", err)
+	}
+	if loaded.WechatProxyURL != cfg.WechatProxyURL {
+		t.Fatalf("loaded WechatProxyURL = %q", loaded.WechatProxyURL)
+	}
+}
+
+func TestToMapMasksWechatProxyURLPassword(t *testing.T) {
+	tests := []struct {
+		name       string
+		proxyURL   string
+		wantMasked string
+	}{
+		{
+			name:       "password",
+			proxyURL:   "https://user:secret-password@proxy.example.com:8443",
+			wantMasked: "https://user:***@proxy.example.com:8443",
+		},
+		{
+			name:       "username-only-token",
+			proxyURL:   "http://proxy-token@proxy.example.com:18443",
+			wantMasked: "http://***@proxy.example.com:18443",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &Config{
+				WechatProxyURL: tt.proxyURL,
+			}
+
+			masked := cfg.ToMap(true)
+			if got := masked["wechat_proxy_url"]; got != tt.wantMasked {
+				t.Fatalf("masked wechat_proxy_url = %q, want %q", got, tt.wantMasked)
+			}
+
+			unmasked := cfg.ToMap(false)
+			if got := unmasked["wechat_proxy_url"]; got != cfg.WechatProxyURL {
+				t.Fatalf("unmasked wechat_proxy_url = %q", got)
+			}
+		})
+	}
+}
+
+func TestLoadWithDefaultsRejectsInvalidWechatProxyURLs(t *testing.T) {
+	cases := []string{
+		"://proxy.example.com",
+		"http://",
+		"http://:8080",
+		"https://",
+		"ftp://proxy.example.com",
+		"socks5://proxy.example.com",
+		"http://proxy.example.com:",
+		"http://proxy.example.com:0",
+		"http://proxy.example.com:-1",
+		"http://proxy.example.com:abc",
+		"http://proxy.example.com:65536",
+		"http://proxy.example.com:99999",
+		"http://[::1]:",
+		"http://[::1]:99999",
+	}
+
+	for _, proxyURL := range cases {
+		t.Run(proxyURL, func(t *testing.T) {
+			t.Setenv("WECHAT_PROXY_URL", proxyURL)
+			path := writeTempConfig(t, `
+api:
+  convert_mode: api
+`)
+
+			_, err := LoadWithDefaults(path)
+			if err == nil || !strings.Contains(err.Error(), "WechatProxyURL") {
+				t.Fatalf("LoadWithDefaults() error = %v, want WechatProxyURL validation error", err)
+			}
+		})
+	}
+}
+
+func TestLoadWithDefaultsAcceptsValidWechatProxyPorts(t *testing.T) {
+	cases := []string{
+		"http://proxy.example.com",
+		"http://proxy.example.com:1",
+		"http://proxy.example.com:65535",
+		"http://[::1]:18443",
+	}
+
+	for _, proxyURL := range cases {
+		t.Run(proxyURL, func(t *testing.T) {
+			t.Setenv("WECHAT_PROXY_URL", proxyURL)
+			path := writeTempConfig(t, `
+api:
+  convert_mode: api
+`)
+
+			cfg, err := LoadWithDefaults(path)
+			if err != nil {
+				t.Fatalf("LoadWithDefaults() error = %v", err)
+			}
+			if cfg.WechatProxyURL != proxyURL {
+				t.Fatalf("WechatProxyURL = %q, want %q", cfg.WechatProxyURL, proxyURL)
+			}
+		})
+	}
+}
+
 func TestLoadWithDefaultsAppliesVolcengineImageDefaults(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "config.yaml")

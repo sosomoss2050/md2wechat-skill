@@ -1,6 +1,8 @@
 wechat:
   appid: "your_wechat_appid"
   secret: "your_wechat_secret"
+  # Advanced API service only. Paste the full proxy URL provided by md2wechat.
+  # proxy_url: "https://wechat-egress-url-provided-by-md2wechat.example"
 
 api:
   md2wechat_key: "your_md2wechat_api_key"

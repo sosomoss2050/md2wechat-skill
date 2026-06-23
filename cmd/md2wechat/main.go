@@ -175,7 +175,8 @@ func prepareWeChatSideEffectWithAPIKey(apiKeyOverride string) error {
 	if err := cfg.ValidateForWeChat(); err != nil {
 		return wrapCLIError(codeConfigInvalid, err, err.Error())
 	}
-	if !cfg.WechatAccountNamed {
+	requiresAPIKey := cfg.WechatAccountNamed || strings.TrimSpace(cfg.WechatProxyURL) != ""
+	if !requiresAPIKey {
 		return nil
 	}
 	apiKey := strings.TrimSpace(apiKeyOverride)
@@ -183,6 +184,9 @@ func prepareWeChatSideEffectWithAPIKey(apiKeyOverride string) error {
 		apiKey = strings.TrimSpace(cfg.MD2WechatAPIKey)
 	}
 	if apiKey == "" {
+		if !cfg.WechatAccountNamed {
+			return newCLIError(codeAPIKeyRequired, "API_KEY_REQUIRED: MD2WECHAT_API_KEY is required for WeChat proxy mode")
+		}
 		return newCLIError(codeAPIKeyRequired, "API_KEY_REQUIRED: MD2WECHAT_API_KEY is required for named WeChat accounts")
 	}
 	if err := validateAPIKeyForWeChatAccount(apiKey); err != nil {

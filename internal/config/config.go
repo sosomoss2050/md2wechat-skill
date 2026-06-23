@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -16,8 +17,9 @@ import (
 // Config 应用配置
 type Config struct {
 	// 微信公众号配置
-	WechatAppID  string `json:"wechat_appid" yaml:"wechat_appid" env:"WECHAT_APPID"`
-	WechatSecret string `json:"wechat_secret" yaml:"wechat_secret" env:"WECHAT_SECRET"`
+	WechatAppID    string `json:"wechat_appid" yaml:"wechat_appid" env:"WECHAT_APPID"`
+	WechatSecret   string `json:"wechat_secret" yaml:"wechat_secret" env:"WECHAT_SECRET"`
+	WechatProxyURL string `json:"wechat_proxy_url" yaml:"wechat_proxy_url" env:"WECHAT_PROXY_URL"`
 	// 多公众号配置
 	WechatDefaultAccount string                   `json:"wechat_default_account" yaml:"wechat_default_account"`
 	WechatAccounts       map[string]WechatAccount `json:"wechat_accounts" yaml:"wechat_accounts"`
@@ -60,6 +62,7 @@ type configFile struct {
 	Wechat struct {
 		AppID          string                   `json:"appid,omitempty" yaml:"appid,omitempty"`
 		Secret         string                   `json:"secret,omitempty" yaml:"secret,omitempty"`
+		ProxyURL       string                   `json:"proxy_url,omitempty" yaml:"proxy_url,omitempty"`
 		DefaultAccount string                   `json:"default_account,omitempty" yaml:"default_account,omitempty"`
 		Accounts       map[string]WechatAccount `json:"accounts,omitempty" yaml:"accounts,omitempty"`
 	} `json:"wechat" yaml:"wechat"`
@@ -326,6 +329,9 @@ func applyConfigFile(cfg *Config, cf *configFile) {
 	if cf.Wechat.Secret != "" {
 		cfg.WechatSecret = cf.Wechat.Secret
 	}
+	if cf.Wechat.ProxyURL != "" {
+		cfg.WechatProxyURL = strings.TrimSpace(cf.Wechat.ProxyURL)
+	}
 	if cf.Wechat.DefaultAccount != "" {
 		cfg.WechatDefaultAccount = strings.TrimSpace(cf.Wechat.DefaultAccount)
 	}
@@ -383,6 +389,9 @@ func loadFromEnv(cfg *Config) {
 	}
 	if v := os.Getenv("WECHAT_SECRET"); v != "" {
 		cfg.WechatSecret = v
+	}
+	if v := os.Getenv("WECHAT_PROXY_URL"); v != "" {
+		cfg.WechatProxyURL = strings.TrimSpace(v)
 	}
 	if v := os.Getenv("WECHAT_ACCOUNT"); v != "" {
 		cfg.WechatAccount = strings.TrimSpace(v)
@@ -471,8 +480,70 @@ func (c *Config) validateCommon() error {
 			Hint:    "配置文件中设置 api.http_timeout: 30",
 		}
 	}
+	if err := validateWechatProxyURL(c.WechatProxyURL); err != nil {
+		return err
+	}
 
 	return nil
+}
+
+func validateWechatProxyURL(proxyURL string) error {
+	proxyURL = strings.TrimSpace(proxyURL)
+	if proxyURL == "" {
+		return nil
+	}
+	parsed, err := url.Parse(proxyURL)
+	if err != nil {
+		return &ConfigError{
+			Field:   "WechatProxyURL",
+			Message: "WECHAT_PROXY_URL must be a valid http:// or https:// URL",
+		}
+	}
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		return &ConfigError{
+			Field:   "WechatProxyURL",
+			Message: "WECHAT_PROXY_URL only supports http:// and https://",
+		}
+	}
+	if parsed.Hostname() == "" {
+		return &ConfigError{
+			Field:   "WechatProxyURL",
+			Message: "WECHAT_PROXY_URL must include a host",
+		}
+	}
+	if err := validateWechatProxyPort(parsed); err != nil {
+		return err
+	}
+	return nil
+}
+
+func validateWechatProxyPort(parsed *url.URL) error {
+	port := parsed.Port()
+	if port == "" {
+		if hasExplicitInvalidPort(parsed.Host) {
+			return &ConfigError{
+				Field:   "WechatProxyURL",
+				Message: "WECHAT_PROXY_URL port must be a number between 1 and 65535",
+			}
+		}
+		return nil
+	}
+
+	portNumber, err := strconv.Atoi(port)
+	if err != nil || portNumber < 1 || portNumber > 65535 {
+		return &ConfigError{
+			Field:   "WechatProxyURL",
+			Message: "WECHAT_PROXY_URL port must be a number between 1 and 65535",
+		}
+	}
+	return nil
+}
+
+func hasExplicitInvalidPort(host string) bool {
+	if strings.HasPrefix(host, "[") {
+		return strings.Contains(host, "]:")
+	}
+	return strings.Contains(host, ":")
 }
 
 func (c *Config) validateWechatAccounts() error {
@@ -620,6 +691,7 @@ func (c *Config) ToMap(maskSecret bool) map[string]any {
 	result := map[string]any{
 		"wechat_appid":            c.WechatAppID,
 		"wechat_secret":           maskIf(c.WechatSecret, maskSecret),
+		"wechat_proxy_url":        maskProxyURLPassword(c.WechatProxyURL, maskSecret),
 		"wechat_account":          c.WechatAccount,
 		"default_convert_mode":    c.DefaultConvertMode,
 		"default_theme":           c.DefaultTheme,
@@ -647,6 +719,7 @@ func SaveConfig(path string, cfg *Config) error {
 	cf := configFile{}
 	cf.Wechat.AppID = cfg.WechatAppID
 	cf.Wechat.Secret = cfg.WechatSecret
+	cf.Wechat.ProxyURL = cfg.WechatProxyURL
 	cf.Wechat.DefaultAccount = cfg.WechatDefaultAccount
 	cf.Wechat.Accounts = cfg.WechatAccounts
 	cf.API.MD2WechatKey = cfg.MD2WechatAPIKey
@@ -738,6 +811,27 @@ func maskIf(value string, mask bool) string {
 		return "***"
 	}
 	return value[:2] + "***" + value[len(value)-2:]
+}
+
+func maskProxyURLPassword(value string, mask bool) string {
+	if !mask || value == "" {
+		return value
+	}
+	parsed, err := url.Parse(value)
+	if err != nil || parsed.User == nil {
+		return value
+	}
+	username := parsed.User.Username()
+	if _, ok := parsed.User.Password(); ok {
+		if username == "" {
+			parsed.User = url.UserPassword("", "***")
+		} else {
+			parsed.User = url.UserPassword(username, "***")
+		}
+	} else {
+		parsed.User = url.User("***")
+	}
+	return strings.Replace(parsed.String(), "%2A%2A%2A", "***", 1)
 }
 
 // getRelativePath 获取相对路径（用于更友好的显示）

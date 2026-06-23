@@ -150,6 +150,94 @@ func TestPrepareWeChatSideEffectDoesNotValidateDirectLegacyPath(t *testing.T) {
 	}
 }
 
+func TestPrepareWeChatSideEffectProxyURLRequiresAPIKey(t *testing.T) {
+	oldCfg, oldAccount := cfg, wechatAccountName
+	oldValidate := validateAPIKeyForWeChatAccount
+	t.Cleanup(func() {
+		cfg = oldCfg
+		wechatAccountName = oldAccount
+		validateAPIKeyForWeChatAccount = oldValidate
+	})
+
+	cfg = &config.Config{
+		WechatAppID:     "appid",
+		WechatSecret:    "secret",
+		WechatProxyURL:  "https://proxy.example.com",
+		MD2WechatAPIKey: "",
+	}
+	wechatAccountName = ""
+	validateAPIKeyForWeChatAccount = func(apiKey string) error {
+		t.Fatal("validator should not be called when key is missing")
+		return nil
+	}
+
+	err := prepareWeChatSideEffect()
+	cliErr, ok := err.(*cliError)
+	if !ok || cliErr.Code != codeAPIKeyRequired {
+		t.Fatalf("prepareWeChatSideEffect() error = %#v", err)
+	}
+}
+
+func TestPrepareWeChatSideEffectProxyURLUsesConfiguredAPIKey(t *testing.T) {
+	oldCfg, oldAccount := cfg, wechatAccountName
+	oldValidate := validateAPIKeyForWeChatAccount
+	t.Cleanup(func() {
+		cfg = oldCfg
+		wechatAccountName = oldAccount
+		validateAPIKeyForWeChatAccount = oldValidate
+	})
+
+	cfg = &config.Config{
+		WechatAppID:     "appid",
+		WechatSecret:    "secret",
+		WechatProxyURL:  "https://proxy.example.com",
+		MD2WechatAPIKey: "configured-api-key",
+	}
+	wechatAccountName = ""
+	var gotKey string
+	validateAPIKeyForWeChatAccount = func(apiKey string) error {
+		gotKey = apiKey
+		return nil
+	}
+
+	if err := prepareWeChatSideEffect(); err != nil {
+		t.Fatalf("prepareWeChatSideEffect() error = %v", err)
+	}
+	if gotKey != "configured-api-key" {
+		t.Fatalf("validator api key = %q, want configured-api-key", gotKey)
+	}
+}
+
+func TestPrepareWeChatSideEffectProxyURLUsesAPIKeyOverride(t *testing.T) {
+	oldCfg, oldAccount := cfg, wechatAccountName
+	oldValidate := validateAPIKeyForWeChatAccount
+	t.Cleanup(func() {
+		cfg = oldCfg
+		wechatAccountName = oldAccount
+		validateAPIKeyForWeChatAccount = oldValidate
+	})
+
+	cfg = &config.Config{
+		WechatAppID:     "appid",
+		WechatSecret:    "secret",
+		WechatProxyURL:  "https://proxy.example.com",
+		MD2WechatAPIKey: "configured-api-key",
+	}
+	wechatAccountName = ""
+	var gotKey string
+	validateAPIKeyForWeChatAccount = func(apiKey string) error {
+		gotKey = apiKey
+		return nil
+	}
+
+	if err := prepareWeChatSideEffectWithAPIKey("flag-api-key"); err != nil {
+		t.Fatalf("prepareWeChatSideEffectWithAPIKey() error = %v", err)
+	}
+	if gotKey != "flag-api-key" {
+		t.Fatalf("validator api key = %q, want flag-api-key", gotKey)
+	}
+}
+
 func TestPrepareWeChatSideEffectMapsInvalidAPIKey(t *testing.T) {
 	oldCfg, oldAccount := cfg, wechatAccountName
 	oldValidate := validateAPIKeyForWeChatAccount

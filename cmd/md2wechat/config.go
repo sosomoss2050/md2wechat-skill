@@ -304,7 +304,12 @@ func printYAMLConfig(cfg *config.Config, maskSecret bool) {
 			secret = "***"
 		}
 	}
-	fmt.Printf("  secret: %s\n\n", secret)
+	fmt.Printf("  secret: %s\n", secret)
+	if cfg.WechatProxyURL != "" {
+		configData := cfg.ToMap(maskSecret)
+		fmt.Printf("  proxy_url: %s\n", configData["wechat_proxy_url"])
+	}
+	fmt.Println()
 
 	fmt.Println("api:")
 	fmt.Printf("  md2wechat_key: %s\n", maskAPIKey(cfg.MD2WechatAPIKey, maskSecret))

@@ -280,6 +280,8 @@ md2wechat convert article.md --mode api
 wechat:
   appid: "your_wechat_appid"
   secret: "your_wechat_secret"
+  # Advanced API service only. Paste the full proxy URL provided by md2wechat.
+  # proxy_url: "https://wechat-egress-url-provided-by-md2wechat.example"
 
 api:
   md2wechat_key: "your_md2wechat_api_key"
@@ -349,6 +351,16 @@ image:
 |--------|------|------|
 | `wechat.appid` | 创建草稿、上传图片时需要 | 微信公众号 AppID |
 | `wechat.secret` | 创建草稿、上传图片时需要 | 微信公众号 Secret |
+| `wechat.proxy_url` | 否 | 高级版 API 固定出口能力：仅微信上传、草稿和图片消息副作用使用的 HTTP/HTTPS 前向代理 |
+
+`wechat.proxy_url` 是高级版 API 服务的固定出口能力，用来解决运行环境公网 IP 动态变化导致微信白名单反复失效的问题。开通后，服务侧会提供两项信息：
+
+- 完整的 `proxy_url`，直接粘贴到配置文件或 `WECHAT_PROXY_URL`
+- 稳定的微信接口出口 IP，填写到微信后台 `IP 白名单`
+
+`wechat.proxy_url` 只影响微信 API 副作用，不影响 API 排版、图片生成 provider、主题/提示词发现或普通转换。启用后，上传、建草稿和图片消息发送前需要有效的 `MD2WECHAT_API_KEY`。
+
+不要自行拼接代理主机、端口或部署形态；以高级版 API 服务提供的完整 URL 为准。公开配置文档不约定代理端口。需要固定出口能力或企业私有化方案时，请联系作者进行 `API咨询`。`HTTPS_PROXY` 只作为全局代理兜底背景理解，优先使用 `wechat.proxy_url` / `WECHAT_PROXY_URL`，避免把非微信流量一起代理。
 
 ### API 转换配置
 
@@ -390,6 +402,7 @@ image:
 | `WECHAT_APPID` | `wechat.appid` |
 | `WECHAT_SECRET` | `wechat.secret` |
 | `WECHAT_ACCOUNT` | 命名账号选择 |
+| `WECHAT_PROXY_URL` | `wechat.proxy_url` |
 | `MD2WECHAT_API_KEY` | `api.md2wechat_key` |
 | `MD2WECHAT_BASE_URL` | `api.md2wechat_base_url` |
 | `IMAGE_API_KEY` | `api.image_key` |
@@ -422,6 +435,7 @@ image:
 |---|---|
 | `wechat_appid` | `wechat.appid` |
 | `wechat_secret` | `wechat.secret` |
+| `wechat_proxy_url` | `wechat.proxy_url` |
 | `wechat_account` | 当前命名账号，直接账号为空字符串 |
 | `md2wechat_api_key` | `api.md2wechat_key` |
 | `md2wechat_base_url` | `api.md2wechat_base_url` |

@@ -282,7 +282,35 @@ curl ipinfo.io/ip
 - 固定一台有公网 IP 的服务器
 - 或固定出口网关
 
-### 4. 重置 AppSecret 后忘了更新配置
+### 4. 使用高级版 API 固定出口
+
+如果你不能直接在运行 `md2wechat` 的机器上获得固定公网 IP，可以使用高级版 API 服务的微信固定出口能力。它提供稳定的微信接口出口 IP，解决动态 IP 导致微信后台白名单反复更新的问题。
+
+开通后，你会拿到两项信息：
+
+- 完整的 `proxy_url`
+- 需要填写到微信后台 `IP 白名单` 的固定出口 IP
+
+配置文件写法：
+
+```yaml
+wechat:
+  proxy_url: "https://wechat-egress-url-provided-by-md2wechat.example"
+```
+
+也可以用环境变量临时覆盖：
+
+```bash
+export WECHAT_PROXY_URL="https://wechat-egress-url-provided-by-md2wechat.example"
+```
+
+`config show --format json` 中对应字段是 `wechat_proxy_url`；默认会隐藏代理密码。
+
+这个代理只影响微信上传、建草稿和图片消息发送，不影响 API 排版、图片生成 provider、主题/提示词发现或普通转换。启用代理模式后，执行 `upload_image`、`convert --draft`、`convert --upload` 或 `create_image_post` 前需要有效的 `MD2WECHAT_API_KEY`。
+
+微信后台 `IP 白名单` 应填写高级版 API 服务提供的固定出口 IP。不要自行拼接代理主机、端口或部署形态；以服务侧提供的完整 URL 为准。需要开通固定出口能力或企业私有化方案时，请联系作者进行 `API咨询`。`HTTPS_PROXY` 只能作为全局代理兜底背景，优先使用 `wechat.proxy_url` / `WECHAT_PROXY_URL`，避免把非微信流量一起代理。
+
+### 5. 重置 AppSecret 后忘了更新配置
 
 一旦你在微信后台点击了 `重置`：
 

@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/geekjourneyx/md2wechat-skill/internal/config"
@@ -22,11 +23,13 @@ import (
 	wechatconfig "github.com/silenceper/wechat/v2/officialaccount/config"
 	"github.com/silenceper/wechat/v2/officialaccount/draft"
 	"github.com/silenceper/wechat/v2/officialaccount/material"
+	"github.com/silenceper/wechat/v2/util"
 	"go.uber.org/zap"
 )
 
 var (
 	downloadLookupIP      = net.LookupIP
+	wechatSDKHTTPClientMu sync.Mutex
 	newDownloadHTTPClient = func() *http.Client {
 		return &http.Client{
 			Timeout: 60 * time.Second,
@@ -46,19 +49,51 @@ type Service struct {
 	log                *zap.Logger
 	wc                 *wechat.Wechat
 	httpClient         *http.Client
+	httpClientErr      error
 	sleep              func(time.Duration)
 	uploadMaterialFunc func(string) (*UploadMaterialResult, error)
 }
 
 // NewService 创建微信服务
 func NewService(cfg *config.Config, log *zap.Logger) *Service {
+	httpClient, httpClientErr := newWechatHTTPClient(cfg)
+
 	return &Service{
-		cfg:        cfg,
-		log:        log,
-		wc:         wechat.NewWechat(),
-		httpClient: &http.Client{Timeout: 60 * time.Second},
-		sleep:      time.Sleep,
+		cfg:           cfg,
+		log:           log,
+		wc:            wechat.NewWechat(),
+		httpClient:    httpClient,
+		httpClientErr: httpClientErr,
+		sleep:         time.Sleep,
 	}
+}
+
+func newWechatHTTPClient(cfg *config.Config) (*http.Client, error) {
+	timeout := 60 * time.Second
+	if cfg != nil && cfg.HTTPTimeout > 0 {
+		timeout = time.Duration(cfg.HTTPTimeout) * time.Second
+	}
+
+	client := &http.Client{Timeout: timeout}
+	if cfg == nil || strings.TrimSpace(cfg.WechatProxyURL) == "" {
+		return client, nil
+	}
+
+	proxyURL, err := neturl.Parse(strings.TrimSpace(cfg.WechatProxyURL))
+	if err != nil {
+		return client, fmt.Errorf("wechat proxy url: %w", err)
+	}
+	if proxyURL.Scheme != "http" && proxyURL.Scheme != "https" {
+		return client, fmt.Errorf("wechat proxy url: unsupported scheme %q", proxyURL.Scheme)
+	}
+	if proxyURL.Hostname() == "" {
+		return client, fmt.Errorf("wechat proxy url: missing host")
+	}
+
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.Proxy = http.ProxyURL(proxyURL)
+	client.Transport = transport
+	return client, nil
 }
 
 // getOfficialAccount 获取公众号实例
@@ -85,30 +120,34 @@ func (s *Service) UploadMaterial(filePath string) (*UploadMaterialResult, error)
 	if s.uploadMaterialFunc != nil {
 		return s.uploadMaterialFunc(filePath)
 	}
+	var result *UploadMaterialResult
+	err := s.withWechatSDKHTTPClient(func() error {
+		startTime := time.Now()
+		oa := s.getOfficialAccount()
+		mat := oa.GetMaterial()
 
-	startTime := time.Now()
-	oa := s.getOfficialAccount()
-	mat := oa.GetMaterial()
+		// 调用微信 API 上传（SDK 接受文件路径字符串）
+		mediaID, url, err := mat.AddMaterial(material.MediaTypeImage, filePath)
+		if err != nil {
+			s.log.Error("upload material failed",
+				zap.String("path", filePath),
+				zap.Error(err))
+			return fmt.Errorf("upload material: %w", err)
+		}
 
-	// 调用微信 API 上传（SDK 接受文件路径字符串）
-	mediaID, url, err := mat.AddMaterial(material.MediaTypeImage, filePath)
-	if err != nil {
-		s.log.Error("upload material failed",
+		duration := time.Since(startTime)
+		s.log.Info("material uploaded",
 			zap.String("path", filePath),
-			zap.Error(err))
-		return nil, fmt.Errorf("upload material: %w", err)
-	}
+			zap.String("media_id", maskMediaID(mediaID)),
+			zap.Duration("duration", duration))
 
-	duration := time.Since(startTime)
-	s.log.Info("material uploaded",
-		zap.String("path", filePath),
-		zap.String("media_id", maskMediaID(mediaID)),
-		zap.Duration("duration", duration))
-
-	return &UploadMaterialResult{
-		MediaID:   mediaID,
-		WechatURL: url,
-	}, nil
+		result = &UploadMaterialResult{
+			MediaID:   mediaID,
+			WechatURL: url,
+		}
+		return nil
+	})
+	return result, err
 }
 
 // CreateDraftResult 创建草稿结果
@@ -119,25 +158,30 @@ type CreateDraftResult struct {
 
 // CreateDraft 创建草稿
 func (s *Service) CreateDraft(articles []*draft.Article) (*CreateDraftResult, error) {
-	startTime := time.Now()
-	oa := s.getOfficialAccount()
-	dm := oa.GetDraft()
+	var result *CreateDraftResult
+	err := s.withWechatSDKHTTPClient(func() error {
+		startTime := time.Now()
+		oa := s.getOfficialAccount()
+		dm := oa.GetDraft()
 
-	// 直接调用 SDK 方法，SDK 接受 []*draft.Article
-	mediaID, err := dm.AddDraft(articles)
-	if err != nil {
-		s.log.Error("create draft failed", zap.Error(err))
-		return nil, fmt.Errorf("create draft: %w", ExplainDraftError(err))
-	}
+		// 直接调用 SDK 方法，SDK 接受 []*draft.Article
+		mediaID, err := dm.AddDraft(articles)
+		if err != nil {
+			s.log.Error("create draft failed", zap.Error(err))
+			return fmt.Errorf("create draft: %w", ExplainDraftError(err))
+		}
 
-	duration := time.Since(startTime)
-	s.log.Info("draft created",
-		zap.String("media_id", maskMediaID(mediaID)),
-		zap.Duration("duration", duration))
+		duration := time.Since(startTime)
+		s.log.Info("draft created",
+			zap.String("media_id", maskMediaID(mediaID)),
+			zap.Duration("duration", duration))
 
-	return &CreateDraftResult{
-		MediaID: mediaID,
-	}, nil
+		result = &CreateDraftResult{
+			MediaID: mediaID,
+		}
+		return nil
+	})
+	return result, err
 }
 
 // UploadMaterialFromBytes 从字节数据上传素材
@@ -175,16 +219,21 @@ type AccessTokenResult struct {
 
 // GetAccessToken 获取 access_token（调试用）
 func (s *Service) GetAccessToken() (*AccessTokenResult, error) {
-	oa := s.getOfficialAccount()
-	accessToken, err := oa.GetAccessToken()
-	if err != nil {
-		return nil, fmt.Errorf("get access token: %w", err)
-	}
+	var result *AccessTokenResult
+	err := s.withWechatSDKHTTPClient(func() error {
+		oa := s.getOfficialAccount()
+		accessToken, err := oa.GetAccessToken()
+		if err != nil {
+			return fmt.Errorf("get access token: %w", err)
+		}
 
-	return &AccessTokenResult{
-		AccessToken: accessToken,
-		ExpiresIn:   7200, // 微信默认 7200 秒
-	}, nil
+		result = &AccessTokenResult{
+			AccessToken: accessToken,
+			ExpiresIn:   7200, // 微信默认 7200 秒
+		}
+		return nil
+	})
+	return result, err
 }
 
 // maskMediaID 遮蔽 media_id 用于日志
@@ -407,65 +456,70 @@ type NewspicDraftResponse struct {
 
 // CreateNewspicDraft 创建小绿书草稿（直接调用微信 API，SDK 不支持 newspic）
 func (s *Service) CreateNewspicDraft(articles []NewspicArticle) (*CreateDraftResult, error) {
-	startTime := time.Now()
+	var result *CreateDraftResult
+	err := s.withWechatSDKHTTPClient(func() error {
+		startTime := time.Now()
 
-	// 获取 access_token
-	oa := s.getOfficialAccount()
-	accessToken, err := oa.GetAccessToken()
-	if err != nil {
-		return nil, fmt.Errorf("get access token: %w", err)
-	}
+		// 获取 access_token
+		oa := s.getOfficialAccount()
+		accessToken, err := oa.GetAccessToken()
+		if err != nil {
+			return fmt.Errorf("get access token: %w", err)
+		}
 
-	// 构造请求
-	req := NewspicDraftRequest{Articles: articles}
-	reqBody, err := json.Marshal(req)
-	if err != nil {
-		return nil, fmt.Errorf("marshal request: %w", err)
-	}
+		// 构造请求
+		req := NewspicDraftRequest{Articles: articles}
+		reqBody, err := json.Marshal(req)
+		if err != nil {
+			return fmt.Errorf("marshal request: %w", err)
+		}
 
-	// 调用微信 API
-	apiURL := fmt.Sprintf("https://api.weixin.qq.com/cgi-bin/draft/add?access_token=%s", accessToken)
-	httpReq, err := http.NewRequest(http.MethodPost, apiURL, bytes.NewReader(reqBody))
-	if err != nil {
-		return nil, fmt.Errorf("build request: %w", err)
-	}
-	httpReq.Header.Set("Content-Type", "application/json")
+		// 调用微信 API
+		apiURL := fmt.Sprintf("https://api.weixin.qq.com/cgi-bin/draft/add?access_token=%s", accessToken)
+		httpReq, err := http.NewRequest(http.MethodPost, apiURL, bytes.NewReader(reqBody))
+		if err != nil {
+			return fmt.Errorf("build request: %w", err)
+		}
+		httpReq.Header.Set("Content-Type", "application/json")
 
-	httpResp, err := s.getHTTPClient().Do(httpReq)
-	if err != nil {
-		return nil, fmt.Errorf("call wechat api: %w", err)
-	}
-	defer func() {
-		_ = httpResp.Body.Close()
-	}()
+		httpResp, err := s.getHTTPClient().Do(httpReq)
+		if err != nil {
+			return fmt.Errorf("call wechat api: %w", err)
+		}
+		defer func() {
+			_ = httpResp.Body.Close()
+		}()
 
-	// 解析响应
-	respBody, err := io.ReadAll(httpResp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("read response: %w", err)
-	}
+		// 解析响应
+		respBody, err := io.ReadAll(httpResp.Body)
+		if err != nil {
+			return fmt.Errorf("read response: %w", err)
+		}
 
-	var resp NewspicDraftResponse
-	if err := json.Unmarshal(respBody, &resp); err != nil {
-		return nil, fmt.Errorf("parse response: %w", err)
-	}
+		var resp NewspicDraftResponse
+		if err := json.Unmarshal(respBody, &resp); err != nil {
+			return fmt.Errorf("parse response: %w", err)
+		}
 
-	// 检查错误
-	if resp.ErrCode != 0 {
-		s.log.Error("create newspic draft failed",
-			zap.Int("errcode", resp.ErrCode),
-			zap.String("errmsg", resp.ErrMsg))
-		return nil, fmt.Errorf("%s", ExplainDraftAPIError(resp.ErrCode, resp.ErrMsg))
-	}
+		// 检查错误
+		if resp.ErrCode != 0 {
+			s.log.Error("create newspic draft failed",
+				zap.Int("errcode", resp.ErrCode),
+				zap.String("errmsg", resp.ErrMsg))
+			return fmt.Errorf("%s", ExplainDraftAPIError(resp.ErrCode, resp.ErrMsg))
+		}
 
-	duration := time.Since(startTime)
-	s.log.Info("newspic draft created",
-		zap.String("media_id", maskMediaID(resp.MediaID)),
-		zap.Duration("duration", duration))
+		duration := time.Since(startTime)
+		s.log.Info("newspic draft created",
+			zap.String("media_id", maskMediaID(resp.MediaID)),
+			zap.Duration("duration", duration))
 
-	return &CreateDraftResult{
-		MediaID: resp.MediaID,
-	}, nil
+		result = &CreateDraftResult{
+			MediaID: resp.MediaID,
+		}
+		return nil
+	})
+	return result, err
 }
 
 func (s *Service) getSleepFunc() func(time.Duration) {
@@ -480,4 +534,28 @@ func (s *Service) getHTTPClient() *http.Client {
 		return s.httpClient
 	}
 	return &http.Client{Timeout: 60 * time.Second}
+}
+
+func (s *Service) ensureHTTPClientReady() error {
+	if s != nil && s.httpClientErr != nil {
+		return s.httpClientErr
+	}
+	return nil
+}
+
+func (s *Service) withWechatSDKHTTPClient(fn func() error) error {
+	if err := s.ensureHTTPClientReady(); err != nil {
+		return err
+	}
+
+	wechatSDKHTTPClientMu.Lock()
+	previousClient := util.DefaultHTTPClient
+	// util.DefaultHTTPClient is SDK-global; install the service client only during WeChat side-effect operations.
+	util.DefaultHTTPClient = s.getHTTPClient()
+	defer func() {
+		util.DefaultHTTPClient = previousClient
+		wechatSDKHTTPClientMu.Unlock()
+	}()
+
+	return fn()
 }

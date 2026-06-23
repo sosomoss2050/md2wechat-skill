@@ -21,7 +21,7 @@
 - [新手快速开始](QUICKSTART.md)
 - [配置保姆级指南](CONFIG-WALKTHROUGH.md)
 - [配置指南](CONFIG.md)
-- [微信凭证与 IP 白名单指南](WECHAT-CREDENTIALS.md)
+- [微信凭证与 IP 白名单指南](WECHAT-CREDENTIALS.md)：包含高级版 API 固定出口配置
 - [能力发现与 Prompt Catalog](DISCOVERY.md)
 - [示例配置](examples/config.yaml.example)
 - [完整使用说明](USAGE.md)
@@ -41,7 +41,7 @@
 - [**高级排版模块教程（保姆级）**](LAYOUT.md) ← API 模式专属，43 个模块
 - [配置保姆级指南](CONFIG-WALKTHROUGH.md)
 - [配置说明](CONFIG.md)
-- [微信凭证与 IP 白名单指南](WECHAT-CREDENTIALS.md)
+- [微信凭证与 IP 白名单指南](WECHAT-CREDENTIALS.md)：包含高级版 API 固定出口配置
 - [能力发现与 Prompt Catalog](DISCOVERY.md)
 - [内置资产](CONFIG.md#内置资产)
 - [真实烟雾测试记录](SMOKE.md)

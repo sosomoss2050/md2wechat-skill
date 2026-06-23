@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.7.0] - 2026-06-23
+
+### Added
+- Added WeChat fixed-egress proxy configuration through `wechat.proxy_url` / `WECHAT_PROXY_URL` for upload, draft creation, and image-post side effects.
+- Added dedicated WeChat HTTP client wiring so configured proxy routing stays scoped to WeChat API calls instead of affecting API conversion, image generation providers, discovery commands, or local preview.
+- Added API-key validation for WeChat proxy side effects, aligning fixed-egress proxy usage with other advanced API features.
+- Added regression coverage for proxy config loading, environment override, validation, secret masking, API-key gating, and WeChat SDK client isolation.
+
+### Changed
+- Documented the fixed-egress proxy as an advanced API service capability that provides a stable WeChat whitelist IP and a complete proxy URL, without exposing deployment ports or private infrastructure details in public docs.
+
 ## [2.6.0] - 2026-06-16
 
 ### Added

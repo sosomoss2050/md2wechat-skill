@@ -300,7 +300,7 @@ macOS Homebrew 等其他安装路径见 [安装指南](docs/INSTALL.md)。
 OpenClaw 用户可以通过 ClawHub 直接安装：[clawhub.ai/geekjourneyx/md2wechat](https://clawhub.ai/geekjourneyx/md2wechat)
 
 ```bash
-curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.6.0/install-openclaw.sh | bash
+curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.7.0/install-openclaw.sh | bash
 ```
 
 ---

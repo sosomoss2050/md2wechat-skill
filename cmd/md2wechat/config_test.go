@@ -108,6 +108,96 @@ func TestConfigShowYAMLOutput(t *testing.T) {
 	}
 }
 
+func TestPrintYAMLConfigMasksWechatProxyURLPassword(t *testing.T) {
+	oldFormat, oldShowSecret := configFormat, configShowSecret
+	oldJSON := jsonOutput
+	t.Cleanup(func() {
+		configFormat, configShowSecret = oldFormat, oldShowSecret
+		jsonOutput = oldJSON
+	})
+
+	t.Setenv("WECHAT_APPID", "wx-appid")
+	t.Setenv("WECHAT_SECRET", "wx-secret")
+	t.Setenv("WECHAT_PROXY_URL", "http://account:credential-value@proxy.example.com:18443")
+	configFormat = "yaml"
+	configShowSecret = false
+	jsonOutput = false
+
+	stdout := captureStdout(t, func() {
+		configCmd.SetArgs([]string{"show"})
+		if err := configCmd.Execute(); err != nil {
+			t.Fatalf("configCmd.Execute() error = %v", err)
+		}
+	})
+
+	output := string(stdout)
+	if !strings.Contains(output, "proxy_url: http://account:***@proxy.example.com:18443") {
+		t.Fatalf("expected masked proxy_url in yaml output, got:\n%s", output)
+	}
+	if strings.Contains(output, "credential-value") {
+		t.Fatalf("proxy password leaked in yaml output:\n%s", output)
+	}
+}
+
+func TestPrintYAMLConfigMasksWechatProxyURLUsernameOnlyToken(t *testing.T) {
+	oldFormat, oldShowSecret := configFormat, configShowSecret
+	oldJSON := jsonOutput
+	t.Cleanup(func() {
+		configFormat, configShowSecret = oldFormat, oldShowSecret
+		jsonOutput = oldJSON
+	})
+
+	t.Setenv("WECHAT_APPID", "wx-appid")
+	t.Setenv("WECHAT_SECRET", "wx-secret")
+	t.Setenv("WECHAT_PROXY_URL", "http://proxy-token@proxy.example.com:18443")
+	configFormat = "yaml"
+	configShowSecret = false
+	jsonOutput = false
+
+	stdout := captureStdout(t, func() {
+		configCmd.SetArgs([]string{"show"})
+		if err := configCmd.Execute(); err != nil {
+			t.Fatalf("configCmd.Execute() error = %v", err)
+		}
+	})
+
+	output := string(stdout)
+	if !strings.Contains(output, "proxy_url: http://***@proxy.example.com:18443") {
+		t.Fatalf("expected masked proxy_url in yaml output, got:\n%s", output)
+	}
+	if strings.Contains(output, "proxy-token") {
+		t.Fatalf("proxy token leaked in yaml output:\n%s", output)
+	}
+}
+
+func TestPrintYAMLConfigShowSecretKeepsWechatProxyURLUsernameOnlyToken(t *testing.T) {
+	oldFormat, oldShowSecret := configFormat, configShowSecret
+	oldJSON := jsonOutput
+	t.Cleanup(func() {
+		configFormat, configShowSecret = oldFormat, oldShowSecret
+		jsonOutput = oldJSON
+	})
+
+	t.Setenv("WECHAT_APPID", "wx-appid")
+	t.Setenv("WECHAT_SECRET", "wx-secret")
+	t.Setenv("WECHAT_PROXY_URL", "http://proxy-token@proxy.example.com:18443")
+	configFormat = "yaml"
+	configShowSecret = true
+	jsonOutput = false
+
+	stdout := captureStdout(t, func() {
+		configCmd.SetArgs([]string{"show", "--show-secret"})
+		if err := configCmd.Execute(); err != nil {
+			t.Fatalf("configCmd.Execute() error = %v", err)
+		}
+	})
+
+	output := string(stdout)
+	if !strings.Contains(output, "proxy_url: http://proxy-token@proxy.example.com:18443") {
+		t.Fatalf("expected unmasked proxy_url in yaml output, got:\n%s", output)
+	}
+}
+
 func TestConfigValidateJSONEnvelope(t *testing.T) {
 	oldJSON := jsonOutput
 	t.Cleanup(func() {

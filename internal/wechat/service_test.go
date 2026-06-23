@@ -25,6 +25,241 @@ func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 	return f(req)
 }
 
+func TestNewServiceConfiguresWechatHTTPClientProxyAndTimeout(t *testing.T) {
+	oldClient := util.DefaultHTTPClient
+	t.Cleanup(func() {
+		util.DefaultHTTPClient = oldClient
+	})
+
+	svc := NewService(&config.Config{
+		WechatProxyURL: "http://user:pass@proxy.example.com:8080",
+		HTTPTimeout:    45,
+	}, zap.NewNop())
+
+	if svc.httpClient == nil {
+		t.Fatal("service http client is nil")
+	}
+	if svc.httpClient.Timeout != 45*time.Second {
+		t.Fatalf("timeout = %v, want 45s", svc.httpClient.Timeout)
+	}
+	if util.DefaultHTTPClient != oldClient {
+		t.Fatal("NewService should not permanently replace SDK default HTTP client")
+	}
+	transport, ok := svc.httpClient.Transport.(*http.Transport)
+	if !ok {
+		t.Fatalf("transport type = %T, want *http.Transport", svc.httpClient.Transport)
+	}
+	req := &http.Request{URL: mustParseURL(t, "https://api.weixin.qq.com/cgi-bin/token")}
+	proxyURL, err := transport.Proxy(req)
+	if err != nil {
+		t.Fatalf("transport proxy error: %v", err)
+	}
+	if proxyURL.String() != "http://user:pass@proxy.example.com:8080" {
+		t.Fatalf("proxy url = %q", proxyURL.String())
+	}
+}
+
+func TestNewServiceUsesDefaultTimeoutAndNoCustomTransportWithoutProxy(t *testing.T) {
+	oldClient := util.DefaultHTTPClient
+	t.Cleanup(func() {
+		util.DefaultHTTPClient = oldClient
+	})
+
+	svc := NewService(&config.Config{}, zap.NewNop())
+
+	if svc.httpClient == nil {
+		t.Fatal("service http client is nil")
+	}
+	if svc.httpClient.Timeout != 60*time.Second {
+		t.Fatalf("timeout = %v, want 60s", svc.httpClient.Timeout)
+	}
+	if svc.httpClient.Transport != nil {
+		t.Fatalf("transport = %T, want nil", svc.httpClient.Transport)
+	}
+	if util.DefaultHTTPClient != oldClient {
+		t.Fatal("NewService should not permanently replace SDK default HTTP client")
+	}
+}
+
+func TestSDKOperationUsesServiceClientAndRestoresGlobalClient(t *testing.T) {
+	oldClient := util.DefaultHTTPClient
+	sentinelClient := &http.Client{
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			return nil, fmt.Errorf("sentinel client should not be used")
+		}),
+	}
+	util.DefaultHTTPClient = sentinelClient
+	t.Cleanup(func() {
+		util.DefaultHTTPClient = oldClient
+	})
+
+	calls := 0
+	var serviceClient *http.Client
+	serviceClient = &http.Client{
+		Timeout: 37 * time.Second,
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			calls++
+			if util.DefaultHTTPClient != serviceClient {
+				t.Fatal("SDK default HTTP client was not set to service client during operation")
+			}
+			if !strings.Contains(req.URL.String(), "/cgi-bin/token") {
+				t.Fatalf("unexpected request url: %s", req.URL.String())
+			}
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader(`{"access_token":"token-123","expires_in":7200}`)),
+				Header:     make(http.Header),
+				Request:    req,
+			}, nil
+		}),
+	}
+
+	svc := &Service{
+		cfg: &config.Config{
+			WechatAppID:  "appid",
+			WechatSecret: "secret",
+		},
+		log:        zap.NewNop(),
+		httpClient: serviceClient,
+	}
+
+	result, err := svc.GetAccessToken()
+	if err != nil {
+		t.Fatalf("GetAccessToken() error = %v", err)
+	}
+	if result.AccessToken != "token-123" {
+		t.Fatalf("access token = %q, want token-123", result.AccessToken)
+	}
+	if calls != 1 {
+		t.Fatalf("calls = %d, want 1", calls)
+	}
+	if util.DefaultHTTPClient != sentinelClient {
+		t.Fatal("SDK default HTTP client was not restored after operation")
+	}
+}
+
+func TestOlderServiceOperationIsNotContaminatedByLaterNewService(t *testing.T) {
+	oldClient := util.DefaultHTTPClient
+	t.Cleanup(func() {
+		util.DefaultHTTPClient = oldClient
+	})
+
+	firstClientCalls := 0
+	secondClientCalls := 0
+	firstClient := &http.Client{
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			firstClientCalls++
+			switch {
+			case strings.Contains(req.URL.String(), "/cgi-bin/token"):
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(strings.NewReader(`{"access_token":"first-token","expires_in":7200}`)),
+					Header:     make(http.Header),
+					Request:    req,
+				}, nil
+			case strings.Contains(req.URL.String(), "/cgi-bin/draft/add"):
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(strings.NewReader(`{"errcode":0,"errmsg":"ok","media_id":"first-media"}`)),
+					Header:     make(http.Header),
+					Request:    req,
+				}, nil
+			default:
+				t.Fatalf("unexpected first client request url: %s", req.URL.String())
+				return nil, nil
+			}
+		}),
+	}
+	firstSvc := NewService(&config.Config{
+		WechatAppID:  "appid",
+		WechatSecret: "secret",
+	}, zap.NewNop())
+	firstSvc.httpClient = firstClient
+
+	secondSvc := NewService(&config.Config{
+		WechatProxyURL: "http://second-proxy.example.com:8080",
+		HTTPTimeout:    30,
+		WechatAppID:    "appid",
+		WechatSecret:   "secret",
+	}, zap.NewNop())
+	secondSvc.httpClient = &http.Client{
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			secondClientCalls++
+			return nil, fmt.Errorf("second service client should not be used by first service")
+		}),
+	}
+	util.DefaultHTTPClient = secondSvc.httpClient
+
+	result, err := firstSvc.CreateNewspicDraft([]NewspicArticle{{
+		Title:       "Title",
+		Content:     "Body",
+		ArticleType: "newspic",
+		ImageInfo: NewspicImageInfo{
+			ImageList: []NewspicImageItem{{ImageMediaID: "media-1"}},
+		},
+	}})
+	if err != nil {
+		t.Fatalf("CreateNewspicDraft() error = %v", err)
+	}
+	if result.MediaID != "first-media" {
+		t.Fatalf("media id = %q, want first-media", result.MediaID)
+	}
+	if firstClientCalls != 2 {
+		t.Fatalf("first client calls = %d, want 2", firstClientCalls)
+	}
+	if secondClientCalls != 0 {
+		t.Fatalf("second client calls = %d, want 0", secondClientCalls)
+	}
+	if util.DefaultHTTPClient != secondSvc.httpClient {
+		t.Fatal("SDK default HTTP client was not restored to later service client")
+	}
+}
+
+func TestCreateNewspicDraftRejectsInvalidProxyBeforeNetwork(t *testing.T) {
+	oldClient := util.DefaultHTTPClient
+	networkCalls := 0
+	util.DefaultHTTPClient = &http.Client{
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			networkCalls++
+			return nil, fmt.Errorf("unexpected network call to %s", req.URL.String())
+		}),
+	}
+	t.Cleanup(func() {
+		util.DefaultHTTPClient = oldClient
+	})
+
+	svc := NewService(&config.Config{
+		WechatAppID:    "appid",
+		WechatSecret:   "secret",
+		WechatProxyURL: "://bad-proxy",
+		HTTPTimeout:    30,
+	}, zap.NewNop())
+
+	_, err := svc.CreateNewspicDraft([]NewspicArticle{{
+		Title:       "Title",
+		Content:     "Body",
+		ArticleType: "newspic",
+		ImageInfo: NewspicImageInfo{
+			ImageList: []NewspicImageItem{{ImageMediaID: "media-1"}},
+		},
+	}})
+	if err == nil || !strings.Contains(err.Error(), "wechat proxy url") {
+		t.Fatalf("CreateNewspicDraft() error = %v, want proxy validation error", err)
+	}
+	if networkCalls != 0 {
+		t.Fatalf("network calls = %d, want 0", networkCalls)
+	}
+}
+
+func mustParseURL(t *testing.T, rawURL string) *neturl.URL {
+	t.Helper()
+	parsed, err := neturl.Parse(rawURL)
+	if err != nil {
+		t.Fatalf("Parse(%q): %v", rawURL, err)
+	}
+	return parsed
+}
+
 func TestDownloadFileReturnsLocalPathForExistingFiles(t *testing.T) {
 	tmpDir := t.TempDir()
 	localPath := filepath.Join(tmpDir, "cover.png")
