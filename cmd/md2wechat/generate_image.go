@@ -20,9 +20,12 @@ var (
 	generateImageCmdKeywords string
 	generateImageCmdStyle    string
 	generateImageCmdAspect   string
+	generateImageCmdPlan     bool
 )
 
 type generateImageInput struct {
+	Command           string
+	Plan              bool
 	RawPrompt         string
 	Preset            string
 	Article           string
@@ -43,8 +46,45 @@ type generateImageContext struct {
 	KeyPoints string
 }
 
+type generateImagePromptResolution struct {
+	Prompt string
+	Spec   *promptcatalog.PromptSpec
+	Ctx    *generateImageContext
+	Style  string
+	Aspect string
+}
+
+type generateImagePlan struct {
+	Mode                    string   `json:"mode"`
+	Command                 string   `json:"command"`
+	ExecutionOwner          string   `json:"execution_owner"`
+	SideEffects             bool     `json:"side_effects"`
+	RequiresProvider        bool     `json:"requires_provider"`
+	RequiresImageAPIKey     bool     `json:"requires_image_api_key"`
+	Prompt                  string   `json:"prompt"`
+	RawPrompt               string   `json:"raw_prompt"`
+	Preset                  string   `json:"preset"`
+	Archetype               string   `json:"archetype"`
+	PrimaryUseCase          string   `json:"primary_use_case"`
+	CompatibleUseCases      []string `json:"compatible_use_cases"`
+	RecommendedAspectRatios []string `json:"recommended_aspect_ratios"`
+	DefaultAspectRatio      string   `json:"default_aspect_ratio"`
+	Article                 string   `json:"article"`
+	Title                   string   `json:"title"`
+	Summary                 string   `json:"summary"`
+	Keywords                string   `json:"keywords"`
+	Style                   string   `json:"style"`
+	Aspect                  string   `json:"aspect"`
+	Size                    string   `json:"size"`
+	ModelHint               string   `json:"model_hint"`
+	SuggestedFilename       string   `json:"suggested_filename"`
+	AltText                 string   `json:"alt_text"`
+}
+
 func runGenerateImage(args []string) error {
 	input := generateImageInput{
+		Command:  "generate_image",
+		Plan:     generateImageCmdPlan,
 		Preset:   generateImageCmdPreset,
 		Article:  generateImageCmdArticle,
 		Title:    generateImageCmdTitle,
@@ -62,6 +102,9 @@ func runGenerateImage(args []string) error {
 }
 
 func runGeneratePresetImage(archetype, defaultPreset string, input generateImageInput) error {
+	if strings.TrimSpace(input.Command) == "" {
+		input.Command = "generate_" + archetype
+	}
 	input.RequiredArchetype = archetype
 	if strings.TrimSpace(input.Preset) == "" {
 		input.Preset = defaultPreset
@@ -70,6 +113,10 @@ func runGeneratePresetImage(archetype, defaultPreset string, input generateImage
 }
 
 func runGenerateImageWithInput(input generateImageInput) error {
+	if input.Plan {
+		return runGenerateImagePlan(input)
+	}
+
 	if err := prepareWeChatSideEffect(); err != nil {
 		return err
 	}
@@ -113,46 +160,156 @@ func resolveImageProcessor(model string) imageProcessor {
 }
 
 func resolveGenerateImagePrompt(input generateImageInput) (string, error) {
+	resolved, err := resolveGenerateImagePromptDetails(input)
+	if err != nil {
+		return "", err
+	}
+	return resolved.Prompt, nil
+}
+
+func resolveGenerateImagePromptDetails(input generateImageInput) (*generateImagePromptResolution, error) {
 	if strings.TrimSpace(input.Preset) == "" {
 		if strings.TrimSpace(input.RawPrompt) == "" {
-			return "", fmt.Errorf("generate_image requires a prompt or --preset")
+			return nil, fmt.Errorf("generate_image requires a prompt or --preset")
 		}
-		return input.RawPrompt, nil
+		return &generateImagePromptResolution{Prompt: input.RawPrompt}, nil
 	}
 
 	if strings.TrimSpace(input.RawPrompt) != "" {
-		return "", fmt.Errorf("do not pass a raw prompt when --preset is used")
+		return nil, fmt.Errorf("do not pass a raw prompt when --preset is used")
 	}
 
 	cat, err := promptcatalog.DefaultCatalog()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	spec, err := cat.Get("image", input.Preset)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	if input.RequiredArchetype != "" && !promptcatalog.SupportsUseCase(spec, input.RequiredArchetype) {
-		return "", fmt.Errorf("preset %s is %s/%s, expected %s", spec.Name, spec.Archetype, spec.PrimaryUseCase, input.RequiredArchetype)
+		return nil, fmt.Errorf("preset %s is %s/%s, expected %s", spec.Name, spec.Archetype, spec.PrimaryUseCase, input.RequiredArchetype)
 	}
 
 	ctx, err := buildGenerateImageContext(input)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
+	style := defaultString(input.Style, defaultVisualStyle(spec.Archetype))
+	aspect := defaultString(input.Aspect, spec.DefaultAspectRatio, defaultAspectRatio(spec.Archetype))
 	rendered, _, err := cat.Render("image", input.Preset, map[string]string{
 		"ARTICLE_TITLE":   ctx.Title,
 		"ARTICLE_SUMMARY": ctx.Summary,
 		"KEYWORDS":        ctx.Keywords,
 		"KEY_POINTS":      ctx.KeyPoints,
-		"VISUAL_STYLE":    defaultString(input.Style, defaultVisualStyle(spec.Archetype)),
-		"ASPECT_RATIO":    defaultString(input.Aspect, spec.DefaultAspectRatio, defaultAspectRatio(spec.Archetype)),
+		"VISUAL_STYLE":    style,
+		"ASPECT_RATIO":    aspect,
 	})
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return rendered, nil
+	return &generateImagePromptResolution{
+		Prompt: rendered,
+		Spec:   spec,
+		Ctx:    ctx,
+		Style:  style,
+		Aspect: aspect,
+	}, nil
+}
+
+func runGenerateImagePlan(input generateImageInput) error {
+	if !jsonOutput {
+		return newCLIError(codeConfigInvalid, "--plan requires --json")
+	}
+
+	resolved, err := resolveGenerateImagePromptDetails(input)
+	if err != nil {
+		return newCLIError(codeConfigInvalid, err.Error())
+	}
+
+	responseActionRequiredWith(codeImagePlanReady, "Image plan ready; generate the image with a host Agent or configured provider.", buildGenerateImagePlan(input, resolved))
+	return nil
+}
+
+func buildGenerateImagePlan(input generateImageInput, resolved *generateImagePromptResolution) generateImagePlan {
+	command := strings.TrimSpace(input.Command)
+	if command == "" {
+		command = "generate_image"
+	}
+
+	plan := generateImagePlan{
+		Mode:                    "plan",
+		Command:                 command,
+		ExecutionOwner:          "host_agent",
+		SideEffects:             false,
+		RequiresProvider:        false,
+		RequiresImageAPIKey:     false,
+		Prompt:                  resolved.Prompt,
+		RawPrompt:               strings.TrimSpace(input.RawPrompt),
+		Article:                 strings.TrimSpace(input.Article),
+		Style:                   strings.TrimSpace(resolved.Style),
+		Aspect:                  strings.TrimSpace(resolved.Aspect),
+		Size:                    strings.TrimSpace(input.Size),
+		ModelHint:               strings.TrimSpace(input.Model),
+		CompatibleUseCases:      []string{},
+		RecommendedAspectRatios: []string{},
+	}
+	if resolved.Ctx != nil {
+		plan.Title = strings.TrimSpace(resolved.Ctx.Title)
+		plan.Summary = strings.TrimSpace(resolved.Ctx.Summary)
+		plan.Keywords = strings.TrimSpace(resolved.Ctx.Keywords)
+	}
+	if resolved.Spec != nil {
+		plan.Preset = resolved.Spec.Name
+		plan.Archetype = resolved.Spec.Archetype
+		plan.PrimaryUseCase = resolved.Spec.PrimaryUseCase
+		plan.CompatibleUseCases = nonNilStringSlice(resolved.Spec.CompatibleUseCases)
+		plan.RecommendedAspectRatios = nonNilStringSlice(resolved.Spec.RecommendedAspectRatios)
+		plan.DefaultAspectRatio = defaultString(resolved.Spec.DefaultAspectRatio, defaultAspectRatio(resolved.Spec.Archetype))
+	}
+	plan.SuggestedFilename = suggestedImagePlanFilename(command, plan.Title, plan.RawPrompt)
+	plan.AltText = suggestedImagePlanAltText(plan.Title, plan.Summary, plan.RawPrompt)
+	return plan
+}
+
+func suggestedImagePlanFilename(command, title, rawPrompt string) string {
+	base := firstNonEmptyString(title, rawPrompt, command, "image-plan")
+	slug := slugifyASCII(base)
+	if slug == "" {
+		slug = "image-plan"
+	}
+	return slug + ".png"
+}
+
+func suggestedImagePlanAltText(title, summary, rawPrompt string) string {
+	return firstNonEmptyString(title, summary, rawPrompt, "Generated image")
+}
+
+func nonNilStringSlice(values []string) []string {
+	if len(values) == 0 {
+		return []string{}
+	}
+	return append([]string(nil), values...)
+}
+
+func slugifyASCII(value string) string {
+	value = strings.ToLower(strings.TrimSpace(value))
+	var builder strings.Builder
+	lastDash := false
+	for _, r := range value {
+		isAlphaNum := (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9')
+		if isAlphaNum {
+			builder.WriteRune(r)
+			lastDash = false
+			continue
+		}
+		if !lastDash && builder.Len() > 0 {
+			builder.WriteByte('-')
+			lastDash = true
+		}
+	}
+	return strings.Trim(builder.String(), "-")
 }
 
 func buildGenerateImageContext(input generateImageInput) (*generateImageContext, error) {

@@ -25,6 +25,9 @@ func TestBuildProviderViewsIncludesBuiltinProviders(t *testing.T) {
 	}
 	found := false
 	for _, provider := range providers {
+		if provider.Name == "agent" || contains(provider.Aliases, "agent") {
+			t.Fatalf("agent must not be exposed as an image provider: %#v", provider)
+		}
 		if provider.Name == "openai" {
 			found = true
 			if !provider.SupportsSize {
@@ -43,6 +46,85 @@ func TestBuildProviderViewsIncludesBuiltinProviders(t *testing.T) {
 	}
 	if !found {
 		t.Fatal("expected openai provider")
+	}
+}
+
+func TestCapabilitiesIncludeImagePlanMode(t *testing.T) {
+	oldCfg := cfg
+	t.Cleanup(func() { cfg = oldCfg })
+
+	cfg = &config.Config{DefaultTheme: "default"}
+	data, err := buildCapabilitiesData()
+	if err != nil {
+		t.Fatalf("buildCapabilitiesData() error = %v", err)
+	}
+
+	imageGeneration, ok := data["image_generation"].(map[string]any)
+	if !ok {
+		t.Fatalf("image_generation type = %T", data["image_generation"])
+	}
+
+	wantCommands := []string{"generate_image", "generate_cover", "generate_infographic"}
+
+	directProvider, ok := imageGeneration["direct_provider"].(map[string]any)
+	if !ok {
+		t.Fatalf("direct_provider type = %T", imageGeneration["direct_provider"])
+	}
+	if directProvider["available"] != true {
+		t.Fatalf("direct_provider available = %#v", directProvider["available"])
+	}
+	if directProvider["requires_provider"] != true {
+		t.Fatalf("direct_provider requires_provider = %#v", directProvider["requires_provider"])
+	}
+	if directProvider["requires_image_api_key"] != true {
+		t.Fatalf("direct_provider requires_image_api_key = %#v", directProvider["requires_image_api_key"])
+	}
+	if directProvider["side_effects"] != true {
+		t.Fatalf("direct_provider side_effects = %#v", directProvider["side_effects"])
+	}
+	directCommands, ok := directProvider["commands"].([]string)
+	if !ok {
+		t.Fatalf("direct_provider commands type = %T", directProvider["commands"])
+	}
+	for _, command := range wantCommands {
+		if !contains(directCommands, command) {
+			t.Fatalf("direct_provider commands missing %s: %#v", command, directCommands)
+		}
+	}
+
+	planMode, ok := imageGeneration["plan_mode"].(map[string]any)
+	if !ok {
+		t.Fatalf("plan_mode type = %T", imageGeneration["plan_mode"])
+	}
+	if planMode["available"] != true {
+		t.Fatalf("plan_mode available = %#v", planMode["available"])
+	}
+	if planMode["requires_provider"] != false {
+		t.Fatalf("plan_mode requires_provider = %#v", planMode["requires_provider"])
+	}
+	if planMode["requires_image_api_key"] != false {
+		t.Fatalf("plan_mode requires_image_api_key = %#v", planMode["requires_image_api_key"])
+	}
+	if planMode["side_effects"] != false {
+		t.Fatalf("plan_mode side_effects = %#v", planMode["side_effects"])
+	}
+	if planMode["execution_owner"] != "host_agent" {
+		t.Fatalf("plan_mode execution_owner = %#v", planMode["execution_owner"])
+	}
+	if planMode["requires_json"] != true {
+		t.Fatalf("plan_mode requires_json = %#v", planMode["requires_json"])
+	}
+	if planMode["response_code"] != codeImagePlanReady {
+		t.Fatalf("plan_mode response_code = %#v, want %s", planMode["response_code"], codeImagePlanReady)
+	}
+	planCommands, ok := planMode["commands"].([]string)
+	if !ok {
+		t.Fatalf("plan_mode commands type = %T", planMode["commands"])
+	}
+	for _, command := range wantCommands {
+		if !contains(planCommands, command) {
+			t.Fatalf("plan_mode commands missing %s: %#v", command, planCommands)
+		}
 	}
 }
 

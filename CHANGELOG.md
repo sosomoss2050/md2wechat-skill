@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Added no-side-effect image plan mode for `generate_image`, `generate_cover`, and `generate_infographic` via `--plan --json`, allowing host Agents to use their own Image Gen tools without md2wechat image-provider credentials.
+- Extended `capabilities --json` with image plan-mode discovery metadata so Agents can distinguish direct provider generation from host-Agent plan execution.
+
+### Changed
+- Documented the Agent Image Gen workflow across user docs and tightened Agent skill guidance while keeping direct image-provider generation unchanged.
+
 ## [2.7.0] - 2026-06-23
 
 ### Added

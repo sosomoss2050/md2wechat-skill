@@ -244,6 +244,16 @@ md2wechat generate_image --preset cover-hero --article article.md
 md2wechat generate_image --preset cover-hero --article article.md --model gemini-3-pro-image-preview
 ```
 
+### 只生成 Agent 图片计划
+
+当当前 Agent 运行时暴露 Image Gen 工具时，可以只输出计划 JSON，由 Agent 读取 `data.prompt` 后调用宿主工具：
+
+```bash
+md2wechat generate_cover --article article.md --plan --json
+```
+
+该路径返回 `IMAGE_PLAN_READY`，`requires_provider:false`，`requires_image_api_key:false`，不会要求或使用 `IMAGE_API_KEY` 进行图片 provider 调用，也不会上传图片。完整流程见 [Agent 图片计划模式](AGENT_IMAGE_GEN.md)。
+
 在决定 `--model` 之前，建议先执行：
 
 ```bash

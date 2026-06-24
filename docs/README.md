@@ -23,6 +23,7 @@
 - [配置指南](CONFIG.md)
 - [微信凭证与 IP 白名单指南](WECHAT-CREDENTIALS.md)：包含高级版 API 固定出口配置
 - [能力发现与 Prompt Catalog](DISCOVERY.md)
+- [Agent 图片计划模式](AGENT_IMAGE_GEN.md)：当前 Agent 运行时暴露 Image Gen 时的 `--plan --json` 工作流
 - [示例配置](examples/config.yaml.example)
 - [完整使用说明](USAGE.md)
 - [真实烟雾测试记录](SMOKE.md)
@@ -46,6 +47,7 @@
 - [内置资产](CONFIG.md#内置资产)
 - [真实烟雾测试记录](SMOKE.md)
 - [图片服务配置](IMAGE_PROVISIONERS.md)
+- [Agent 图片计划模式](AGENT_IMAGE_GEN.md)
 - [OpenClaw 指南](OPENCLAW.md)
 - [Obsidian / Claudian 指南](OBSIDIAN.md)
 - [写作功能问答](WRITING_FAQ.md)

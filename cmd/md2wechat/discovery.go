@@ -335,12 +335,36 @@ func buildCapabilitiesData() (map[string]any, error) {
 			"default_theme":    currentCfg.DefaultTheme,
 		},
 		"providers":         providers,
+		"image_generation":  buildImageGenerationCapabilityData(),
 		"themes":            themes,
 		"layout":            buildLayoutCapabilityData(),
 		"prompts":           allPrompts,
 		"prompt_kinds":      sortedPromptKinds(allPrompts),
 		"prompt_archetypes": sortedPromptArchetypes(allPrompts),
 	}, nil
+}
+
+func buildImageGenerationCapabilityData() map[string]any {
+	commands := []string{"generate_image", "generate_cover", "generate_infographic"}
+	return map[string]any{
+		"direct_provider": map[string]any{
+			"available":              true,
+			"requires_provider":      true,
+			"requires_image_api_key": true,
+			"side_effects":           true,
+			"commands":               commands,
+		},
+		"plan_mode": map[string]any{
+			"available":              true,
+			"requires_provider":      false,
+			"requires_image_api_key": false,
+			"side_effects":           false,
+			"execution_owner":        "host_agent",
+			"requires_json":          true,
+			"response_code":          codeImagePlanReady,
+			"commands":               commands,
+		},
+	}
 }
 
 func buildLayoutCapabilityData() map[string]any {

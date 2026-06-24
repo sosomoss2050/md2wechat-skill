@@ -242,6 +242,25 @@ md2wechat generate_image --preset cover-hero --article article.md --model gemini
 
 如果某个图片 preset 的 `compatible_use_cases` 包含 `cover`，那么它也可以被 `generate_cover` 使用；默认画幅优先跟随 prompt 自身声明的 `default_aspect_ratio`。
 
+### Agent 图片计划
+
+当当前 Agent 运行时暴露 Image Gen 工具时，可以让图片命令只返回计划，交给宿主 Agent 执行：
+
+```bash
+md2wechat generate_cover --article article.md --plan --json
+md2wechat generate_infographic --article article.md --preset infographic-comparison --plan --json
+md2wechat generate_image "一张适合公众号文章的产品发布插画" --plan --json
+```
+
+JSON envelope 会返回 `IMAGE_PLAN_READY` 和 `status: action_required`。关键执行边界在 `data` 中：
+
+- `side_effects:false`
+- `requires_provider:false`
+- `requires_image_api_key:false`
+- `execution_owner:"host_agent"`
+
+这条路径不要求或使用 `IMAGE_API_KEY` 进行图片 provider 调用，不请求 provider，也不上传微信。完整教程见 [Agent 图片计划模式](AGENT_IMAGE_GEN.md)。
+
 当前内置 prompt kind：
 
 - `humanizer`

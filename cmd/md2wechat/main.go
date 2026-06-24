@@ -65,6 +65,7 @@ const (
 	codePreviewFailed          = "PREVIEW_FAILED"
 	codeImageUploadFailed      = "IMAGE_UPLOAD_FAILED"
 	codeImageGenerateFailed    = "IMAGE_GENERATE_FAILED"
+	codeImagePlanReady         = "IMAGE_PLAN_READY"
 	codeDraftCreateFailed      = "DRAFT_CREATE_FAILED"
 	codeImagePostInvalid       = "IMAGE_POST_INVALID"
 	codeImagePostPreviewFailed = "IMAGE_POST_PREVIEW_FAILED"
@@ -354,6 +355,7 @@ Examples:
 	generateImageCmd.Flags().StringVar(&generateImageCmdStyle, "style", "", "Visual style used to render a preset prompt")
 	generateImageCmd.Flags().StringVar(&generateImageCmdAspect, "aspect", "", "Aspect ratio hint used to render a preset prompt, e.g. 16:9 or 3:4")
 	generateImageCmd.Flags().StringVar(&generateImageCmdModel, "model", "", "Image model to use for this command (overrides IMAGE_MODEL and api.image_model)")
+	generateImageCmd.Flags().BoolVar(&generateImageCmdPlan, "plan", false, "Render an image generation plan without provider or upload side effects")
 	addWechatAccountFlag(generateImageCmd)
 	addWechatAccountFlag(generateCoverCmd)
 	addWechatAccountFlag(generateInfographicCmd)

@@ -577,6 +577,24 @@ md2wechat config show --format json
 md2wechat generate_image "test prompt"
 ```
 
+### Q14.1：Agent 有 Image Gen 时还需要 `IMAGE_API_KEY` 吗？
+
+看你走哪条路径。
+
+直接 CLI 生成会请求图片 provider，所以需要配置 provider 和 `IMAGE_API_KEY` / `api.image_key`：
+
+```bash
+md2wechat generate_cover --article article.md
+```
+
+Agent 图片计划模式只返回 `IMAGE_PLAN_READY`，不会请求 provider、不会要求或使用 `IMAGE_API_KEY` 进行图片 provider 调用、不会上传微信。它适合当前 Agent 运行时暴露 Image Gen 工具的场景：
+
+```bash
+md2wechat generate_cover --article article.md --plan --json
+```
+
+返回里的 `requires_provider:false` 和 `requires_image_api_key:false` 表示 md2wechat 这一侧不需要图片服务配置。真正的图片文件只有在宿主 Agent 调用 Image Gen 并保存后才会出现。完整流程见 [Agent 图片计划模式](AGENT_IMAGE_GEN.md)。
+
 ---
 
 ## 微信与草稿

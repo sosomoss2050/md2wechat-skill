@@ -2,6 +2,8 @@
 
 md2wechat 支持多种图片生成服务，可以在 Markdown 中使用 AI 生成图片。
 
+本页说明的是 md2wechat 直接请求图片 provider 的配置路径。如果你想使用当前 Agent 运行时暴露的 Image Gen 工具，请使用 `--plan --json`，让 md2wechat 返回 `IMAGE_PLAN_READY`、`requires_provider:false`、`requires_image_api_key:false` 的计划，再由宿主 Agent 执行。详见 [Agent 图片计划模式](AGENT_IMAGE_GEN.md)。
+
 ## 快速开始
 
 在 Markdown 中使用以下语法生成图片：

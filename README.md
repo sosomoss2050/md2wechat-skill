@@ -319,6 +319,18 @@ curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.
 
 配置方式详见 [图片服务配置指南](docs/IMAGE_PROVISIONERS.md)。
 
+### Agent 图片计划模式
+
+当当前 Agent 运行时暴露 Image Gen 工具时，也可以让 md2wechat 只生成图片计划，由 Agent 读取 `data.prompt` 后调用宿主工具：
+
+```bash
+md2wechat generate_cover --article article.md --plan --json
+md2wechat generate_infographic --article article.md --preset infographic-comparison --plan --json
+md2wechat generate_image "一张适合公众号文章的产品发布插画" --plan --json
+```
+
+计划模式返回 `IMAGE_PLAN_READY`，并标记 `requires_provider:false`、`requires_image_api_key:false`。它不会直接生成文件、不会上传到微信，也不会要求或使用 `IMAGE_API_KEY` 进行图片 provider 调用。完整流程见 [Agent 图片计划模式](docs/AGENT_IMAGE_GEN.md)。
+
 ---
 
 ## 文档
@@ -332,6 +344,7 @@ curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.
 | [安装指南](docs/INSTALL.md) | 多平台安装（npm / go / install.sh / Windows） |
 | [配置指南](docs/CONFIG.md) | 配置文件与环境变量完整说明 |
 | [图片服务配置](docs/IMAGE_PROVISIONERS.md) | AI 图片生成服务配置 |
+| [Agent 图片计划模式](docs/AGENT_IMAGE_GEN.md) | Agent Image Gen 工作流与 `--plan --json` |
 | [微信凭证指南](docs/WECHAT-CREDENTIALS.md) | AppID / Secret / IP 白名单 |
 | [常见问题](docs/FAQ.md) | 20+ 问题解答 |
 | [故障排查](docs/TROUBLESHOOTING.md) | 遇到问题看这里 |
