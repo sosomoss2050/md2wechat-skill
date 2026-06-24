@@ -7,12 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.8.0] - 2026-06-24
+
 ### Added
 - Added no-side-effect image plan mode for `generate_image`, `generate_cover`, and `generate_infographic` via `--plan --json`, allowing host Agents to use their own Image Gen tools without md2wechat image-provider credentials.
 - Extended `capabilities --json` with image plan-mode discovery metadata so Agents can distinguish direct provider generation from host-Agent plan execution.
 
 ### Changed
 - Documented the Agent Image Gen workflow across user docs and tightened Agent skill guidance while keeping direct image-provider generation unchanged.
+- Refined the README around the professional API, Agent workflow, image plan mode, multi-account publishing, fixed WeChat egress, and commercial licensing paths.
 
 ## [2.7.0] - 2026-06-23
 

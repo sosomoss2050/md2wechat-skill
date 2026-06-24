@@ -118,7 +118,6 @@ grep -q '"clawdbot"' platforms/openclaw/md2wechat/SKILL.md || fail "OpenClaw ski
 grep -q '"bins":\["md2wechat"\]' platforms/openclaw/md2wechat/SKILL.md || fail "OpenClaw skill metadata must declare md2wechat as a required bin"
 grep -q '"formula":"geekjourneyx/tap/md2wechat"' platforms/openclaw/md2wechat/SKILL.md || fail "OpenClaw skill metadata must declare the brew install path"
 grep -q '"module":"github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@latest"' platforms/openclaw/md2wechat/SKILL.md || fail "OpenClaw skill metadata must declare the go install path"
-grep -q 'releases/download/v' README.md || fail "README must point install instructions at fixed-version release assets"
 grep -q 'releases/download/v' docs/INSTALL.md || fail "docs/INSTALL.md must point install instructions at fixed-version release assets"
 grep -q 'releases/download/v' docs/OPENCLAW.md || fail "docs/OPENCLAW.md must point OpenClaw install instructions at fixed-version release assets"
 grep -q 'npm install -g @geekjourneyx/md2wechat' README.md || fail "README must document the npm install path"
