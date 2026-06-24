@@ -10,6 +10,7 @@
 **面向 AI Agent 的微信公众号创作与发布 CLI**
 
 写 Markdown，生成公众号排版，制作封面和文章配图，预览校验后推送草稿箱。
+
 支持 Claude Code、Codex、WorkBuddy、Kimi Work、Hermes Agent、OpenClaw 等 Agent 通过 JSON discovery 稳定调用。
 
 [![Go Version](https://img.shields.io/badge/Go-1.26.1+-00ADD8?logo=go)](https://golang.org)
