@@ -95,11 +95,12 @@ func TestBuiltinTitlePromptRendersArticleContentAndJSONInstruction(t *testing.T)
 	}
 
 	rendered, spec, err := cat.Render("title", "wechat-title-expert", map[string]string{
-		"ARTICLE_CONTENT": "这篇文章复盘了一个公众号标题实验，重点是用真实价值降低标题党风险。",
-		"TARGET_READER":   "内容创作者",
-		"TITLE_COUNT":     "8",
-		"MAX_TITLE_CHARS": "22",
-		"HOOK_LEVEL":      "3",
+		"ARTICLE_CONTENT":  "这篇文章复盘了一个公众号标题实验，重点是用真实价值降低标题党风险。",
+		"TARGET_READER":    "内容创作者",
+		"TITLE_COUNT":      "8",
+		"MAX_TITLE_CHARS":  "22",
+		"HOOK_LEVEL":       "3",
+		"HOOK_LEVEL_LABEL": "high_tension",
 	})
 	if err != nil {
 		t.Fatalf("Render(title, wechat-title-expert) error = %v", err)
@@ -119,8 +120,11 @@ func TestBuiltinTitlePromptRendersArticleContentAndJSONInstruction(t *testing.T)
 	if !containsString(spec.Variables, "HOOK_LEVEL") {
 		t.Fatalf("title prompt variables missing HOOK_LEVEL: %#v", spec.Variables)
 	}
+	if !containsString(spec.Variables, "HOOK_LEVEL_LABEL") {
+		t.Fatalf("title prompt variables missing HOOK_LEVEL_LABEL: %#v", spec.Variables)
+	}
 	for _, want := range []string{
-		"标题钩子力度：3",
+		"标题钩子力度：3（high_tension",
 		`"hook_level": 3`,
 		`"hook_level_label"`,
 		`"claim_strength"`,

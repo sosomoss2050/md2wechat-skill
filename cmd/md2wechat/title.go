@@ -85,7 +85,7 @@ func runTitleSuggest(articlePath string) error {
 func parseTitleSuggestHookLevel(raw string) (int, error) {
 	value := strings.TrimSpace(raw)
 	if value == "" {
-		return titlebuilder.DefaultHookLevel, nil
+		return 0, fmt.Errorf("hook level must be numeric and between %d and %d: %q", titlebuilder.MinHookLevel, titlebuilder.MaxHookLevel, raw)
 	}
 	level, err := strconv.Atoi(value)
 	if err != nil {
