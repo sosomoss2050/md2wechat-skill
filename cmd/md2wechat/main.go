@@ -31,52 +31,55 @@ var (
 var Version = "dev"
 
 const (
-	codeOK                     = "OK"
-	codeError                  = "ERROR"
-	codeConfigInvalid          = "CONFIG_INVALID"
-	codeConfigNotFound         = "CONFIG_NOT_FOUND"
-	codeConfigWriteFailed      = "CONFIG_WRITE_FAILED"
-	codeConvertInvalid         = "CONVERT_INVALID"
-	codeConvertReadFailed      = "CONVERT_READ_FAILED"
-	codeConvertFailed          = "CONVERT_FAILED"
-	codeConvertImageFailed     = "CONVERT_IMAGE_FAILED"
-	codeConvertDraftFailed     = "CONVERT_DRAFT_FAILED"
-	codeVersionShown           = "VERSION_SHOWN"
-	codeConfigShown            = "CONFIG_SHOWN"
-	codeConfigValidated        = "CONFIG_VALIDATED"
-	codeConfigInitialized      = "CONFIG_INITIALIZED"
-	codeWechatAccountNotFound  = "WECHAT_ACCOUNT_NOT_FOUND"
-	codeWechatAccountInvalid   = "WECHAT_ACCOUNT_INVALID"
-	codeWechatAccountAmbiguous = "WECHAT_ACCOUNT_AMBIGUOUS"
-	codeWechatAccountsShown    = "WECHAT_ACCOUNTS_SHOWN"
-	codeAPIKeyRequired         = "API_KEY_REQUIRED"
-	codeAPIKeyInvalid          = "API_KEY_INVALID"
-	codeAPIKeyVerifyFailed     = "API_KEY_VERIFY_FAILED"
-	codeWriteInputInvalid      = "WRITE_INPUT_INVALID"
-	codeWriteReadFailed        = "WRITE_READ_FAILED"
-	codeWriteFailed            = "WRITE_FAILED"
-	codeWriteAIRequestReady    = "WRITE_AI_REQUEST_READY"
-	codeHumanizeReadFailed     = "HUMANIZE_READ_FAILED"
-	codeHumanizeWriteFailed    = "HUMANIZE_WRITE_FAILED"
-	codeHumanizeRequestReady   = "HUMANIZE_REQUEST_READY"
-	codeConvertAIRequestReady  = "CONVERT_AI_REQUEST_READY"
-	codeConvertCompleted       = "CONVERT_COMPLETED"
-	codeInspectCompleted       = "INSPECT_COMPLETED"
-	codePreviewReady           = "PREVIEW_READY"
-	codePreviewFailed          = "PREVIEW_FAILED"
-	codeImageUploadFailed      = "IMAGE_UPLOAD_FAILED"
-	codeImageGenerateFailed    = "IMAGE_GENERATE_FAILED"
-	codeImagePlanReady         = "IMAGE_PLAN_READY"
-	codeDraftCreateFailed      = "DRAFT_CREATE_FAILED"
-	codeImagePostInvalid       = "IMAGE_POST_INVALID"
-	codeImagePostPreviewFailed = "IMAGE_POST_PREVIEW_FAILED"
-	codeImagePostCreateFailed  = "IMAGE_POST_CREATE_FAILED"
-	codeImagePostPreviewReady  = "IMAGE_POST_PREVIEW_READY"
-	codeImagePostCreated       = "IMAGE_POST_CREATED"
-	codeTestDraftReadFailed    = "TEST_DRAFT_READ_FAILED"
-	codeTestDraftCoverFailed   = "TEST_DRAFT_COVER_FAILED"
-	codeTestDraftCreateFailed  = "TEST_DRAFT_CREATE_FAILED"
-	codeTestDraftCreated       = "TEST_DRAFT_CREATED"
+	codeOK                       = "OK"
+	codeError                    = "ERROR"
+	codeConfigInvalid            = "CONFIG_INVALID"
+	codeConfigNotFound           = "CONFIG_NOT_FOUND"
+	codeConfigWriteFailed        = "CONFIG_WRITE_FAILED"
+	codeConvertInvalid           = "CONVERT_INVALID"
+	codeConvertReadFailed        = "CONVERT_READ_FAILED"
+	codeConvertFailed            = "CONVERT_FAILED"
+	codeConvertImageFailed       = "CONVERT_IMAGE_FAILED"
+	codeConvertDraftFailed       = "CONVERT_DRAFT_FAILED"
+	codeVersionShown             = "VERSION_SHOWN"
+	codeConfigShown              = "CONFIG_SHOWN"
+	codeConfigValidated          = "CONFIG_VALIDATED"
+	codeConfigInitialized        = "CONFIG_INITIALIZED"
+	codeWechatAccountNotFound    = "WECHAT_ACCOUNT_NOT_FOUND"
+	codeWechatAccountInvalid     = "WECHAT_ACCOUNT_INVALID"
+	codeWechatAccountAmbiguous   = "WECHAT_ACCOUNT_AMBIGUOUS"
+	codeWechatAccountsShown      = "WECHAT_ACCOUNTS_SHOWN"
+	codeAPIKeyRequired           = "API_KEY_REQUIRED"
+	codeAPIKeyInvalid            = "API_KEY_INVALID"
+	codeAPIKeyVerifyFailed       = "API_KEY_VERIFY_FAILED"
+	codeWriteInputInvalid        = "WRITE_INPUT_INVALID"
+	codeWriteReadFailed          = "WRITE_READ_FAILED"
+	codeWriteFailed              = "WRITE_FAILED"
+	codeWriteAIRequestReady      = "WRITE_AI_REQUEST_READY"
+	codeHumanizeReadFailed       = "HUMANIZE_READ_FAILED"
+	codeHumanizeWriteFailed      = "HUMANIZE_WRITE_FAILED"
+	codeHumanizeRequestReady     = "HUMANIZE_REQUEST_READY"
+	codeTitleSuggestReadFailed   = "TITLE_SUGGEST_READ_FAILED"
+	codeTitleSuggestInvalid      = "TITLE_SUGGEST_INVALID"
+	codeTitleSuggestRequestReady = "TITLE_SUGGEST_REQUEST_READY"
+	codeConvertAIRequestReady    = "CONVERT_AI_REQUEST_READY"
+	codeConvertCompleted         = "CONVERT_COMPLETED"
+	codeInspectCompleted         = "INSPECT_COMPLETED"
+	codePreviewReady             = "PREVIEW_READY"
+	codePreviewFailed            = "PREVIEW_FAILED"
+	codeImageUploadFailed        = "IMAGE_UPLOAD_FAILED"
+	codeImageGenerateFailed      = "IMAGE_GENERATE_FAILED"
+	codeImagePlanReady           = "IMAGE_PLAN_READY"
+	codeDraftCreateFailed        = "DRAFT_CREATE_FAILED"
+	codeImagePostInvalid         = "IMAGE_POST_INVALID"
+	codeImagePostPreviewFailed   = "IMAGE_POST_PREVIEW_FAILED"
+	codeImagePostCreateFailed    = "IMAGE_POST_CREATE_FAILED"
+	codeImagePostPreviewReady    = "IMAGE_POST_PREVIEW_READY"
+	codeImagePostCreated         = "IMAGE_POST_CREATED"
+	codeTestDraftReadFailed      = "TEST_DRAFT_READ_FAILED"
+	codeTestDraftCoverFailed     = "TEST_DRAFT_COVER_FAILED"
+	codeTestDraftCreateFailed    = "TEST_DRAFT_CREATE_FAILED"
+	codeTestDraftCreated         = "TEST_DRAFT_CREATED"
 
 	codeLayoutModuleNotFound       = "LAYOUT_MODULE_NOT_FOUND"
 	codeLayoutInvalidFilter        = "LAYOUT_INVALID_FILTER"
@@ -264,29 +267,30 @@ type rootCommandEntry struct {
 
 func rootCommandManifest() []rootCommandEntry {
 	return []rootCommandEntry{
-		{Command: uploadImageCmd, WechatAccount: true, DiscoveryOrder: 7},
-		{Command: downloadAndUploadCmd, WechatAccount: true, DiscoveryOrder: 8},
-		{Command: generateImageCmd, WechatAccount: true, DiscoveryOrder: 9},
-		{Command: generateCoverCmd, WechatAccount: true, DiscoveryOrder: 10},
-		{Command: generateInfographicCmd, WechatAccount: true, DiscoveryOrder: 11},
-		{Command: createDraftCmd, WechatAccount: true, DiscoveryOrder: 12},
-		{Command: versionCmd, DiscoveryOrder: 23},
+		{Command: uploadImageCmd, WechatAccount: true, DiscoveryOrder: 8},
+		{Command: downloadAndUploadCmd, WechatAccount: true, DiscoveryOrder: 9},
+		{Command: generateImageCmd, WechatAccount: true, DiscoveryOrder: 10},
+		{Command: generateCoverCmd, WechatAccount: true, DiscoveryOrder: 11},
+		{Command: generateInfographicCmd, WechatAccount: true, DiscoveryOrder: 12},
+		{Command: createDraftCmd, WechatAccount: true, DiscoveryOrder: 13},
+		{Command: versionCmd, DiscoveryOrder: 24},
 		{Command: convertCmd, WechatAccount: true, DiscoveryOrder: 1},
 		{Command: inspectCmd, WechatAccount: true, DiscoveryOrder: 2},
 		{Command: previewCmd, DiscoveryOrder: 3},
 		{Command: configCmd, DiscoveryOrder: 4},
-		{Command: capabilitiesCmd, DiscoveryOrder: 22},
-		{Command: providersCmd, DiscoveryOrder: 15},
-		{Command: themesCmd, DiscoveryOrder: 16},
-		{Command: promptsCmd, DiscoveryOrder: 17},
+		{Command: capabilitiesCmd, DiscoveryOrder: 23},
+		{Command: providersCmd, DiscoveryOrder: 16},
+		{Command: themesCmd, DiscoveryOrder: 17},
+		{Command: promptsCmd, DiscoveryOrder: 18},
 		{Command: writeCmd, DiscoveryOrder: 5},
 		{Command: humanizeCmd, DiscoveryOrder: 6},
-		{Command: testHTMLCmd, WechatAccount: true, DiscoveryOrder: 14},
-		{Command: createImagePostCmd, WechatAccount: true, DiscoveryOrder: 13},
-		{Command: layoutCmd, DiscoveryOrder: 18},
-		{Command: brandCmd, DiscoveryOrder: 19},
-		{Command: doctorCmd, DiscoveryOrder: 20},
-		{Command: skillsCmd, DiscoveryOrder: 21},
+		{Command: titleCmd, DiscoveryOrder: 7},
+		{Command: testHTMLCmd, WechatAccount: true, DiscoveryOrder: 15},
+		{Command: createImagePostCmd, WechatAccount: true, DiscoveryOrder: 14},
+		{Command: layoutCmd, DiscoveryOrder: 19},
+		{Command: brandCmd, DiscoveryOrder: 20},
+		{Command: doctorCmd, DiscoveryOrder: 21},
+		{Command: skillsCmd, DiscoveryOrder: 22},
 	}
 }
 
