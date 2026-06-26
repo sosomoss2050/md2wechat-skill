@@ -144,6 +144,8 @@ md2wechat title suggest article.md --json --hook-level 3
 
 该命令返回 `TITLE_SUGGEST_REQUEST_READY` 和 `status: action_required`，`data.prompt` 需要交给宿主 Agent 或外部模型执行。CLI 本身不调用模型、不写回 Markdown、不创建草稿，也不会自动替你确认最终标题。
 
+完整工作流、`--hook-level` 选择建议、模型返回 JSON 字段和 Agent 使用边界见 [公众号标题建议](TITLE_SUGGEST.md)。
+
 ### 确认层命令
 
 ```bash

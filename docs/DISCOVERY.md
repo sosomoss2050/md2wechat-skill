@@ -298,6 +298,8 @@ JSON envelope 会返回 `TITLE_SUGGEST_REQUEST_READY` 和 `status: action_requir
 
 这些字段只描述 host-Agent handoff 的请求能力，不表示 CLI 会本地生成标题、调用模型、选择最终标题或写回文章。
 
+完整的人类/Agent 工作流、`--hook-level` 选择建议和候选 JSON 字段说明见 [公众号标题建议](TITLE_SUGGEST.md)。
+
 当前内置 prompt kind：
 
 - `humanizer`
