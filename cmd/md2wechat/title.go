@@ -13,6 +13,7 @@ var (
 	titleSuggestTargetReader  string
 	titleSuggestCount         int
 	titleSuggestMaxTitleChars int
+	titleSuggestHookLevel     int
 	titleSuggestPrompt        string
 )
 
@@ -39,6 +40,7 @@ func init() {
 	titleSuggestCmd.Flags().StringVar(&titleSuggestTargetReader, "target-reader", "", "Target reader for title suggestions")
 	titleSuggestCmd.Flags().IntVar(&titleSuggestCount, "count", titlebuilder.DefaultCount, "Number of title candidates to request")
 	titleSuggestCmd.Flags().IntVar(&titleSuggestMaxTitleChars, "max-title-chars", titlebuilder.DefaultMaxTitleChars, "Maximum characters per title")
+	titleSuggestCmd.Flags().IntVar(&titleSuggestHookLevel, "hook-level", titlebuilder.DefaultHookLevel, "Title hook tension level: 1=restrained, 2=punchy, 3=high_tension")
 	titleSuggestCmd.Flags().StringVar(&titleSuggestPrompt, "prompt", titlebuilder.DefaultPromptName, "Title prompt preset name")
 	titleCmd.AddCommand(titleSuggestCmd)
 }
@@ -60,6 +62,7 @@ func runTitleSuggest(articlePath string) error {
 		TargetReader:   titleSuggestTargetReader,
 		Count:          titleSuggestCount,
 		MaxTitleChars:  titleSuggestMaxTitleChars,
+		HookLevel:      titleSuggestHookLevel,
 		PromptName:     titleSuggestPrompt,
 	})
 	if err != nil {

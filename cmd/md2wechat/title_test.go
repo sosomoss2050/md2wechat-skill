@@ -14,12 +14,14 @@ func TestRunTitleSuggestOutputsActionRequiredRequest(t *testing.T) {
 	oldCount := titleSuggestCount
 	oldMaxTitleChars := titleSuggestMaxTitleChars
 	oldPrompt := titleSuggestPrompt
+	oldHookLevel := titleSuggestHookLevel
 	t.Cleanup(func() {
 		jsonOutput = oldJSON
 		titleSuggestTargetReader = oldTargetReader
 		titleSuggestCount = oldCount
 		titleSuggestMaxTitleChars = oldMaxTitleChars
 		titleSuggestPrompt = oldPrompt
+		titleSuggestHookLevel = oldHookLevel
 	})
 
 	article := strings.Join([]string{
@@ -41,6 +43,7 @@ func TestRunTitleSuggestOutputsActionRequiredRequest(t *testing.T) {
 	titleSuggestCount = 10
 	titleSuggestMaxTitleChars = 25
 	titleSuggestPrompt = "wechat-title-expert"
+	titleSuggestHookLevel = 1
 
 	stdout := captureStdout(t, func() {
 		if err := runTitleSuggest(articlePath); err != nil {
@@ -85,8 +88,78 @@ func TestRunTitleSuggestOutputsActionRequiredRequest(t *testing.T) {
 	if data["max_title_chars"] != float64(25) {
 		t.Fatalf("max_title_chars = %#v", data["max_title_chars"])
 	}
+	if data["hook_level"] != float64(1) {
+		t.Fatalf("hook_level = %#v", data["hook_level"])
+	}
+	if data["hook_level_label"] != "restrained" {
+		t.Fatalf("hook_level_label = %#v", data["hook_level_label"])
+	}
 	if data["side_effects"] != false || data["requires_external_model"] != true || data["recommendation_only"] != true {
 		t.Fatalf("unexpected execution flags: %#v", data)
+	}
+}
+
+func TestRunTitleSuggestHookLevelTwoOutputsDataField(t *testing.T) {
+	oldJSON := jsonOutput
+	oldHookLevel := titleSuggestHookLevel
+	t.Cleanup(func() {
+		jsonOutput = oldJSON
+		titleSuggestHookLevel = oldHookLevel
+	})
+
+	articlePath := filepath.Join(t.TempDir(), "article.md")
+	if err := os.WriteFile(articlePath, []byte("# Title\n\n正文内容。"), 0600); err != nil {
+		t.Fatalf("write article: %v", err)
+	}
+
+	jsonOutput = true
+	titleSuggestHookLevel = 2
+
+	stdout := captureStdout(t, func() {
+		if err := runTitleSuggest(articlePath); err != nil {
+			t.Fatalf("runTitleSuggest() error = %v", err)
+		}
+	})
+
+	var response map[string]any
+	if err := json.Unmarshal(stdout, &response); err != nil {
+		t.Fatalf("unmarshal response: %v\n%s", err, stdout)
+	}
+	data, _ := response["data"].(map[string]any)
+	if data["hook_level"] != float64(2) {
+		t.Fatalf("hook_level = %#v", data["hook_level"])
+	}
+}
+
+func TestRunTitleSuggestHookLevelThreeOutputsHighTensionLabel(t *testing.T) {
+	oldJSON := jsonOutput
+	oldHookLevel := titleSuggestHookLevel
+	t.Cleanup(func() {
+		jsonOutput = oldJSON
+		titleSuggestHookLevel = oldHookLevel
+	})
+
+	articlePath := filepath.Join(t.TempDir(), "article.md")
+	if err := os.WriteFile(articlePath, []byte("# Title\n\n正文内容。"), 0600); err != nil {
+		t.Fatalf("write article: %v", err)
+	}
+
+	jsonOutput = true
+	titleSuggestHookLevel = 3
+
+	stdout := captureStdout(t, func() {
+		if err := runTitleSuggest(articlePath); err != nil {
+			t.Fatalf("runTitleSuggest() error = %v", err)
+		}
+	})
+
+	var response map[string]any
+	if err := json.Unmarshal(stdout, &response); err != nil {
+		t.Fatalf("unmarshal response: %v\n%s", err, stdout)
+	}
+	data, _ := response["data"].(map[string]any)
+	if data["hook_level_label"] != "high_tension" {
+		t.Fatalf("hook_level_label = %#v", data["hook_level_label"])
 	}
 }
 
@@ -148,5 +221,34 @@ func TestRunTitleSuggestMapsInvalidCountToInvalidError(t *testing.T) {
 	}
 	if cliErr.Code != "TITLE_SUGGEST_INVALID" {
 		t.Fatalf("code = %q", cliErr.Code)
+	}
+}
+
+func TestRunTitleSuggestMapsInvalidHookLevelToInvalidError(t *testing.T) {
+	oldJSON := jsonOutput
+	oldHookLevel := titleSuggestHookLevel
+	t.Cleanup(func() {
+		jsonOutput = oldJSON
+		titleSuggestHookLevel = oldHookLevel
+	})
+
+	articlePath := filepath.Join(t.TempDir(), "article.md")
+	if err := os.WriteFile(articlePath, []byte("# Title\n\n正文内容。"), 0600); err != nil {
+		t.Fatalf("write article: %v", err)
+	}
+
+	jsonOutput = true
+	titleSuggestHookLevel = 4
+
+	err := runTitleSuggest(articlePath)
+	cliErr, ok := err.(*cliError)
+	if !ok {
+		t.Fatalf("error type = %T, want *cliError", err)
+	}
+	if cliErr.Code != "TITLE_SUGGEST_INVALID" {
+		t.Fatalf("code = %q", cliErr.Code)
+	}
+	if !strings.Contains(cliErr.Message, "hook level") {
+		t.Fatalf("message = %q", cliErr.Message)
 	}
 }

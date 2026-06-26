@@ -99,6 +99,7 @@ func TestBuiltinTitlePromptRendersArticleContentAndJSONInstruction(t *testing.T)
 		"TARGET_READER":   "内容创作者",
 		"TITLE_COUNT":     "8",
 		"MAX_TITLE_CHARS": "22",
+		"HOOK_LEVEL":      "3",
 	})
 	if err != nil {
 		t.Fatalf("Render(title, wechat-title-expert) error = %v", err)
@@ -114,6 +115,24 @@ func TestBuiltinTitlePromptRendersArticleContentAndJSONInstruction(t *testing.T)
 	}
 	if !strings.Contains(rendered, `"article_summary"`) || !strings.Contains(rendered, `"weighted_score"`) {
 		t.Fatalf("rendered prompt missing expected JSON fields: %q", rendered)
+	}
+	if !containsString(spec.Variables, "HOOK_LEVEL") {
+		t.Fatalf("title prompt variables missing HOOK_LEVEL: %#v", spec.Variables)
+	}
+	for _, want := range []string{
+		"标题钩子力度：3",
+		`"hook_level": 3`,
+		`"hook_level_label"`,
+		`"claim_strength"`,
+		`"evidence_basis"`,
+		`"risk_flags"`,
+		"Level 3",
+		"evidence_basis 必须非空",
+		"risk_flags 必须存在",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered prompt missing %q: %q", want, rendered)
+		}
 	}
 }
 
@@ -361,6 +380,15 @@ func TestBuiltinImagePromptsHaveConsistentUseCaseAndAspectMetadata(t *testing.T)
 func containsAspectRatio(ratios []string, target string) bool {
 	for _, ratio := range ratios {
 		if strings.EqualFold(strings.TrimSpace(ratio), strings.TrimSpace(target)) {
+			return true
+		}
+	}
+	return false
+}
+
+func containsString(items []string, target string) bool {
+	for _, item := range items {
+		if item == target {
 			return true
 		}
 	}

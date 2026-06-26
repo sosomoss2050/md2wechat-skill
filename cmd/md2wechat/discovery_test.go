@@ -435,23 +435,26 @@ func TestBuildCapabilitiesDataIncludesTitleGenerationCapability(t *testing.T) {
 	}
 
 	wantValues := map[string]any{
-		"available":                   true,
-		"command":                     "title suggest",
-		"prompt_kind":                 titlebuilder.PromptKind,
-		"default_prompt":              titlebuilder.DefaultPromptName,
-		"action":                      "ai_title_suggestion_request",
-		"mode":                        "ai_request_host_agent_handoff",
-		"execution_owner":             "host_agent",
-		"side_effects":                false,
-		"requires_external_model":     true,
-		"requires_json":               true,
-		"requires_provider":           false,
-		"requires_image_api_key":      false,
-		"requires_wechat_credentials": false,
-		"response_code":               codeTitleSuggestRequestReady,
-		"default_max_title_chars":     titlebuilder.DefaultMaxTitleChars,
-		"metadata_title_max_chars":    titlebuilder.MetadataTitleMaxChars,
-		"recommendation_only":         true,
+		"available":                       true,
+		"command":                         "title suggest",
+		"prompt_kind":                     titlebuilder.PromptKind,
+		"default_prompt":                  titlebuilder.DefaultPromptName,
+		"action":                          "ai_title_suggestion_request",
+		"mode":                            "ai_request_host_agent_handoff",
+		"execution_owner":                 "host_agent",
+		"side_effects":                    false,
+		"requires_external_model":         true,
+		"requires_json":                   true,
+		"requires_provider":               false,
+		"requires_image_api_key":          false,
+		"requires_wechat_credentials":     false,
+		"response_code":                   codeTitleSuggestRequestReady,
+		"default_max_title_chars":         titlebuilder.DefaultMaxTitleChars,
+		"metadata_title_max_chars":        titlebuilder.MetadataTitleMaxChars,
+		"default_hook_level":              titlebuilder.DefaultHookLevel,
+		"max_recommended_hook_level":      2,
+		"level_3_requires_evidence_basis": true,
+		"recommendation_only":             true,
 	}
 	for key, want := range wantValues {
 		if titleGeneration[key] != want {
@@ -470,6 +473,29 @@ func TestBuildCapabilitiesDataIncludesTitleGenerationCapability(t *testing.T) {
 	} {
 		if candidateCount[key] != want {
 			t.Fatalf("candidate_count[%s] = %#v, want %d", key, candidateCount[key], want)
+		}
+	}
+
+	hookLevels, ok := titleGeneration["hook_levels"].([]map[string]any)
+	if !ok {
+		t.Fatalf("hook_levels type = %T", titleGeneration["hook_levels"])
+	}
+	if len(hookLevels) != 3 {
+		t.Fatalf("hook_levels length = %d, want 3: %#v", len(hookLevels), hookLevels)
+	}
+	for i, want := range []struct {
+		level int
+		label string
+	}{
+		{level: 1, label: "restrained"},
+		{level: 2, label: "punchy"},
+		{level: 3, label: "high_tension"},
+	} {
+		if hookLevels[i]["level"] != want.level || hookLevels[i]["label"] != want.label {
+			t.Fatalf("hook_levels[%d] = %#v, want level=%d label=%s", i, hookLevels[i], want.level, want.label)
+		}
+		if hookLevels[i]["description"] == "" {
+			t.Fatalf("hook_levels[%d] missing description: %#v", i, hookLevels[i])
 		}
 	}
 }

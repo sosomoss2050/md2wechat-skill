@@ -128,8 +128,19 @@ md2wechat title suggest article.md \
   --target-reader "独立开发者" \
   --count 10 \
   --max-title-chars 25 \
+  --hook-level 2 \
   --json
 ```
+
+钩子力度可用 `--hook-level` 控制：
+
+```bash
+md2wechat title suggest article.md --json --hook-level 1
+md2wechat title suggest article.md --json --hook-level 2
+md2wechat title suggest article.md --json --hook-level 3
+```
+
+`1` = `restrained`，`2` = `punchy`，`3` = `high_tension`。Level 3 仍然受事实约束，返回的候选应包含证据依据和风险标记。
 
 该命令返回 `TITLE_SUGGEST_REQUEST_READY` 和 `status: action_required`，`data.prompt` 需要交给宿主 Agent 或外部模型执行。CLI 本身不调用模型、不写回 Markdown、不创建草稿，也不会自动替你确认最终标题。
 

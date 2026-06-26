@@ -16,6 +16,10 @@ const (
 	MinCount     = 8
 	MaxCount     = 10
 
+	DefaultHookLevel = 1
+	MinHookLevel     = 1
+	MaxHookLevel     = 3
+
 	DefaultMaxTitleChars  = 25
 	MinTitleChars         = 12
 	MetadataTitleMaxChars = 32
@@ -32,6 +36,7 @@ type SuggestRequest struct {
 	ExistingTitle  string
 	TargetReader   string
 	Count          int
+	HookLevel      int
 	MaxTitleChars  int
 	PromptName     string
 }
@@ -47,6 +52,8 @@ type SuggestAIRequest struct {
 	TargetReader          string `json:"target_reader"`
 	TitleCount            int    `json:"title_count"`
 	MaxTitleChars         int    `json:"max_title_chars"`
+	HookLevel             int    `json:"hook_level"`
+	HookLevelLabel        string `json:"hook_level_label"`
 	SideEffects           bool   `json:"side_effects"`
 	RequiresExternalModel bool   `json:"requires_external_model"`
 	RecommendationOnly    bool   `json:"recommendation_only"`
@@ -74,6 +81,15 @@ func BuildSuggestRequest(req SuggestRequest) (*SuggestAIRequest, error) {
 		return nil, fmt.Errorf("max title chars must be between %d and %d: %d", MinTitleChars, MetadataTitleMaxChars, maxTitleChars)
 	}
 
+	hookLevel := req.HookLevel
+	if hookLevel == 0 {
+		hookLevel = DefaultHookLevel
+	}
+	if hookLevel < MinHookLevel || hookLevel > MaxHookLevel {
+		return nil, fmt.Errorf("hook level must be between %d and %d: %d", MinHookLevel, MaxHookLevel, hookLevel)
+	}
+	hookLevelLabel := HookLevelLabel(hookLevel)
+
 	promptName := strings.TrimSpace(req.PromptName)
 	if promptName == "" {
 		promptName = DefaultPromptName
@@ -85,10 +101,12 @@ func BuildSuggestRequest(req SuggestRequest) (*SuggestAIRequest, error) {
 	}
 
 	prompt, err := renderBundledPrompt(promptName, map[string]string{
-		"ARTICLE_CONTENT": articleContent,
-		"TARGET_READER":   targetReader,
-		"TITLE_COUNT":     strconv.Itoa(count),
-		"MAX_TITLE_CHARS": strconv.Itoa(maxTitleChars),
+		"ARTICLE_CONTENT":  articleContent,
+		"TARGET_READER":    targetReader,
+		"TITLE_COUNT":      strconv.Itoa(count),
+		"MAX_TITLE_CHARS":  strconv.Itoa(maxTitleChars),
+		"HOOK_LEVEL":       strconv.Itoa(hookLevel),
+		"HOOK_LEVEL_LABEL": hookLevelLabel,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("render title suggestion prompt %s/%s: %w", PromptKind, promptName, err)
@@ -105,10 +123,25 @@ func BuildSuggestRequest(req SuggestRequest) (*SuggestAIRequest, error) {
 		TargetReader:          targetReader,
 		TitleCount:            count,
 		MaxTitleChars:         maxTitleChars,
+		HookLevel:             hookLevel,
+		HookLevelLabel:        hookLevelLabel,
 		SideEffects:           false,
 		RequiresExternalModel: true,
 		RecommendationOnly:    true,
 	}, nil
+}
+
+func HookLevelLabel(level int) string {
+	switch level {
+	case 1:
+		return "restrained"
+	case 2:
+		return "punchy"
+	case 3:
+		return "high_tension"
+	default:
+		return ""
+	}
 }
 
 func renderBundledPrompt(name string, vars map[string]string) (string, error) {

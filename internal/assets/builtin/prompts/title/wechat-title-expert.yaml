@@ -7,6 +7,8 @@ variables:
   - TARGET_READER
   - TITLE_COUNT
   - MAX_TITLE_CHARS
+  - HOOK_LEVEL
+  - HOOK_LEVEL_LABEL
 tags:
   - wechat
   - title
@@ -26,6 +28,7 @@ template: |
   - 目标读者：{{TARGET_READER}}
   - 候选数量：{{TITLE_COUNT}}（如为空，默认生成 10 个；总数必须在 8-10 个之间）
   - 标题最长字数：{{MAX_TITLE_CHARS}}（如为空，按 25 个汉字硬上限处理）
+  - 标题钩子力度：{{HOOK_LEVEL}}（{{HOOK_LEVEL_LABEL}}；1=restrained，2=punchy，3=high_tension）
   - 文章内容：
   {{ARTICLE_CONTENT}}
 
@@ -38,11 +41,26 @@ template: |
   5. 直接价值：直接说明读者能获得什么，稳定、清楚、低风险。
   6. 问题反转：反转常见误解、提出反直觉问题或重新定义问题。
 
+  ## 钩子力度控制
+  - Level 1 restrained：保持当前克制、可信、内容价值优先的标题力度。
+  - Level 2 punchy：在文章支持时，可以使用更强对比、标点、明确实体、数字和后果框架，但不得扩大事实。
+  - Level 3 high_tension：可以尝试高张力表达，但每个候选都必须有证据依据和风险披露；如果证据不足，必须降低标题力度，并在 recommendation_reason 中说明。
+
+  可选结构参考，不是强制模板：
+  - Level 1：`[实体][动作]，[数字/权威]揭示[变化]`
+  - Level 2：`[实体][动作]，[对手/行业]变天！[数字/后果]`
+  - Level 3：`刚刚，[实体][强动作]！[冲突/数字/后果]，全网[情绪]`
+
   ## 标题约束
   - 中文标题优先控制在 12-22 个汉字，硬上限为 {{MAX_TITLE_CHARS}}；无变量时硬上限 25 个汉字。
   - 口语化、自然、有节奏，避免陈词滥调式标题党。
   - 真诚优先于套路，不能夸大结果、制造虚假稀缺或暗示文章没有提供的结论。
   - 如文章信息不足以支撑强承诺，降低标题力度，并在推荐理由中说明。
+  - 不要使用 `刚刚`，除非文章包含当前时间信号。
+  - 不要使用 `全网`，除非文章包含传播范围、平台范围或分发证据。
+  - 不要使用 `第一` / `榜首` / `变天`，除非文章支持排名、对比或行业变化判断。
+  - 不要编造数字、公司、模型、人物、基准测试或群体。
+  - 如果高张力表达没有文章证据支撑，降低标题力度，并在 `recommendation_reason` 中解释。
 
   ## 评分规则
   每个候选标题都必须给出 1-10 分：
@@ -63,11 +81,16 @@ template: |
     "target_reader": "{{TARGET_READER}}",
     "title_count": {{TITLE_COUNT}},
     "max_title_chars": {{MAX_TITLE_CHARS}},
+    "hook_level": {{HOOK_LEVEL}},
+    "hook_level_label": "{{HOOK_LEVEL_LABEL}}",
     "candidates": [
       {
         "rank": 1,
         "title": "候选标题",
         "strategy": "data_anchoring | emotion_resonance | suspense_hook | authority_endorsement | direct_value | question_reversal",
+        "claim_strength": "low | medium | high",
+        "evidence_basis": "标题关键承诺对应的文章依据；如果是低张力且依据很直接，也要简要说明",
+        "risk_flags": ["unsupported_current_time | unsupported_scope | unsupported_ranking | invented_number | invented_entity | exaggerated_consequence | none"],
         "scores": {
           "curiosity": 1,
           "value": 1,
@@ -81,4 +104,5 @@ template: |
     ]
   }
 
-  如果 {{TITLE_COUNT}} 或 {{MAX_TITLE_CHARS}} 为空，仍然输出合法 JSON 数字字段：title_count 使用 10，max_title_chars 使用 25。
+  如果 {{TITLE_COUNT}}、{{MAX_TITLE_CHARS}} 或 {{HOOK_LEVEL}} 为空，仍然输出合法 JSON 数字字段：title_count 使用 10，max_title_chars 使用 25，hook_level 使用 1，hook_level_label 使用 "restrained"。
+  Level 3 时，每个候选的 evidence_basis 必须非空，risk_flags 必须存在；没有风险时也要输出 ["none"]。

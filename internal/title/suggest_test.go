@@ -46,6 +46,12 @@ func TestBuildSuggestRequestDefaultsRenderBundledPrompt(t *testing.T) {
 	if got.MaxTitleChars != DefaultMaxTitleChars {
 		t.Fatalf("MaxTitleChars = %d", got.MaxTitleChars)
 	}
+	if got.HookLevel != DefaultHookLevel {
+		t.Fatalf("HookLevel = %d, want %d", got.HookLevel, DefaultHookLevel)
+	}
+	if got.HookLevelLabel != "restrained" {
+		t.Fatalf("HookLevelLabel = %q, want restrained", got.HookLevelLabel)
+	}
 	if got.SideEffects {
 		t.Fatal("SideEffects = true")
 	}
@@ -63,6 +69,9 @@ func TestBuildSuggestRequestDefaultsRenderBundledPrompt(t *testing.T) {
 	}
 	if !strings.Contains(got.Prompt, "标题最长字数：25") || !strings.Contains(got.Prompt, `"max_title_chars": 25`) {
 		t.Fatalf("Prompt missing default max title chars: %q", got.Prompt)
+	}
+	if !strings.Contains(got.Prompt, "标题钩子力度：1") || !strings.Contains(got.Prompt, `"hook_level": 1`) {
+		t.Fatalf("Prompt missing default hook level: %q", got.Prompt)
 	}
 }
 
@@ -91,6 +100,8 @@ func TestBuildSuggestRequestUsesStableJSONFieldNames(t *testing.T) {
 		`"article_chars"`,
 		`"title_count"`,
 		`"max_title_chars"`,
+		`"hook_level"`,
+		`"hook_level_label"`,
 		`"side_effects"`,
 		`"requires_external_model"`,
 		`"recommendation_only"`,
@@ -206,6 +217,118 @@ func TestBuildSuggestRequestCustomInputsAreRenderedAndStructured(t *testing.T) {
 		if !strings.Contains(got.Prompt, want) {
 			t.Fatalf("Prompt missing %q: %q", want, got.Prompt)
 		}
+	}
+}
+
+func TestBuildSuggestRequestHookLevelZeroDefaultsToOne(t *testing.T) {
+	promptcatalog.ResetDefaultCatalogForTests()
+	t.Chdir(t.TempDir())
+
+	got, err := BuildSuggestRequest(SuggestRequest{
+		ArticleContent: "有效文章内容",
+		HookLevel:      0,
+	})
+	if err != nil {
+		t.Fatalf("BuildSuggestRequest() error = %v", err)
+	}
+
+	if got.HookLevel != 1 {
+		t.Fatalf("HookLevel = %d, want 1", got.HookLevel)
+	}
+	if got.HookLevelLabel != "restrained" {
+		t.Fatalf("HookLevelLabel = %q, want restrained", got.HookLevelLabel)
+	}
+}
+
+func TestBuildSuggestRequestHookLevelTwoIsRenderedAndStructured(t *testing.T) {
+	promptcatalog.ResetDefaultCatalogForTests()
+	t.Chdir(t.TempDir())
+
+	got, err := BuildSuggestRequest(SuggestRequest{
+		ArticleContent: "本文复盘了一个标题实验，包含对手变化、真实数据和失败风险。",
+		HookLevel:      2,
+	})
+	if err != nil {
+		t.Fatalf("BuildSuggestRequest() error = %v", err)
+	}
+
+	if got.HookLevel != 2 {
+		t.Fatalf("HookLevel = %d, want 2", got.HookLevel)
+	}
+	if got.HookLevelLabel != "punchy" {
+		t.Fatalf("HookLevelLabel = %q, want punchy", got.HookLevelLabel)
+	}
+	for _, want := range []string{
+		"标题钩子力度：2",
+		`"hook_level": 2`,
+		`"hook_level_label": "punchy"`,
+		`"claim_strength"`,
+		`"evidence_basis"`,
+		`"risk_flags"`,
+	} {
+		if !strings.Contains(got.Prompt, want) {
+			t.Fatalf("Prompt missing %q: %q", want, got.Prompt)
+		}
+	}
+}
+
+func TestBuildSuggestRequestHookLevelThreeIncludesEvidenceAndRiskRequirements(t *testing.T) {
+	promptcatalog.ResetDefaultCatalogForTests()
+	t.Chdir(t.TempDir())
+
+	got, err := BuildSuggestRequest(SuggestRequest{
+		ArticleContent: "刚刚发布的行业报告显示，榜首公司份额下降，全网讨论量超过 10 万。",
+		HookLevel:      3,
+	})
+	if err != nil {
+		t.Fatalf("BuildSuggestRequest() error = %v", err)
+	}
+
+	if got.HookLevel != 3 {
+		t.Fatalf("HookLevel = %d, want 3", got.HookLevel)
+	}
+	if got.HookLevelLabel != "high_tension" {
+		t.Fatalf("HookLevelLabel = %q, want high_tension", got.HookLevelLabel)
+	}
+	for _, want := range []string{
+		"Level 3",
+		"evidence_basis 必须非空",
+		"risk_flags 必须存在",
+		"刚刚",
+		"全网",
+		"第一",
+		"榜首",
+		"变天",
+	} {
+		if !strings.Contains(got.Prompt, want) {
+			t.Fatalf("Prompt missing %q: %q", want, got.Prompt)
+		}
+	}
+}
+
+func TestBuildSuggestRequestRejectsHookLevelOutsideRange(t *testing.T) {
+	promptcatalog.ResetDefaultCatalogForTests()
+	t.Chdir(t.TempDir())
+
+	for _, tc := range []struct {
+		name      string
+		hookLevel int
+	}{
+		{name: "below min", hookLevel: -1},
+		{name: "above max", hookLevel: 4},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := BuildSuggestRequest(SuggestRequest{
+				ArticleContent: "有效文章内容",
+				HookLevel:      tc.hookLevel,
+			})
+			if err == nil {
+				t.Fatal("BuildSuggestRequest() error = nil")
+			}
+			if !strings.Contains(err.Error(), "hook level must be between 1 and 3") {
+				t.Fatalf("error = %v", err)
+			}
+		})
 	}
 }
 

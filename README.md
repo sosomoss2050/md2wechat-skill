@@ -109,6 +109,7 @@ md2wechat inspect article.md --json
 md2wechat themes list --json
 md2wechat layout list --json
 md2wechat title suggest article.md --json
+md2wechat title suggest article.md --json --hook-level 2
 md2wechat skills list --json
 md2wechat skills read md2wechat --json
 ```

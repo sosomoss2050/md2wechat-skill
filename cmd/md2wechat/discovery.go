@@ -387,9 +387,33 @@ func buildTitleGenerationCapabilityData() map[string]any {
 			"max":     titlebuilder.MaxCount,
 			"default": titlebuilder.DefaultCount,
 		},
-		"default_max_title_chars":  titlebuilder.DefaultMaxTitleChars,
-		"metadata_title_max_chars": titlebuilder.MetadataTitleMaxChars,
-		"recommendation_only":      true,
+		"hook_levels":                     buildTitleHookLevelsCapabilityData(),
+		"default_hook_level":              titlebuilder.DefaultHookLevel,
+		"max_recommended_hook_level":      2,
+		"level_3_requires_evidence_basis": true,
+		"default_max_title_chars":         titlebuilder.DefaultMaxTitleChars,
+		"metadata_title_max_chars":        titlebuilder.MetadataTitleMaxChars,
+		"recommendation_only":             true,
+	}
+}
+
+func buildTitleHookLevelsCapabilityData() []map[string]any {
+	return []map[string]any{
+		{
+			"level":       1,
+			"label":       titlebuilder.HookLevelLabel(1),
+			"description": "Restrained factual titles that preserve the current low-risk behavior.",
+		},
+		{
+			"level":       2,
+			"label":       titlebuilder.HookLevelLabel(2),
+			"description": "Punchier factual hooks with stronger contrast, entities, numbers, and consequence framing when supported.",
+		},
+		{
+			"level":       3,
+			"label":       titlebuilder.HookLevelLabel(3),
+			"description": "High-tension factual hooks that require evidence_basis and risk_flags on every candidate.",
+		},
 	}
 }
 

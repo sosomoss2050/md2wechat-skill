@@ -516,10 +516,12 @@ md2wechat title suggest article.md --json
 如果已经知道目标读者，可以传入更具体的上下文：
 
 ```bash
-md2wechat title suggest article.md --target-reader "AI 工具用户" --count 10 --max-title-chars 25 --json
+md2wechat title suggest article.md --target-reader "AI 工具用户" --count 10 --max-title-chars 25 --hook-level 2 --json
 ```
 
 这个命令返回 `TITLE_SUGGEST_REQUEST_READY`，表示标题生成 prompt 已准备好，需要宿主 Agent 或外部模型继续执行。它不会直接调用模型，不会写回文章，也不会创建微信草稿。最终标题应由用户确认，或者由上层 Agent 流程基于返回候选的评分再选择。
+
+`--hook-level 1|2|3` 只控制标题张力：`1` = `restrained`，`2` = `punchy`，`3` = `high_tension`。Level 3 不允许编造事实；如果文章没有证据支撑“刚刚”“全网”“第一”“榜首”“变天”等表达，候选应降级张力并说明原因。
 
 ---
 
