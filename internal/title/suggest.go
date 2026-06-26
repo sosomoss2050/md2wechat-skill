@@ -5,8 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/geekjourneyx/md2wechat-skill/internal/assets"
-	"gopkg.in/yaml.v3"
+	"github.com/geekjourneyx/md2wechat-skill/internal/promptcatalog"
 )
 
 const (
@@ -38,25 +37,19 @@ type SuggestRequest struct {
 }
 
 type SuggestAIRequest struct {
-	Action                string
-	ExecutionOwner        string
-	PromptKind            string
-	PromptName            string
-	Prompt                string
-	ArticleTitle          string
-	ArticleChars          int
-	TargetReader          string
-	TitleCount            int
-	MaxTitleChars         int
-	SideEffects           bool
-	RequiresExternalModel bool
-	RecommendationOnly    bool
-}
-
-type promptSpec struct {
-	Name     string `yaml:"name"`
-	Kind     string `yaml:"kind"`
-	Template string `yaml:"template"`
+	Action                string `json:"action"`
+	ExecutionOwner        string `json:"execution_owner"`
+	PromptKind            string `json:"prompt_kind"`
+	PromptName            string `json:"prompt_name"`
+	Prompt                string `json:"prompt"`
+	ArticleTitle          string `json:"article_title,omitempty"`
+	ArticleChars          int    `json:"article_chars"`
+	TargetReader          string `json:"target_reader"`
+	TitleCount            int    `json:"title_count"`
+	MaxTitleChars         int    `json:"max_title_chars"`
+	SideEffects           bool   `json:"side_effects"`
+	RequiresExternalModel bool   `json:"requires_external_model"`
+	RecommendationOnly    bool   `json:"recommendation_only"`
 }
 
 func BuildSuggestRequest(req SuggestRequest) (*SuggestAIRequest, error) {
@@ -119,29 +112,19 @@ func BuildSuggestRequest(req SuggestRequest) (*SuggestAIRequest, error) {
 }
 
 func renderBundledPrompt(name string, vars map[string]string) (string, error) {
-	if name != DefaultPromptName {
-		return "", fmt.Errorf("prompt not found: %s/%s", PromptKind, name)
-	}
-
-	data, err := assets.ReadBuiltinPrompt(PromptKind, name)
+	cat, err := promptcatalog.DefaultCatalog()
 	if err != nil {
-		return "", fmt.Errorf("read bundled prompt: %w", err)
+		return "", fmt.Errorf("load prompt catalog: %w", err)
 	}
-
-	var spec promptSpec
-	if err := yaml.Unmarshal(data, &spec); err != nil {
-		return "", fmt.Errorf("parse bundled prompt: %w", err)
+	rendered, spec, err := cat.Render(PromptKind, name, vars)
+	if err != nil {
+		return "", err
 	}
 	if spec.Kind != PromptKind || spec.Name != name {
-		return "", fmt.Errorf("bundled prompt identity mismatch: got %s/%s", spec.Kind, spec.Name)
+		return "", fmt.Errorf("prompt identity mismatch: got %s/%s", spec.Kind, spec.Name)
 	}
-	if strings.TrimSpace(spec.Template) == "" {
-		return "", fmt.Errorf("bundled prompt template is empty")
-	}
-
-	rendered := spec.Template
-	for key, value := range vars {
-		rendered = strings.ReplaceAll(rendered, "{{"+key+"}}", value)
+	if strings.TrimSpace(rendered) == "" {
+		return "", fmt.Errorf("rendered prompt is empty")
 	}
 	return rendered, nil
 }

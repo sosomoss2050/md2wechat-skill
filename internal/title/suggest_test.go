@@ -1,11 +1,17 @@
 package title
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/geekjourneyx/md2wechat-skill/internal/promptcatalog"
 )
 
 func TestBuildSuggestRequestDefaultsRenderBundledPrompt(t *testing.T) {
+	promptcatalog.ResetDefaultCatalogForTests()
+	t.Chdir(t.TempDir())
+
 	article := "这篇文章复盘了一个公众号标题实验，重点是用真实价值降低标题党风险。"
 
 	got, err := BuildSuggestRequest(SuggestRequest{
@@ -60,6 +66,46 @@ func TestBuildSuggestRequestDefaultsRenderBundledPrompt(t *testing.T) {
 	}
 }
 
+func TestBuildSuggestRequestUsesStableJSONFieldNames(t *testing.T) {
+	promptcatalog.ResetDefaultCatalogForTests()
+	t.Chdir(t.TempDir())
+
+	got, err := BuildSuggestRequest(SuggestRequest{
+		ArticleContent: "有效文章内容",
+		ExistingTitle:  "旧标题",
+	})
+	if err != nil {
+		t.Fatalf("BuildSuggestRequest() error = %v", err)
+	}
+
+	data, err := json.Marshal(got)
+	if err != nil {
+		t.Fatalf("Marshal() error = %v", err)
+	}
+	payload := string(data)
+	for _, want := range []string{
+		`"execution_owner"`,
+		`"prompt_kind"`,
+		`"prompt_name"`,
+		`"article_title"`,
+		`"article_chars"`,
+		`"title_count"`,
+		`"max_title_chars"`,
+		`"side_effects"`,
+		`"requires_external_model"`,
+		`"recommendation_only"`,
+	} {
+		if !strings.Contains(payload, want) {
+			t.Fatalf("JSON missing %s: %s", want, payload)
+		}
+	}
+	for _, unwanted := range []string{"ExecutionOwner", "PromptKind", "ArticleTitle", "RequiresExternalModel"} {
+		if strings.Contains(payload, unwanted) {
+			t.Fatalf("JSON leaked Go field name %q: %s", unwanted, payload)
+		}
+	}
+}
+
 func TestBuildSuggestRequestRejectsEmptyArticleContent(t *testing.T) {
 	_, err := BuildSuggestRequest(SuggestRequest{ArticleContent: " \n\t "})
 	if err == nil {
@@ -71,6 +117,9 @@ func TestBuildSuggestRequestRejectsEmptyArticleContent(t *testing.T) {
 }
 
 func TestBuildSuggestRequestRejectsCountOutsideRange(t *testing.T) {
+	promptcatalog.ResetDefaultCatalogForTests()
+	t.Chdir(t.TempDir())
+
 	for _, tc := range []struct {
 		name  string
 		count int
@@ -94,6 +143,9 @@ func TestBuildSuggestRequestRejectsCountOutsideRange(t *testing.T) {
 }
 
 func TestBuildSuggestRequestRejectsMaxTitleCharsOutsideRange(t *testing.T) {
+	promptcatalog.ResetDefaultCatalogForTests()
+	t.Chdir(t.TempDir())
+
 	for _, tc := range []struct {
 		name          string
 		maxTitleChars int
@@ -117,6 +169,9 @@ func TestBuildSuggestRequestRejectsMaxTitleCharsOutsideRange(t *testing.T) {
 }
 
 func TestBuildSuggestRequestCustomInputsAreRenderedAndStructured(t *testing.T) {
+	promptcatalog.ResetDefaultCatalogForTests()
+	t.Chdir(t.TempDir())
+
 	got, err := BuildSuggestRequest(SuggestRequest{
 		ArticleContent: "本文讲给独立开发者看的增长复盘，强调小样本实验和标题承诺一致。",
 		ExistingTitle:  "原始增长复盘",
@@ -155,6 +210,9 @@ func TestBuildSuggestRequestCustomInputsAreRenderedAndStructured(t *testing.T) {
 }
 
 func TestBuildSuggestRequestInvalidPromptNameReturnsUsefulError(t *testing.T) {
+	promptcatalog.ResetDefaultCatalogForTests()
+	t.Chdir(t.TempDir())
+
 	_, err := BuildSuggestRequest(SuggestRequest{
 		ArticleContent: "有效文章内容",
 		PromptName:     "missing-title-prompt",
