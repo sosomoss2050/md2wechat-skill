@@ -454,6 +454,7 @@ md2wechat capabilities --json
 md2wechat providers list --json
 md2wechat themes list --json
 md2wechat prompts list --json
+md2wechat prompts list --kind title --json
 md2wechat prompts list --kind image --archetype cover --json
 md2wechat prompts list --kind image --tag editorial --json
 ```
@@ -464,6 +465,7 @@ md2wechat prompts list --kind image --tag editorial --json
 md2wechat providers show openrouter --json
 md2wechat providers show volcengine --json
 md2wechat themes show autumn-warm --json
+md2wechat prompts show wechat-title-expert --kind title --json
 md2wechat prompts show cover-default --kind image --json
 ```
 
@@ -502,6 +504,22 @@ md2wechat prompts show <preset-name> --kind image --json
 ```
 
 优先看输出里的 `primary_use_case`、`compatible_use_cases` 和 `default_aspect_ratio`。有些信息图 preset 也可以兼作封面，不需要复制成两份模板。
+
+### Q11.1：怎么根据文章生成公众号标题候选？
+
+使用标题建议命令：
+
+```bash
+md2wechat title suggest article.md --json
+```
+
+如果已经知道目标读者，可以传入更具体的上下文：
+
+```bash
+md2wechat title suggest article.md --target-reader "AI 工具用户" --count 10 --max-title-chars 25 --json
+```
+
+这个命令返回 `TITLE_SUGGEST_REQUEST_READY`，表示标题生成 prompt 已准备好，需要宿主 Agent 或外部模型继续执行。它不会直接调用模型，不会写回文章，也不会创建微信草稿。最终标题应由用户确认，或者由上层 Agent 流程基于返回候选的评分再选择。
 
 ---
 

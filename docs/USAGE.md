@@ -113,6 +113,26 @@ md2wechat convert article.md --title "新标题" --author "作者名" --digest "
 
 创建草稿时如果摘要仍为空，会从正文 HTML 生成一个 120 字符兜底摘要。正文里的一级标题不会因为被拿来当标题来源就自动删除。
 
+### 标题建议
+
+如果需要根据文章内容生成一批公众号标题候选，使用：
+
+```bash
+md2wechat title suggest article.md --json
+```
+
+可选参数：
+
+```bash
+md2wechat title suggest article.md \
+  --target-reader "独立开发者" \
+  --count 10 \
+  --max-title-chars 25 \
+  --json
+```
+
+该命令返回 `TITLE_SUGGEST_REQUEST_READY` 和 `status: action_required`，`data.prompt` 需要交给宿主 Agent 或外部模型执行。CLI 本身不调用模型、不写回 Markdown、不创建草稿，也不会自动替你确认最终标题。
+
 ### 确认层命令
 
 ```bash
