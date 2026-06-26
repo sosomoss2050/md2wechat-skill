@@ -50,6 +50,73 @@ func TestCatalogRenderReplacesVariables(t *testing.T) {
 	}
 }
 
+func TestBuiltinTitlePromptIsDiscoverable(t *testing.T) {
+	ResetDefaultCatalogForTests()
+	t.Chdir(t.TempDir())
+
+	cat, err := DefaultCatalog()
+	if err != nil {
+		t.Fatalf("DefaultCatalog() error = %v", err)
+	}
+
+	spec, err := cat.Get("title", "wechat-title-expert")
+	if err != nil {
+		t.Fatalf("Get(title, wechat-title-expert) error = %v", err)
+	}
+	if spec.Kind != "title" || spec.Name != "wechat-title-expert" {
+		t.Fatalf("unexpected spec: %#v", spec)
+	}
+
+	prompts := cat.List("title")
+	if len(prompts) == 0 {
+		t.Fatal("expected title prompts in catalog list")
+	}
+	found := false
+	for _, prompt := range prompts {
+		if prompt.Name == "wechat-title-expert" {
+			found = true
+		}
+		if prompt.Kind != "title" {
+			t.Fatalf("unexpected prompt in title list: %#v", prompt)
+		}
+	}
+	if !found {
+		t.Fatalf("title list missing wechat-title-expert: %#v", prompts)
+	}
+}
+
+func TestBuiltinTitlePromptRendersArticleContentAndJSONInstruction(t *testing.T) {
+	ResetDefaultCatalogForTests()
+	t.Chdir(t.TempDir())
+
+	cat, err := DefaultCatalog()
+	if err != nil {
+		t.Fatalf("DefaultCatalog() error = %v", err)
+	}
+
+	rendered, spec, err := cat.Render("title", "wechat-title-expert", map[string]string{
+		"ARTICLE_CONTENT": "这篇文章复盘了一个公众号标题实验，重点是用真实价值降低标题党风险。",
+		"TARGET_READER":   "内容创作者",
+		"TITLE_COUNT":     "8",
+		"MAX_TITLE_CHARS": "22",
+	})
+	if err != nil {
+		t.Fatalf("Render(title, wechat-title-expert) error = %v", err)
+	}
+	if spec.Name != "wechat-title-expert" {
+		t.Fatalf("spec.Name = %q", spec.Name)
+	}
+	if !strings.Contains(rendered, "这篇文章复盘了一个公众号标题实验") {
+		t.Fatalf("rendered prompt missing article content: %q", rendered)
+	}
+	if !strings.Contains(rendered, "strict JSON only") || !strings.Contains(rendered, "不要输出 Markdown") {
+		t.Fatalf("rendered prompt missing JSON-only instruction: %q", rendered)
+	}
+	if !strings.Contains(rendered, `"article_summary"`) || !strings.Contains(rendered, `"weighted_score"`) {
+		t.Fatalf("rendered prompt missing expected JSON fields: %q", rendered)
+	}
+}
+
 func TestCatalogPrefersExplicitPromptDirOverBuiltin(t *testing.T) {
 	ResetDefaultCatalogForTests()
 	tmpDir := t.TempDir()

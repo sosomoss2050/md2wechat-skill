@@ -98,7 +98,7 @@ func getPromptDirs() []string {
 }
 
 func (c *Catalog) loadBuiltin() error {
-	kinds := []string{"humanizer", "refine", "image"}
+	kinds := []string{"humanizer", "refine", "image", "title"}
 	for _, kind := range kinds {
 		names, err := assets.ListBuiltinPrompts(kind)
 		if err != nil {
