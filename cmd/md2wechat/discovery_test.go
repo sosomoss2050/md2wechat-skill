@@ -9,6 +9,7 @@ import (
 
 	"github.com/geekjourneyx/md2wechat-skill/internal/config"
 	"github.com/geekjourneyx/md2wechat-skill/internal/promptcatalog"
+	titlebuilder "github.com/geekjourneyx/md2wechat-skill/internal/title"
 	"github.com/spf13/cobra"
 )
 
@@ -393,6 +394,82 @@ func TestBuildCapabilitiesDataDerivesCommandsFromRootManifest(t *testing.T) {
 	} {
 		if !contains(commands, want) {
 			t.Fatalf("commands missing %q: %#v", want, commands)
+		}
+	}
+}
+
+func TestBuildCapabilitiesDataIncludesTitleGenerationCapability(t *testing.T) {
+	oldCfg := cfg
+	t.Cleanup(func() {
+		cfg = oldCfg
+		promptcatalog.ResetDefaultCatalogForTests()
+	})
+
+	cfg = &config.Config{DefaultTheme: "default"}
+	promptcatalog.ResetDefaultCatalogForTests()
+
+	data, err := buildCapabilitiesData()
+	if err != nil {
+		t.Fatalf("buildCapabilitiesData() error = %v", err)
+	}
+
+	commands, ok := data["commands"].([]string)
+	if !ok {
+		t.Fatalf("commands type = %T", data["commands"])
+	}
+	if !contains(commands, "title") {
+		t.Fatalf("commands missing title: %#v", commands)
+	}
+
+	promptKinds, ok := data["prompt_kinds"].([]string)
+	if !ok {
+		t.Fatalf("prompt_kinds type = %T", data["prompt_kinds"])
+	}
+	if !contains(promptKinds, titlebuilder.PromptKind) {
+		t.Fatalf("prompt_kinds missing %q: %#v", titlebuilder.PromptKind, promptKinds)
+	}
+
+	titleGeneration, ok := data["title_generation"].(map[string]any)
+	if !ok {
+		t.Fatalf("title_generation type = %T", data["title_generation"])
+	}
+
+	wantValues := map[string]any{
+		"available":                   true,
+		"command":                     "title suggest",
+		"prompt_kind":                 titlebuilder.PromptKind,
+		"default_prompt":              titlebuilder.DefaultPromptName,
+		"action":                      "ai_title_suggestion_request",
+		"mode":                        "ai_request_host_agent_handoff",
+		"execution_owner":             "host_agent",
+		"side_effects":                false,
+		"requires_external_model":     true,
+		"requires_json":               true,
+		"requires_provider":           false,
+		"requires_image_api_key":      false,
+		"requires_wechat_credentials": false,
+		"response_code":               codeTitleSuggestRequestReady,
+		"default_max_title_chars":     titlebuilder.DefaultMaxTitleChars,
+		"metadata_title_max_chars":    titlebuilder.MetadataTitleMaxChars,
+		"recommendation_only":         true,
+	}
+	for key, want := range wantValues {
+		if titleGeneration[key] != want {
+			t.Fatalf("title_generation[%s] = %#v, want %#v", key, titleGeneration[key], want)
+		}
+	}
+
+	candidateCount, ok := titleGeneration["candidate_count"].(map[string]any)
+	if !ok {
+		t.Fatalf("candidate_count type = %T", titleGeneration["candidate_count"])
+	}
+	for key, want := range map[string]int{
+		"min":     titlebuilder.MinCount,
+		"max":     titlebuilder.MaxCount,
+		"default": titlebuilder.DefaultCount,
+	} {
+		if candidateCount[key] != want {
+			t.Fatalf("candidate_count[%s] = %#v, want %d", key, candidateCount[key], want)
 		}
 	}
 }

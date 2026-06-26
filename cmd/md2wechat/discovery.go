@@ -10,6 +10,7 @@ import (
 	"github.com/geekjourneyx/md2wechat-skill/internal/image"
 	"github.com/geekjourneyx/md2wechat-skill/internal/layoutcatalog"
 	"github.com/geekjourneyx/md2wechat-skill/internal/promptcatalog"
+	titlebuilder "github.com/geekjourneyx/md2wechat-skill/internal/title"
 	"github.com/spf13/cobra"
 )
 
@@ -333,6 +334,7 @@ func buildCapabilitiesData() (map[string]any, error) {
 		},
 		"providers":         providers,
 		"image_generation":  buildImageGenerationCapabilityData(),
+		"title_generation":  buildTitleGenerationCapabilityData(),
 		"themes":            themes,
 		"layout":            buildLayoutCapabilityData(),
 		"prompts":           allPrompts,
@@ -361,6 +363,33 @@ func buildImageGenerationCapabilityData() map[string]any {
 			"response_code":          codeImagePlanReady,
 			"commands":               commands,
 		},
+	}
+}
+
+func buildTitleGenerationCapabilityData() map[string]any {
+	return map[string]any{
+		"available":                   true,
+		"command":                     "title suggest",
+		"prompt_kind":                 titlebuilder.PromptKind,
+		"default_prompt":              titlebuilder.DefaultPromptName,
+		"action":                      "ai_title_suggestion_request",
+		"mode":                        "ai_request_host_agent_handoff",
+		"execution_owner":             "host_agent",
+		"side_effects":                false,
+		"requires_external_model":     true,
+		"requires_json":               true,
+		"requires_provider":           false,
+		"requires_image_api_key":      false,
+		"requires_wechat_credentials": false,
+		"response_code":               codeTitleSuggestRequestReady,
+		"candidate_count": map[string]any{
+			"min":     titlebuilder.MinCount,
+			"max":     titlebuilder.MaxCount,
+			"default": titlebuilder.DefaultCount,
+		},
+		"default_max_title_chars":  titlebuilder.DefaultMaxTitleChars,
+		"metadata_title_max_chars": titlebuilder.MetadataTitleMaxChars,
+		"recommendation_only":      true,
 	}
 }
 
