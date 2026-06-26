@@ -9,6 +9,7 @@ import (
 
 	"github.com/geekjourneyx/md2wechat-skill/internal/config"
 	"github.com/geekjourneyx/md2wechat-skill/internal/promptcatalog"
+	"github.com/spf13/cobra"
 )
 
 func TestBuildProviderViewsIncludesBuiltinProviders(t *testing.T) {
@@ -345,6 +346,138 @@ func TestBuildCapabilitiesDataKeepsConvertContractStableWithInspectAndPreview(t 
 	}
 	if len(backgroundTypes) != 3 || backgroundTypes[0] != "default" || backgroundTypes[1] != "grid" || backgroundTypes[2] != "none" {
 		t.Fatalf("background_types = %#v", backgroundTypes)
+	}
+}
+
+func TestBuildCapabilitiesDataDerivesCommandsFromRootManifest(t *testing.T) {
+	oldCfg := cfg
+	t.Cleanup(func() { cfg = oldCfg })
+
+	cfg = &config.Config{DefaultTheme: "default"}
+
+	data, err := buildCapabilitiesData()
+	if err != nil {
+		t.Fatalf("buildCapabilitiesData() error = %v", err)
+	}
+
+	commands, ok := data["commands"].([]string)
+	if !ok {
+		t.Fatalf("commands type = %T", data["commands"])
+	}
+
+	for _, want := range []string{
+		"convert",
+		"inspect",
+		"preview",
+		"config",
+		"write",
+		"humanize",
+		"upload_image",
+		"download_and_upload",
+		"generate_image",
+		"generate_cover",
+		"generate_infographic",
+		"create_draft",
+		"create_image_post",
+		"test-draft",
+		"providers",
+		"themes",
+		"prompts",
+		"layout",
+		"brand",
+		"doctor",
+		"skills",
+		"capabilities",
+		"version",
+	} {
+		if !contains(commands, want) {
+			t.Fatalf("commands missing %q: %#v", want, commands)
+		}
+	}
+}
+
+func TestBuildCapabilitiesDataKeepsStableCommandOrderFromRootManifest(t *testing.T) {
+	oldCfg := cfg
+	t.Cleanup(func() { cfg = oldCfg })
+
+	cfg = &config.Config{DefaultTheme: "default"}
+
+	data, err := buildCapabilitiesData()
+	if err != nil {
+		t.Fatalf("buildCapabilitiesData() error = %v", err)
+	}
+
+	commands, ok := data["commands"].([]string)
+	if !ok {
+		t.Fatalf("commands type = %T", data["commands"])
+	}
+
+	want := []string{
+		"convert",
+		"inspect",
+		"preview",
+		"config",
+		"write",
+		"humanize",
+		"upload_image",
+		"download_and_upload",
+		"generate_image",
+		"generate_cover",
+		"generate_infographic",
+		"create_draft",
+		"create_image_post",
+		"test-draft",
+		"providers",
+		"themes",
+		"prompts",
+		"layout",
+		"brand",
+		"doctor",
+		"skills",
+		"capabilities",
+		"version",
+	}
+	if len(commands) != len(want) {
+		t.Fatalf("commands length = %d, want %d: %#v", len(commands), len(want), commands)
+	}
+	for i := range want {
+		if commands[i] != want[i] {
+			t.Fatalf("commands[%d] = %q, want %q; commands=%#v", i, commands[i], want[i], commands)
+		}
+	}
+
+	manifestNames := map[string]bool{}
+	for _, entry := range rootCommandManifest() {
+		if entry.Command == nil {
+			continue
+		}
+		fields := strings.Fields(entry.Command.Use)
+		if len(fields) == 0 {
+			continue
+		}
+		manifestNames[fields[0]] = true
+	}
+	for _, command := range commands {
+		if !manifestNames[command] {
+			t.Fatalf("capabilities command %q is not backed by root manifest: %#v", command, commands)
+		}
+	}
+}
+
+func TestAddWechatAccountFlagCanBeCalledRepeatedly(t *testing.T) {
+	cmd := &cobra.Command{Use: "test"}
+
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("addWechatAccountFlag panicked on repeated calls: %v", r)
+		}
+	}()
+
+	addWechatAccountFlag(cmd)
+	addWechatAccountFlag(cmd)
+
+	if cmd.Flags().Lookup("wechat-account") == nil {
+		t.Fatal("expected wechat-account flag")
 	}
 }
 

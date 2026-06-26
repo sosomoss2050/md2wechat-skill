@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -162,7 +163,166 @@ func extractCLIError(err error) (*cliError, bool) {
 }
 
 func addWechatAccountFlag(cmd *cobra.Command) {
+	if cmd.Flags().Lookup("wechat-account") != nil {
+		return
+	}
 	cmd.Flags().StringVar(&wechatAccountName, "wechat-account", "", "Named WeChat account from config")
+}
+
+var uploadImageCmd = &cobra.Command{
+	Use:   "upload_image <file_path>",
+	Short: "Upload local image to WeChat material library",
+	Args:  cobra.ExactArgs(1),
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		return initConfig()
+	},
+	RunE: func(cmd *cobra.Command, args []string) error {
+		filePath := args[0]
+		if err := prepareWeChatSideEffect(); err != nil {
+			return err
+		}
+		processor := newRuntimeImageProcessor()
+		result, err := processor.UploadLocalImage(filePath)
+		if err != nil {
+			return wrapCLIError(codeImageUploadFailed, err, err.Error())
+		}
+		responseSuccess(result)
+		return nil
+	},
+}
+
+var downloadAndUploadCmd = &cobra.Command{
+	Use:   "download_and_upload <url>",
+	Short: "Download online image and upload to WeChat",
+	Args:  cobra.ExactArgs(1),
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		return initConfig()
+	},
+	RunE: func(cmd *cobra.Command, args []string) error {
+		url := args[0]
+		if err := prepareWeChatSideEffect(); err != nil {
+			return err
+		}
+		processor := newRuntimeImageProcessor()
+		result, err := processor.DownloadAndUpload(url)
+		if err != nil {
+			return wrapCLIError(codeImageUploadFailed, err, err.Error())
+		}
+		responseSuccess(result)
+		return nil
+	},
+}
+
+var generateImageCmd = &cobra.Command{
+	Use:   "generate_image [prompt]",
+	Short: "Generate image via AI and upload to WeChat",
+	Args:  cobra.MaximumNArgs(1),
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		return initConfig()
+	},
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return runGenerateImage(args)
+	},
+}
+
+var createDraftCmd = &cobra.Command{
+	Use:   "create_draft <json_file>",
+	Short: "Create WeChat draft article from JSON file",
+	Args:  cobra.ExactArgs(1),
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		return initConfig()
+	},
+	RunE: func(cmd *cobra.Command, args []string) error {
+		jsonFile := args[0]
+		if err := prepareWeChatSideEffect(); err != nil {
+			return err
+		}
+		svc := draft.NewService(cfg, log)
+		result, err := svc.CreateDraftFromFile(jsonFile)
+		if err != nil {
+			return wrapCLIError(codeDraftCreateFailed, err, err.Error())
+		}
+		responseSuccess(result)
+		return nil
+	},
+}
+
+var versionCmd = &cobra.Command{
+	Use:   "version",
+	Short: "Print CLI version",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		runVersion()
+		return nil
+	},
+}
+
+type rootCommandEntry struct {
+	Command        *cobra.Command
+	WechatAccount  bool
+	DiscoveryOrder int
+}
+
+func rootCommandManifest() []rootCommandEntry {
+	return []rootCommandEntry{
+		{Command: uploadImageCmd, WechatAccount: true, DiscoveryOrder: 7},
+		{Command: downloadAndUploadCmd, WechatAccount: true, DiscoveryOrder: 8},
+		{Command: generateImageCmd, WechatAccount: true, DiscoveryOrder: 9},
+		{Command: generateCoverCmd, WechatAccount: true, DiscoveryOrder: 10},
+		{Command: generateInfographicCmd, WechatAccount: true, DiscoveryOrder: 11},
+		{Command: createDraftCmd, WechatAccount: true, DiscoveryOrder: 12},
+		{Command: versionCmd, DiscoveryOrder: 23},
+		{Command: convertCmd, WechatAccount: true, DiscoveryOrder: 1},
+		{Command: inspectCmd, WechatAccount: true, DiscoveryOrder: 2},
+		{Command: previewCmd, DiscoveryOrder: 3},
+		{Command: configCmd, DiscoveryOrder: 4},
+		{Command: capabilitiesCmd, DiscoveryOrder: 22},
+		{Command: providersCmd, DiscoveryOrder: 15},
+		{Command: themesCmd, DiscoveryOrder: 16},
+		{Command: promptsCmd, DiscoveryOrder: 17},
+		{Command: writeCmd, DiscoveryOrder: 5},
+		{Command: humanizeCmd, DiscoveryOrder: 6},
+		{Command: testHTMLCmd, WechatAccount: true, DiscoveryOrder: 14},
+		{Command: createImagePostCmd, WechatAccount: true, DiscoveryOrder: 13},
+		{Command: layoutCmd, DiscoveryOrder: 18},
+		{Command: brandCmd, DiscoveryOrder: 19},
+		{Command: doctorCmd, DiscoveryOrder: 20},
+		{Command: skillsCmd, DiscoveryOrder: 21},
+	}
+}
+
+func topLevelCommandNames() []string {
+	entries := rootCommandManifest()
+	sort.SliceStable(entries, func(i, j int) bool {
+		return entries[i].DiscoveryOrder < entries[j].DiscoveryOrder
+	})
+
+	names := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		if entry.Command == nil {
+			continue
+		}
+		if entry.DiscoveryOrder <= 0 {
+			continue
+		}
+		name := strings.Fields(entry.Command.Use)
+		if len(name) == 0 {
+			continue
+		}
+		names = append(names, name[0])
+	}
+	return names
+}
+
+func addRootCommands(root *cobra.Command) {
+	for _, entry := range rootCommandManifest() {
+		if entry.Command == nil {
+			continue
+		}
+		if entry.WechatAccount {
+			addWechatAccountFlag(entry.Command)
+		}
+		root.AddCommand(entry.Command)
+	}
 }
 
 func prepareWeChatSideEffect() error {
@@ -285,67 +445,6 @@ Examples:
 	rootCmd.SetVersionTemplate("{{printf \"%s\\n\" .Version}}")
 	rootCmd.PersistentFlags().BoolVar(&jsonOutput, "json", false, "Emit machine-readable JSON output")
 
-	// upload_image command
-	var uploadImageCmd = &cobra.Command{
-		Use:   "upload_image <file_path>",
-		Short: "Upload local image to WeChat material library",
-		Args:  cobra.ExactArgs(1),
-		PreRunE: func(cmd *cobra.Command, args []string) error {
-			return initConfig()
-		},
-		RunE: func(cmd *cobra.Command, args []string) error {
-			filePath := args[0]
-			if err := prepareWeChatSideEffect(); err != nil {
-				return err
-			}
-			processor := newRuntimeImageProcessor()
-			result, err := processor.UploadLocalImage(filePath)
-			if err != nil {
-				return wrapCLIError(codeImageUploadFailed, err, err.Error())
-			}
-			responseSuccess(result)
-			return nil
-		},
-	}
-	addWechatAccountFlag(uploadImageCmd)
-	rootCmd.AddCommand(uploadImageCmd)
-
-	// download_and_upload command
-	var downloadAndUploadCmd = &cobra.Command{
-		Use:   "download_and_upload <url>",
-		Short: "Download online image and upload to WeChat",
-		Args:  cobra.ExactArgs(1),
-		PreRunE: func(cmd *cobra.Command, args []string) error {
-			return initConfig()
-		},
-		RunE: func(cmd *cobra.Command, args []string) error {
-			url := args[0]
-			if err := prepareWeChatSideEffect(); err != nil {
-				return err
-			}
-			processor := newRuntimeImageProcessor()
-			result, err := processor.DownloadAndUpload(url)
-			if err != nil {
-				return wrapCLIError(codeImageUploadFailed, err, err.Error())
-			}
-			responseSuccess(result)
-			return nil
-		},
-	}
-	addWechatAccountFlag(downloadAndUploadCmd)
-	rootCmd.AddCommand(downloadAndUploadCmd)
-
-	var generateImageCmd = &cobra.Command{
-		Use:   "generate_image [prompt]",
-		Short: "Generate image via AI and upload to WeChat",
-		Args:  cobra.MaximumNArgs(1),
-		PreRunE: func(cmd *cobra.Command, args []string) error {
-			return initConfig()
-		},
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return runGenerateImage(args)
-		},
-	}
 	generateImageCmd.Flags().StringVarP(&generateImageCmdSize, "size", "s", "", "Image size (e.g., 2560x1440 for 16:9)")
 	generateImageCmd.Flags().StringVar(&generateImageCmdPreset, "preset", "", "Prompt preset from the image prompt catalog")
 	generateImageCmd.Flags().StringVarP(&generateImageCmdArticle, "article", "a", "", "Article markdown file used to render a preset prompt")
@@ -356,89 +455,7 @@ Examples:
 	generateImageCmd.Flags().StringVar(&generateImageCmdAspect, "aspect", "", "Aspect ratio hint used to render a preset prompt, e.g. 16:9 or 3:4")
 	generateImageCmd.Flags().StringVar(&generateImageCmdModel, "model", "", "Image model to use for this command (overrides IMAGE_MODEL and api.image_model)")
 	generateImageCmd.Flags().BoolVar(&generateImageCmdPlan, "plan", false, "Render an image generation plan without provider or upload side effects")
-	addWechatAccountFlag(generateImageCmd)
-	addWechatAccountFlag(generateCoverCmd)
-	addWechatAccountFlag(generateInfographicCmd)
-	rootCmd.AddCommand(generateImageCmd)
-	rootCmd.AddCommand(generateCoverCmd)
-	rootCmd.AddCommand(generateInfographicCmd)
-
-	// create_draft command
-	var createDraftCmd = &cobra.Command{
-		Use:   "create_draft <json_file>",
-		Short: "Create WeChat draft article from JSON file",
-		Args:  cobra.ExactArgs(1),
-		PreRunE: func(cmd *cobra.Command, args []string) error {
-			return initConfig()
-		},
-		RunE: func(cmd *cobra.Command, args []string) error {
-			jsonFile := args[0]
-			if err := prepareWeChatSideEffect(); err != nil {
-				return err
-			}
-			svc := draft.NewService(cfg, log)
-			result, err := svc.CreateDraftFromFile(jsonFile)
-			if err != nil {
-				return wrapCLIError(codeDraftCreateFailed, err, err.Error())
-			}
-			responseSuccess(result)
-			return nil
-		},
-	}
-	addWechatAccountFlag(createDraftCmd)
-	rootCmd.AddCommand(createDraftCmd)
-
-	var versionCmd = &cobra.Command{
-		Use:   "version",
-		Short: "Print CLI version",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			runVersion()
-			return nil
-		},
-	}
-	rootCmd.AddCommand(versionCmd)
-
-	// convert command
-	addWechatAccountFlag(convertCmd)
-	rootCmd.AddCommand(convertCmd)
-	addWechatAccountFlag(inspectCmd)
-	rootCmd.AddCommand(inspectCmd)
-	rootCmd.AddCommand(previewCmd)
-
-	// config command
-	rootCmd.AddCommand(configCmd)
-
-	// discovery commands
-	rootCmd.AddCommand(capabilitiesCmd)
-	rootCmd.AddCommand(providersCmd)
-	rootCmd.AddCommand(themesCmd)
-	rootCmd.AddCommand(promptsCmd)
-
-	// write command
-	rootCmd.AddCommand(writeCmd)
-
-	// humanize command
-	rootCmd.AddCommand(humanizeCmd)
-
-	// test-draft command
-	addWechatAccountFlag(testHTMLCmd)
-	rootCmd.AddCommand(testHTMLCmd)
-
-	// create-image-post command (小绿书)
-	addWechatAccountFlag(createImagePostCmd)
-	rootCmd.AddCommand(createImagePostCmd)
-
-	// layout command
-	rootCmd.AddCommand(layoutCmd)
-
-	// brand command
-	rootCmd.AddCommand(brandCmd)
-
-	// doctor command
-	rootCmd.AddCommand(doctorCmd)
-
-	// embedded agent skills
-	rootCmd.AddCommand(skillsCmd)
+	addRootCommands(rootCmd)
 
 	// Execute
 	if err := rootCmd.Execute(); err != nil {

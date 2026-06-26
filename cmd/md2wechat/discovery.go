@@ -55,14 +55,15 @@ var (
 var capabilitiesCmd = &cobra.Command{
 	Use:   "capabilities",
 	Short: "Show machine-readable CLI capabilities",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		data, err := buildCapabilitiesData()
-		if err != nil {
-			return wrapCLIError(codeError, err, err.Error())
-		}
-		responseSuccessWith(codeCapabilitiesShown, "Capabilities shown", data)
-		return nil
-	},
+}
+
+func runCapabilities(cmd *cobra.Command, args []string) error {
+	data, err := buildCapabilitiesData()
+	if err != nil {
+		return wrapCLIError(codeError, err, err.Error())
+	}
+	responseSuccessWith(codeCapabilitiesShown, "Capabilities shown", data)
+	return nil
 }
 
 var providersCmd = &cobra.Command{
@@ -217,6 +218,7 @@ var promptsRenderCmd = &cobra.Command{
 }
 
 func init() {
+	capabilitiesCmd.RunE = runCapabilities
 	providersCmd.AddCommand(providersListCmd, providersShowCmd)
 	themesCmd.AddCommand(themesListCmd, themesShowCmd)
 	promptsListCmd.Flags().StringVar(&promptKind, "kind", "", "Prompt kind filter")
@@ -321,12 +323,7 @@ func buildCapabilitiesData() (map[string]any, error) {
 	allPrompts := cat.List("")
 	currentCfg := loadDiscoveryConfig()
 	return map[string]any{
-		"commands": []string{
-			"convert", "inspect", "preview", "config", "write", "humanize", "upload_image",
-			"download_and_upload", "generate_image", "generate_cover", "generate_infographic", "create_draft",
-			"create_image_post", "test-draft", "providers", "themes",
-			"prompts", "layout", "brand", "doctor", "skills", "capabilities", "version",
-		},
+		"commands": topLevelCommandNames(),
 		"convert": map[string]any{
 			"default_mode":     "api",
 			"supported_modes":  []string{"api", "ai"},
