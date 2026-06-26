@@ -55,13 +55,13 @@ npm install -g @geekjourneyx/md2wechat
 如果你已经有稳定可用的 Go 环境，也可以：
 
 ```bash
-go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v2.8.0
+go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v2.9.0
 ```
 
 如果以上都不适合，再走固定版本安装脚本：
 
 ```bash
-curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.8.0/install.sh | bash
+curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.9.0/install.sh | bash
 ```
 
 安装脚本默认会把 CLI 放到：
@@ -158,13 +158,13 @@ npm install -g @geekjourneyx/md2wechat
 如果你已经有 Go 环境，再把第一步改成：
 
 ```bash
-go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v2.8.0
+go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v2.9.0
 ```
 
 如果以上都不适合，再把第一步改成：
 
 ```bash
-curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.8.0/install.sh | bash
+curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.9.0/install.sh | bash
 ```
 
 如果你懒得自己操作，也可以直接把下面的话发给 Claude Code / Codex / OpenCode：
@@ -173,8 +173,8 @@ curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.
 请先安装 md2wechat CLI，再安装 md2wechat skill，并验证版本和能力发现都正常。
 执行：
 1. 如果我是 mac 用户，先运行：brew install geekjourneyx/tap/md2wechat
-2. 如果我已经有稳定可用的 Go 环境，也可以改成：go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v2.8.0
-3. 如果以上两种都不适合，再运行：curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.8.0/install.sh | bash
+2. 如果我已经有稳定可用的 Go 环境，也可以改成：go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v2.9.0
+3. 如果以上两种都不适合，再运行：curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.9.0/install.sh | bash
 4. 运行：npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
 5. 如果我是通过 install.sh 安装的，再执行：export PATH="$HOME/.local/bin:$PATH"
 6. md2wechat version --json
@@ -188,7 +188,7 @@ curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.
 ```text
 请帮我安装 OpenClaw 版 md2wechat，并验证 skill 和 CLI 都可用。
 执行：
-1. curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.8.0/install-openclaw.sh | bash
+1. curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.9.0/install-openclaw.sh | bash
 2. 先执行：export PATH="$HOME/.local/bin:$PATH"
 3. md2wechat version --json
 4. md2wechat config init
@@ -218,7 +218,7 @@ npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
 如果你已经有 Go 环境，再改成：
 
 ```bash
-go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v2.8.0
+go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v2.9.0
 md2wechat version --json
 npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
 ```
@@ -226,7 +226,7 @@ npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
 如果以上都不适合，再改成：
 
 ```bash
-curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.8.0/install.sh | bash
+curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.9.0/install.sh | bash
 export PATH="$HOME/.local/bin:$PATH"
 md2wechat version --json
 npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
@@ -454,6 +454,7 @@ md2wechat capabilities --json
 md2wechat providers list --json
 md2wechat themes list --json
 md2wechat prompts list --json
+md2wechat prompts list --kind title --json
 md2wechat prompts list --kind image --archetype cover --json
 md2wechat prompts list --kind image --tag editorial --json
 ```
@@ -464,6 +465,7 @@ md2wechat prompts list --kind image --tag editorial --json
 md2wechat providers show openrouter --json
 md2wechat providers show volcengine --json
 md2wechat themes show autumn-warm --json
+md2wechat prompts show wechat-title-expert --kind title --json
 md2wechat prompts show cover-default --kind image --json
 ```
 
@@ -502,6 +504,24 @@ md2wechat prompts show <preset-name> --kind image --json
 ```
 
 优先看输出里的 `primary_use_case`、`compatible_use_cases` 和 `default_aspect_ratio`。有些信息图 preset 也可以兼作封面，不需要复制成两份模板。
+
+### Q11.1：怎么根据文章生成公众号标题候选？
+
+使用标题建议命令：
+
+```bash
+md2wechat title suggest article.md --json
+```
+
+如果已经知道目标读者，可以传入更具体的上下文：
+
+```bash
+md2wechat title suggest article.md --target-reader "AI 工具用户" --count 10 --max-title-chars 25 --hook-level 2 --json
+```
+
+这个命令返回 `TITLE_SUGGEST_REQUEST_READY`，表示标题生成 prompt 已准备好，需要宿主 Agent 或外部模型继续执行。它不会直接调用模型，不会写回文章，也不会创建微信草稿。最终标题应由用户确认，或者由上层 Agent 流程基于返回候选的评分再选择。
+
+`--hook-level 1|2|3` 只控制标题张力：`1` = `restrained`，`2` = `punchy`，`3` = `high_tension`。Level 3 不允许编造事实；如果文章没有证据支撑“刚刚”“全网”“第一”“榜首”“变天”等表达，候选应降级张力并说明原因。
 
 ---
 

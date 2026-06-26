@@ -9,6 +9,8 @@ import (
 
 	"github.com/geekjourneyx/md2wechat-skill/internal/config"
 	"github.com/geekjourneyx/md2wechat-skill/internal/promptcatalog"
+	titlebuilder "github.com/geekjourneyx/md2wechat-skill/internal/title"
+	"github.com/spf13/cobra"
 )
 
 func TestBuildProviderViewsIncludesBuiltinProviders(t *testing.T) {
@@ -345,6 +347,242 @@ func TestBuildCapabilitiesDataKeepsConvertContractStableWithInspectAndPreview(t 
 	}
 	if len(backgroundTypes) != 3 || backgroundTypes[0] != "default" || backgroundTypes[1] != "grid" || backgroundTypes[2] != "none" {
 		t.Fatalf("background_types = %#v", backgroundTypes)
+	}
+}
+
+func TestBuildCapabilitiesDataDerivesCommandsFromRootManifest(t *testing.T) {
+	oldCfg := cfg
+	t.Cleanup(func() { cfg = oldCfg })
+
+	cfg = &config.Config{DefaultTheme: "default"}
+
+	data, err := buildCapabilitiesData()
+	if err != nil {
+		t.Fatalf("buildCapabilitiesData() error = %v", err)
+	}
+
+	commands, ok := data["commands"].([]string)
+	if !ok {
+		t.Fatalf("commands type = %T", data["commands"])
+	}
+
+	for _, want := range []string{
+		"convert",
+		"inspect",
+		"preview",
+		"config",
+		"write",
+		"humanize",
+		"title",
+		"upload_image",
+		"download_and_upload",
+		"generate_image",
+		"generate_cover",
+		"generate_infographic",
+		"create_draft",
+		"create_image_post",
+		"test-draft",
+		"providers",
+		"themes",
+		"prompts",
+		"layout",
+		"brand",
+		"doctor",
+		"skills",
+		"capabilities",
+		"version",
+	} {
+		if !contains(commands, want) {
+			t.Fatalf("commands missing %q: %#v", want, commands)
+		}
+	}
+}
+
+func TestBuildCapabilitiesDataIncludesTitleGenerationCapability(t *testing.T) {
+	oldCfg := cfg
+	t.Cleanup(func() {
+		cfg = oldCfg
+		promptcatalog.ResetDefaultCatalogForTests()
+	})
+
+	cfg = &config.Config{DefaultTheme: "default"}
+	promptcatalog.ResetDefaultCatalogForTests()
+
+	data, err := buildCapabilitiesData()
+	if err != nil {
+		t.Fatalf("buildCapabilitiesData() error = %v", err)
+	}
+
+	commands, ok := data["commands"].([]string)
+	if !ok {
+		t.Fatalf("commands type = %T", data["commands"])
+	}
+	if !contains(commands, "title") {
+		t.Fatalf("commands missing title: %#v", commands)
+	}
+
+	promptKinds, ok := data["prompt_kinds"].([]string)
+	if !ok {
+		t.Fatalf("prompt_kinds type = %T", data["prompt_kinds"])
+	}
+	if !contains(promptKinds, titlebuilder.PromptKind) {
+		t.Fatalf("prompt_kinds missing %q: %#v", titlebuilder.PromptKind, promptKinds)
+	}
+
+	titleGeneration, ok := data["title_generation"].(map[string]any)
+	if !ok {
+		t.Fatalf("title_generation type = %T", data["title_generation"])
+	}
+
+	wantValues := map[string]any{
+		"available":                       true,
+		"command":                         "title suggest",
+		"prompt_kind":                     titlebuilder.PromptKind,
+		"default_prompt":                  titlebuilder.DefaultPromptName,
+		"action":                          "ai_title_suggestion_request",
+		"mode":                            "ai_request_host_agent_handoff",
+		"execution_owner":                 "host_agent",
+		"side_effects":                    false,
+		"requires_external_model":         true,
+		"requires_json":                   true,
+		"requires_provider":               false,
+		"requires_image_api_key":          false,
+		"requires_wechat_credentials":     false,
+		"response_code":                   codeTitleSuggestRequestReady,
+		"default_max_title_chars":         titlebuilder.DefaultMaxTitleChars,
+		"metadata_title_max_chars":        titlebuilder.MetadataTitleMaxChars,
+		"default_hook_level":              titlebuilder.DefaultHookLevel,
+		"max_recommended_hook_level":      2,
+		"level_3_requires_evidence_basis": true,
+		"recommendation_only":             true,
+	}
+	for key, want := range wantValues {
+		if titleGeneration[key] != want {
+			t.Fatalf("title_generation[%s] = %#v, want %#v", key, titleGeneration[key], want)
+		}
+	}
+
+	candidateCount, ok := titleGeneration["candidate_count"].(map[string]any)
+	if !ok {
+		t.Fatalf("candidate_count type = %T", titleGeneration["candidate_count"])
+	}
+	for key, want := range map[string]int{
+		"min":     titlebuilder.MinCount,
+		"max":     titlebuilder.MaxCount,
+		"default": titlebuilder.DefaultCount,
+	} {
+		if candidateCount[key] != want {
+			t.Fatalf("candidate_count[%s] = %#v, want %d", key, candidateCount[key], want)
+		}
+	}
+
+	hookLevels, ok := titleGeneration["hook_levels"].([]map[string]any)
+	if !ok {
+		t.Fatalf("hook_levels type = %T", titleGeneration["hook_levels"])
+	}
+	if len(hookLevels) != 3 {
+		t.Fatalf("hook_levels length = %d, want 3: %#v", len(hookLevels), hookLevels)
+	}
+	for i, want := range []struct {
+		level int
+		label string
+	}{
+		{level: 1, label: "restrained"},
+		{level: 2, label: "punchy"},
+		{level: 3, label: "high_tension"},
+	} {
+		if hookLevels[i]["level"] != want.level || hookLevels[i]["label"] != want.label {
+			t.Fatalf("hook_levels[%d] = %#v, want level=%d label=%s", i, hookLevels[i], want.level, want.label)
+		}
+		if hookLevels[i]["description"] == "" {
+			t.Fatalf("hook_levels[%d] missing description: %#v", i, hookLevels[i])
+		}
+	}
+}
+
+func TestBuildCapabilitiesDataKeepsStableCommandOrderFromRootManifest(t *testing.T) {
+	oldCfg := cfg
+	t.Cleanup(func() { cfg = oldCfg })
+
+	cfg = &config.Config{DefaultTheme: "default"}
+
+	data, err := buildCapabilitiesData()
+	if err != nil {
+		t.Fatalf("buildCapabilitiesData() error = %v", err)
+	}
+
+	commands, ok := data["commands"].([]string)
+	if !ok {
+		t.Fatalf("commands type = %T", data["commands"])
+	}
+
+	want := []string{
+		"convert",
+		"inspect",
+		"preview",
+		"config",
+		"write",
+		"humanize",
+		"title",
+		"upload_image",
+		"download_and_upload",
+		"generate_image",
+		"generate_cover",
+		"generate_infographic",
+		"create_draft",
+		"create_image_post",
+		"test-draft",
+		"providers",
+		"themes",
+		"prompts",
+		"layout",
+		"brand",
+		"doctor",
+		"skills",
+		"capabilities",
+		"version",
+	}
+	if len(commands) != len(want) {
+		t.Fatalf("commands length = %d, want %d: %#v", len(commands), len(want), commands)
+	}
+	for i := range want {
+		if commands[i] != want[i] {
+			t.Fatalf("commands[%d] = %q, want %q; commands=%#v", i, commands[i], want[i], commands)
+		}
+	}
+
+	manifestNames := map[string]bool{}
+	for _, entry := range rootCommandManifest() {
+		if entry.Command == nil {
+			continue
+		}
+		fields := strings.Fields(entry.Command.Use)
+		if len(fields) == 0 {
+			continue
+		}
+		manifestNames[fields[0]] = true
+	}
+	for _, command := range commands {
+		if !manifestNames[command] {
+			t.Fatalf("capabilities command %q is not backed by root manifest: %#v", command, commands)
+		}
+	}
+}
+
+func TestAddWechatAccountFlagCanBeCalledRepeatedly(t *testing.T) {
+	cmd := &cobra.Command{Use: "test"}
+
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("addWechatAccountFlag panicked on repeated calls: %v", r)
+		}
+	}()
+
+	addWechatAccountFlag(cmd)
+	addWechatAccountFlag(cmd)
+
+	if cmd.Flags().Lookup("wechat-account") == nil {
+		t.Fatal("expected wechat-account flag")
 	}
 }
 

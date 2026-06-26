@@ -10,6 +10,7 @@ import (
 	"github.com/geekjourneyx/md2wechat-skill/internal/image"
 	"github.com/geekjourneyx/md2wechat-skill/internal/layoutcatalog"
 	"github.com/geekjourneyx/md2wechat-skill/internal/promptcatalog"
+	titlebuilder "github.com/geekjourneyx/md2wechat-skill/internal/title"
 	"github.com/spf13/cobra"
 )
 
@@ -55,14 +56,15 @@ var (
 var capabilitiesCmd = &cobra.Command{
 	Use:   "capabilities",
 	Short: "Show machine-readable CLI capabilities",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		data, err := buildCapabilitiesData()
-		if err != nil {
-			return wrapCLIError(codeError, err, err.Error())
-		}
-		responseSuccessWith(codeCapabilitiesShown, "Capabilities shown", data)
-		return nil
-	},
+}
+
+func runCapabilities(cmd *cobra.Command, args []string) error {
+	data, err := buildCapabilitiesData()
+	if err != nil {
+		return wrapCLIError(codeError, err, err.Error())
+	}
+	responseSuccessWith(codeCapabilitiesShown, "Capabilities shown", data)
+	return nil
 }
 
 var providersCmd = &cobra.Command{
@@ -217,6 +219,7 @@ var promptsRenderCmd = &cobra.Command{
 }
 
 func init() {
+	capabilitiesCmd.RunE = runCapabilities
 	providersCmd.AddCommand(providersListCmd, providersShowCmd)
 	themesCmd.AddCommand(themesListCmd, themesShowCmd)
 	promptsListCmd.Flags().StringVar(&promptKind, "kind", "", "Prompt kind filter")
@@ -321,12 +324,7 @@ func buildCapabilitiesData() (map[string]any, error) {
 	allPrompts := cat.List("")
 	currentCfg := loadDiscoveryConfig()
 	return map[string]any{
-		"commands": []string{
-			"convert", "inspect", "preview", "config", "write", "humanize", "upload_image",
-			"download_and_upload", "generate_image", "generate_cover", "generate_infographic", "create_draft",
-			"create_image_post", "test-draft", "providers", "themes",
-			"prompts", "layout", "brand", "doctor", "skills", "capabilities", "version",
-		},
+		"commands": topLevelCommandNames(),
 		"convert": map[string]any{
 			"default_mode":     "api",
 			"supported_modes":  []string{"api", "ai"},
@@ -336,6 +334,7 @@ func buildCapabilitiesData() (map[string]any, error) {
 		},
 		"providers":         providers,
 		"image_generation":  buildImageGenerationCapabilityData(),
+		"title_generation":  buildTitleGenerationCapabilityData(),
 		"themes":            themes,
 		"layout":            buildLayoutCapabilityData(),
 		"prompts":           allPrompts,
@@ -363,6 +362,57 @@ func buildImageGenerationCapabilityData() map[string]any {
 			"requires_json":          true,
 			"response_code":          codeImagePlanReady,
 			"commands":               commands,
+		},
+	}
+}
+
+func buildTitleGenerationCapabilityData() map[string]any {
+	return map[string]any{
+		"available":                   true,
+		"command":                     "title suggest",
+		"prompt_kind":                 titlebuilder.PromptKind,
+		"default_prompt":              titlebuilder.DefaultPromptName,
+		"action":                      "ai_title_suggestion_request",
+		"mode":                        "ai_request_host_agent_handoff",
+		"execution_owner":             "host_agent",
+		"side_effects":                false,
+		"requires_external_model":     true,
+		"requires_json":               true,
+		"requires_provider":           false,
+		"requires_image_api_key":      false,
+		"requires_wechat_credentials": false,
+		"response_code":               codeTitleSuggestRequestReady,
+		"candidate_count": map[string]any{
+			"min":     titlebuilder.MinCount,
+			"max":     titlebuilder.MaxCount,
+			"default": titlebuilder.DefaultCount,
+		},
+		"hook_levels":                     buildTitleHookLevelsCapabilityData(),
+		"default_hook_level":              titlebuilder.DefaultHookLevel,
+		"max_recommended_hook_level":      2,
+		"level_3_requires_evidence_basis": true,
+		"default_max_title_chars":         titlebuilder.DefaultMaxTitleChars,
+		"metadata_title_max_chars":        titlebuilder.MetadataTitleMaxChars,
+		"recommendation_only":             true,
+	}
+}
+
+func buildTitleHookLevelsCapabilityData() []map[string]any {
+	return []map[string]any{
+		{
+			"level":       1,
+			"label":       titlebuilder.HookLevelLabel(1),
+			"description": "Restrained factual titles that preserve the current low-risk behavior.",
+		},
+		{
+			"level":       2,
+			"label":       titlebuilder.HookLevelLabel(2),
+			"description": "Punchier factual hooks with stronger contrast, entities, numbers, and consequence framing when supported.",
+		},
+		{
+			"level":       3,
+			"label":       titlebuilder.HookLevelLabel(3),
+			"description": "High-tension factual hooks that require evidence_basis and risk_flags on every candidate.",
 		},
 	}
 }

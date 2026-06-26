@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.9.0] - 2026-06-26
+
+### Added
+- Added `md2wechat title suggest <article.md> --json`, a no-side-effect host-Agent handoff that prepares a WeChat title suggestion prompt request for external model execution.
+- Added the bundled `title/wechat-title-expert` prompt catalog entry with strict JSON output guidance, title-count limits, scoring fields, and trust boundaries for WeChat title candidates.
+- Added `title_generation` to `capabilities --json` so Agents can discover that title suggestions require `--json`, an external model, and no provider, image API key, WeChat credentials, upload, draft, or write-back side effects.
+
+### Changed
+- Derived `capabilities.commands` from the root command manifest while preserving the stable command order, reducing drift when new top-level commands are added.
+- Updated user docs and both Agent skill entry points with minimal routing guidance for title suggestions, plus repository rules that treat `SKILL.md` edits as runtime-contract changes rather than routine documentation churn.
+
 ## [2.8.0] - 2026-06-24
 
 ### Added

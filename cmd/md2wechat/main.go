@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -30,52 +31,55 @@ var (
 var Version = "dev"
 
 const (
-	codeOK                     = "OK"
-	codeError                  = "ERROR"
-	codeConfigInvalid          = "CONFIG_INVALID"
-	codeConfigNotFound         = "CONFIG_NOT_FOUND"
-	codeConfigWriteFailed      = "CONFIG_WRITE_FAILED"
-	codeConvertInvalid         = "CONVERT_INVALID"
-	codeConvertReadFailed      = "CONVERT_READ_FAILED"
-	codeConvertFailed          = "CONVERT_FAILED"
-	codeConvertImageFailed     = "CONVERT_IMAGE_FAILED"
-	codeConvertDraftFailed     = "CONVERT_DRAFT_FAILED"
-	codeVersionShown           = "VERSION_SHOWN"
-	codeConfigShown            = "CONFIG_SHOWN"
-	codeConfigValidated        = "CONFIG_VALIDATED"
-	codeConfigInitialized      = "CONFIG_INITIALIZED"
-	codeWechatAccountNotFound  = "WECHAT_ACCOUNT_NOT_FOUND"
-	codeWechatAccountInvalid   = "WECHAT_ACCOUNT_INVALID"
-	codeWechatAccountAmbiguous = "WECHAT_ACCOUNT_AMBIGUOUS"
-	codeWechatAccountsShown    = "WECHAT_ACCOUNTS_SHOWN"
-	codeAPIKeyRequired         = "API_KEY_REQUIRED"
-	codeAPIKeyInvalid          = "API_KEY_INVALID"
-	codeAPIKeyVerifyFailed     = "API_KEY_VERIFY_FAILED"
-	codeWriteInputInvalid      = "WRITE_INPUT_INVALID"
-	codeWriteReadFailed        = "WRITE_READ_FAILED"
-	codeWriteFailed            = "WRITE_FAILED"
-	codeWriteAIRequestReady    = "WRITE_AI_REQUEST_READY"
-	codeHumanizeReadFailed     = "HUMANIZE_READ_FAILED"
-	codeHumanizeWriteFailed    = "HUMANIZE_WRITE_FAILED"
-	codeHumanizeRequestReady   = "HUMANIZE_REQUEST_READY"
-	codeConvertAIRequestReady  = "CONVERT_AI_REQUEST_READY"
-	codeConvertCompleted       = "CONVERT_COMPLETED"
-	codeInspectCompleted       = "INSPECT_COMPLETED"
-	codePreviewReady           = "PREVIEW_READY"
-	codePreviewFailed          = "PREVIEW_FAILED"
-	codeImageUploadFailed      = "IMAGE_UPLOAD_FAILED"
-	codeImageGenerateFailed    = "IMAGE_GENERATE_FAILED"
-	codeImagePlanReady         = "IMAGE_PLAN_READY"
-	codeDraftCreateFailed      = "DRAFT_CREATE_FAILED"
-	codeImagePostInvalid       = "IMAGE_POST_INVALID"
-	codeImagePostPreviewFailed = "IMAGE_POST_PREVIEW_FAILED"
-	codeImagePostCreateFailed  = "IMAGE_POST_CREATE_FAILED"
-	codeImagePostPreviewReady  = "IMAGE_POST_PREVIEW_READY"
-	codeImagePostCreated       = "IMAGE_POST_CREATED"
-	codeTestDraftReadFailed    = "TEST_DRAFT_READ_FAILED"
-	codeTestDraftCoverFailed   = "TEST_DRAFT_COVER_FAILED"
-	codeTestDraftCreateFailed  = "TEST_DRAFT_CREATE_FAILED"
-	codeTestDraftCreated       = "TEST_DRAFT_CREATED"
+	codeOK                       = "OK"
+	codeError                    = "ERROR"
+	codeConfigInvalid            = "CONFIG_INVALID"
+	codeConfigNotFound           = "CONFIG_NOT_FOUND"
+	codeConfigWriteFailed        = "CONFIG_WRITE_FAILED"
+	codeConvertInvalid           = "CONVERT_INVALID"
+	codeConvertReadFailed        = "CONVERT_READ_FAILED"
+	codeConvertFailed            = "CONVERT_FAILED"
+	codeConvertImageFailed       = "CONVERT_IMAGE_FAILED"
+	codeConvertDraftFailed       = "CONVERT_DRAFT_FAILED"
+	codeVersionShown             = "VERSION_SHOWN"
+	codeConfigShown              = "CONFIG_SHOWN"
+	codeConfigValidated          = "CONFIG_VALIDATED"
+	codeConfigInitialized        = "CONFIG_INITIALIZED"
+	codeWechatAccountNotFound    = "WECHAT_ACCOUNT_NOT_FOUND"
+	codeWechatAccountInvalid     = "WECHAT_ACCOUNT_INVALID"
+	codeWechatAccountAmbiguous   = "WECHAT_ACCOUNT_AMBIGUOUS"
+	codeWechatAccountsShown      = "WECHAT_ACCOUNTS_SHOWN"
+	codeAPIKeyRequired           = "API_KEY_REQUIRED"
+	codeAPIKeyInvalid            = "API_KEY_INVALID"
+	codeAPIKeyVerifyFailed       = "API_KEY_VERIFY_FAILED"
+	codeWriteInputInvalid        = "WRITE_INPUT_INVALID"
+	codeWriteReadFailed          = "WRITE_READ_FAILED"
+	codeWriteFailed              = "WRITE_FAILED"
+	codeWriteAIRequestReady      = "WRITE_AI_REQUEST_READY"
+	codeHumanizeReadFailed       = "HUMANIZE_READ_FAILED"
+	codeHumanizeWriteFailed      = "HUMANIZE_WRITE_FAILED"
+	codeHumanizeRequestReady     = "HUMANIZE_REQUEST_READY"
+	codeTitleSuggestReadFailed   = "TITLE_SUGGEST_READ_FAILED"
+	codeTitleSuggestInvalid      = "TITLE_SUGGEST_INVALID"
+	codeTitleSuggestRequestReady = "TITLE_SUGGEST_REQUEST_READY"
+	codeConvertAIRequestReady    = "CONVERT_AI_REQUEST_READY"
+	codeConvertCompleted         = "CONVERT_COMPLETED"
+	codeInspectCompleted         = "INSPECT_COMPLETED"
+	codePreviewReady             = "PREVIEW_READY"
+	codePreviewFailed            = "PREVIEW_FAILED"
+	codeImageUploadFailed        = "IMAGE_UPLOAD_FAILED"
+	codeImageGenerateFailed      = "IMAGE_GENERATE_FAILED"
+	codeImagePlanReady           = "IMAGE_PLAN_READY"
+	codeDraftCreateFailed        = "DRAFT_CREATE_FAILED"
+	codeImagePostInvalid         = "IMAGE_POST_INVALID"
+	codeImagePostPreviewFailed   = "IMAGE_POST_PREVIEW_FAILED"
+	codeImagePostCreateFailed    = "IMAGE_POST_CREATE_FAILED"
+	codeImagePostPreviewReady    = "IMAGE_POST_PREVIEW_READY"
+	codeImagePostCreated         = "IMAGE_POST_CREATED"
+	codeTestDraftReadFailed      = "TEST_DRAFT_READ_FAILED"
+	codeTestDraftCoverFailed     = "TEST_DRAFT_COVER_FAILED"
+	codeTestDraftCreateFailed    = "TEST_DRAFT_CREATE_FAILED"
+	codeTestDraftCreated         = "TEST_DRAFT_CREATED"
 
 	codeLayoutModuleNotFound       = "LAYOUT_MODULE_NOT_FOUND"
 	codeLayoutInvalidFilter        = "LAYOUT_INVALID_FILTER"
@@ -162,7 +166,167 @@ func extractCLIError(err error) (*cliError, bool) {
 }
 
 func addWechatAccountFlag(cmd *cobra.Command) {
+	if cmd.Flags().Lookup("wechat-account") != nil {
+		return
+	}
 	cmd.Flags().StringVar(&wechatAccountName, "wechat-account", "", "Named WeChat account from config")
+}
+
+var uploadImageCmd = &cobra.Command{
+	Use:   "upload_image <file_path>",
+	Short: "Upload local image to WeChat material library",
+	Args:  cobra.ExactArgs(1),
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		return initConfig()
+	},
+	RunE: func(cmd *cobra.Command, args []string) error {
+		filePath := args[0]
+		if err := prepareWeChatSideEffect(); err != nil {
+			return err
+		}
+		processor := newRuntimeImageProcessor()
+		result, err := processor.UploadLocalImage(filePath)
+		if err != nil {
+			return wrapCLIError(codeImageUploadFailed, err, err.Error())
+		}
+		responseSuccess(result)
+		return nil
+	},
+}
+
+var downloadAndUploadCmd = &cobra.Command{
+	Use:   "download_and_upload <url>",
+	Short: "Download online image and upload to WeChat",
+	Args:  cobra.ExactArgs(1),
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		return initConfig()
+	},
+	RunE: func(cmd *cobra.Command, args []string) error {
+		url := args[0]
+		if err := prepareWeChatSideEffect(); err != nil {
+			return err
+		}
+		processor := newRuntimeImageProcessor()
+		result, err := processor.DownloadAndUpload(url)
+		if err != nil {
+			return wrapCLIError(codeImageUploadFailed, err, err.Error())
+		}
+		responseSuccess(result)
+		return nil
+	},
+}
+
+var generateImageCmd = &cobra.Command{
+	Use:   "generate_image [prompt]",
+	Short: "Generate image via AI and upload to WeChat",
+	Args:  cobra.MaximumNArgs(1),
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		return initConfig()
+	},
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return runGenerateImage(args)
+	},
+}
+
+var createDraftCmd = &cobra.Command{
+	Use:   "create_draft <json_file>",
+	Short: "Create WeChat draft article from JSON file",
+	Args:  cobra.ExactArgs(1),
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		return initConfig()
+	},
+	RunE: func(cmd *cobra.Command, args []string) error {
+		jsonFile := args[0]
+		if err := prepareWeChatSideEffect(); err != nil {
+			return err
+		}
+		svc := draft.NewService(cfg, log)
+		result, err := svc.CreateDraftFromFile(jsonFile)
+		if err != nil {
+			return wrapCLIError(codeDraftCreateFailed, err, err.Error())
+		}
+		responseSuccess(result)
+		return nil
+	},
+}
+
+var versionCmd = &cobra.Command{
+	Use:   "version",
+	Short: "Print CLI version",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		runVersion()
+		return nil
+	},
+}
+
+type rootCommandEntry struct {
+	Command        *cobra.Command
+	WechatAccount  bool
+	DiscoveryOrder int
+}
+
+func rootCommandManifest() []rootCommandEntry {
+	return []rootCommandEntry{
+		{Command: uploadImageCmd, WechatAccount: true, DiscoveryOrder: 8},
+		{Command: downloadAndUploadCmd, WechatAccount: true, DiscoveryOrder: 9},
+		{Command: generateImageCmd, WechatAccount: true, DiscoveryOrder: 10},
+		{Command: generateCoverCmd, WechatAccount: true, DiscoveryOrder: 11},
+		{Command: generateInfographicCmd, WechatAccount: true, DiscoveryOrder: 12},
+		{Command: createDraftCmd, WechatAccount: true, DiscoveryOrder: 13},
+		{Command: versionCmd, DiscoveryOrder: 24},
+		{Command: convertCmd, WechatAccount: true, DiscoveryOrder: 1},
+		{Command: inspectCmd, WechatAccount: true, DiscoveryOrder: 2},
+		{Command: previewCmd, DiscoveryOrder: 3},
+		{Command: configCmd, DiscoveryOrder: 4},
+		{Command: capabilitiesCmd, DiscoveryOrder: 23},
+		{Command: providersCmd, DiscoveryOrder: 16},
+		{Command: themesCmd, DiscoveryOrder: 17},
+		{Command: promptsCmd, DiscoveryOrder: 18},
+		{Command: writeCmd, DiscoveryOrder: 5},
+		{Command: humanizeCmd, DiscoveryOrder: 6},
+		{Command: titleCmd, DiscoveryOrder: 7},
+		{Command: testHTMLCmd, WechatAccount: true, DiscoveryOrder: 15},
+		{Command: createImagePostCmd, WechatAccount: true, DiscoveryOrder: 14},
+		{Command: layoutCmd, DiscoveryOrder: 19},
+		{Command: brandCmd, DiscoveryOrder: 20},
+		{Command: doctorCmd, DiscoveryOrder: 21},
+		{Command: skillsCmd, DiscoveryOrder: 22},
+	}
+}
+
+func topLevelCommandNames() []string {
+	entries := rootCommandManifest()
+	sort.SliceStable(entries, func(i, j int) bool {
+		return entries[i].DiscoveryOrder < entries[j].DiscoveryOrder
+	})
+
+	names := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		if entry.Command == nil {
+			continue
+		}
+		if entry.DiscoveryOrder <= 0 {
+			continue
+		}
+		name := strings.Fields(entry.Command.Use)
+		if len(name) == 0 {
+			continue
+		}
+		names = append(names, name[0])
+	}
+	return names
+}
+
+func addRootCommands(root *cobra.Command) {
+	for _, entry := range rootCommandManifest() {
+		if entry.Command == nil {
+			continue
+		}
+		if entry.WechatAccount {
+			addWechatAccountFlag(entry.Command)
+		}
+		root.AddCommand(entry.Command)
+	}
 }
 
 func prepareWeChatSideEffect() error {
@@ -285,67 +449,6 @@ Examples:
 	rootCmd.SetVersionTemplate("{{printf \"%s\\n\" .Version}}")
 	rootCmd.PersistentFlags().BoolVar(&jsonOutput, "json", false, "Emit machine-readable JSON output")
 
-	// upload_image command
-	var uploadImageCmd = &cobra.Command{
-		Use:   "upload_image <file_path>",
-		Short: "Upload local image to WeChat material library",
-		Args:  cobra.ExactArgs(1),
-		PreRunE: func(cmd *cobra.Command, args []string) error {
-			return initConfig()
-		},
-		RunE: func(cmd *cobra.Command, args []string) error {
-			filePath := args[0]
-			if err := prepareWeChatSideEffect(); err != nil {
-				return err
-			}
-			processor := newRuntimeImageProcessor()
-			result, err := processor.UploadLocalImage(filePath)
-			if err != nil {
-				return wrapCLIError(codeImageUploadFailed, err, err.Error())
-			}
-			responseSuccess(result)
-			return nil
-		},
-	}
-	addWechatAccountFlag(uploadImageCmd)
-	rootCmd.AddCommand(uploadImageCmd)
-
-	// download_and_upload command
-	var downloadAndUploadCmd = &cobra.Command{
-		Use:   "download_and_upload <url>",
-		Short: "Download online image and upload to WeChat",
-		Args:  cobra.ExactArgs(1),
-		PreRunE: func(cmd *cobra.Command, args []string) error {
-			return initConfig()
-		},
-		RunE: func(cmd *cobra.Command, args []string) error {
-			url := args[0]
-			if err := prepareWeChatSideEffect(); err != nil {
-				return err
-			}
-			processor := newRuntimeImageProcessor()
-			result, err := processor.DownloadAndUpload(url)
-			if err != nil {
-				return wrapCLIError(codeImageUploadFailed, err, err.Error())
-			}
-			responseSuccess(result)
-			return nil
-		},
-	}
-	addWechatAccountFlag(downloadAndUploadCmd)
-	rootCmd.AddCommand(downloadAndUploadCmd)
-
-	var generateImageCmd = &cobra.Command{
-		Use:   "generate_image [prompt]",
-		Short: "Generate image via AI and upload to WeChat",
-		Args:  cobra.MaximumNArgs(1),
-		PreRunE: func(cmd *cobra.Command, args []string) error {
-			return initConfig()
-		},
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return runGenerateImage(args)
-		},
-	}
 	generateImageCmd.Flags().StringVarP(&generateImageCmdSize, "size", "s", "", "Image size (e.g., 2560x1440 for 16:9)")
 	generateImageCmd.Flags().StringVar(&generateImageCmdPreset, "preset", "", "Prompt preset from the image prompt catalog")
 	generateImageCmd.Flags().StringVarP(&generateImageCmdArticle, "article", "a", "", "Article markdown file used to render a preset prompt")
@@ -356,89 +459,7 @@ Examples:
 	generateImageCmd.Flags().StringVar(&generateImageCmdAspect, "aspect", "", "Aspect ratio hint used to render a preset prompt, e.g. 16:9 or 3:4")
 	generateImageCmd.Flags().StringVar(&generateImageCmdModel, "model", "", "Image model to use for this command (overrides IMAGE_MODEL and api.image_model)")
 	generateImageCmd.Flags().BoolVar(&generateImageCmdPlan, "plan", false, "Render an image generation plan without provider or upload side effects")
-	addWechatAccountFlag(generateImageCmd)
-	addWechatAccountFlag(generateCoverCmd)
-	addWechatAccountFlag(generateInfographicCmd)
-	rootCmd.AddCommand(generateImageCmd)
-	rootCmd.AddCommand(generateCoverCmd)
-	rootCmd.AddCommand(generateInfographicCmd)
-
-	// create_draft command
-	var createDraftCmd = &cobra.Command{
-		Use:   "create_draft <json_file>",
-		Short: "Create WeChat draft article from JSON file",
-		Args:  cobra.ExactArgs(1),
-		PreRunE: func(cmd *cobra.Command, args []string) error {
-			return initConfig()
-		},
-		RunE: func(cmd *cobra.Command, args []string) error {
-			jsonFile := args[0]
-			if err := prepareWeChatSideEffect(); err != nil {
-				return err
-			}
-			svc := draft.NewService(cfg, log)
-			result, err := svc.CreateDraftFromFile(jsonFile)
-			if err != nil {
-				return wrapCLIError(codeDraftCreateFailed, err, err.Error())
-			}
-			responseSuccess(result)
-			return nil
-		},
-	}
-	addWechatAccountFlag(createDraftCmd)
-	rootCmd.AddCommand(createDraftCmd)
-
-	var versionCmd = &cobra.Command{
-		Use:   "version",
-		Short: "Print CLI version",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			runVersion()
-			return nil
-		},
-	}
-	rootCmd.AddCommand(versionCmd)
-
-	// convert command
-	addWechatAccountFlag(convertCmd)
-	rootCmd.AddCommand(convertCmd)
-	addWechatAccountFlag(inspectCmd)
-	rootCmd.AddCommand(inspectCmd)
-	rootCmd.AddCommand(previewCmd)
-
-	// config command
-	rootCmd.AddCommand(configCmd)
-
-	// discovery commands
-	rootCmd.AddCommand(capabilitiesCmd)
-	rootCmd.AddCommand(providersCmd)
-	rootCmd.AddCommand(themesCmd)
-	rootCmd.AddCommand(promptsCmd)
-
-	// write command
-	rootCmd.AddCommand(writeCmd)
-
-	// humanize command
-	rootCmd.AddCommand(humanizeCmd)
-
-	// test-draft command
-	addWechatAccountFlag(testHTMLCmd)
-	rootCmd.AddCommand(testHTMLCmd)
-
-	// create-image-post command (小绿书)
-	addWechatAccountFlag(createImagePostCmd)
-	rootCmd.AddCommand(createImagePostCmd)
-
-	// layout command
-	rootCmd.AddCommand(layoutCmd)
-
-	// brand command
-	rootCmd.AddCommand(brandCmd)
-
-	// doctor command
-	rootCmd.AddCommand(doctorCmd)
-
-	// embedded agent skills
-	rootCmd.AddCommand(skillsCmd)
+	addRootCommands(rootCmd)
 
 	// Execute
 	if err := rootCmd.Execute(); err != nil {

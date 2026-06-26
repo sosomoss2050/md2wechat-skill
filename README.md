@@ -35,7 +35,7 @@ md2wechat 把公众号发布流程拆成一组可验证的 CLI 命令：
 | 发布前检查 | `inspect --json` 输出标题、摘要、图片、cover、draft readiness |
 | 稳定排版 | API 模式返回确定性 HTML，支持 48 个主题和 43 个高级排版模块 |
 | Agent 自动化 | `capabilities`、`doctor`、`themes`、`layout`、`providers` 等 discovery 命令 |
-| 内容生产 | `write`、`humanize`、`generate_cover`、`generate_infographic` |
+| 内容生产 | `write`、`humanize`、`title suggest`、`generate_cover`、`generate_infographic` |
 | 多账号发布 | 命名公众号账号，本地只读发现，不输出 Secret |
 | 微信白名单 | 高级 API 服务可提供微信接口固定出口能力 |
 
@@ -108,6 +108,8 @@ md2wechat doctor --json
 md2wechat inspect article.md --json
 md2wechat themes list --json
 md2wechat layout list --json
+md2wechat title suggest article.md --json
+md2wechat title suggest article.md --json --hook-level 2
 md2wechat skills list --json
 md2wechat skills read md2wechat --json
 ```
@@ -120,6 +122,7 @@ Agent 可以据此判断：
 - API、草稿、上传是否具备执行条件
 - 某篇文章能不能发草稿
 - 当前主题和排版模块是否可用
+- 标题建议是否应交给宿主 Agent / 外部模型完成
 - 当前二进制内置的 Agent SOP 是什么
 
 Brand Profile 支持把长期风格偏好写入 `~/.config/md2wechat/brand.md`，由 Agent 在写作和排版时读取。详见 [docs/BRAND-PROFILE.md](docs/BRAND-PROFILE.md)。
@@ -193,6 +196,7 @@ md2wechat layout validate --file article.md --json
 | `convert` | Markdown 转微信 HTML，可选创建草稿 |
 | `write` | 从想法生成文章 |
 | `humanize` | 重写 AI 文章，支持 `authentic` 强度 |
+| `title suggest` | 生成公众号标题建议的 AI 请求 |
 | `generate_cover` | 生成封面图或图片计划 |
 | `generate_infographic` | 生成信息图或图片计划 |
 | `upload_image` | 上传图片到微信素材库 |

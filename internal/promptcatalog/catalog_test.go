@@ -50,6 +50,96 @@ func TestCatalogRenderReplacesVariables(t *testing.T) {
 	}
 }
 
+func TestBuiltinTitlePromptIsDiscoverable(t *testing.T) {
+	ResetDefaultCatalogForTests()
+	t.Chdir(t.TempDir())
+
+	cat, err := DefaultCatalog()
+	if err != nil {
+		t.Fatalf("DefaultCatalog() error = %v", err)
+	}
+
+	spec, err := cat.Get("title", "wechat-title-expert")
+	if err != nil {
+		t.Fatalf("Get(title, wechat-title-expert) error = %v", err)
+	}
+	if spec.Kind != "title" || spec.Name != "wechat-title-expert" {
+		t.Fatalf("unexpected spec: %#v", spec)
+	}
+
+	prompts := cat.List("title")
+	if len(prompts) == 0 {
+		t.Fatal("expected title prompts in catalog list")
+	}
+	found := false
+	for _, prompt := range prompts {
+		if prompt.Name == "wechat-title-expert" {
+			found = true
+		}
+		if prompt.Kind != "title" {
+			t.Fatalf("unexpected prompt in title list: %#v", prompt)
+		}
+	}
+	if !found {
+		t.Fatalf("title list missing wechat-title-expert: %#v", prompts)
+	}
+}
+
+func TestBuiltinTitlePromptRendersArticleContentAndJSONInstruction(t *testing.T) {
+	ResetDefaultCatalogForTests()
+	t.Chdir(t.TempDir())
+
+	cat, err := DefaultCatalog()
+	if err != nil {
+		t.Fatalf("DefaultCatalog() error = %v", err)
+	}
+
+	rendered, spec, err := cat.Render("title", "wechat-title-expert", map[string]string{
+		"ARTICLE_CONTENT":  "这篇文章复盘了一个公众号标题实验，重点是用真实价值降低标题党风险。",
+		"TARGET_READER":    "内容创作者",
+		"TITLE_COUNT":      "8",
+		"MAX_TITLE_CHARS":  "22",
+		"HOOK_LEVEL":       "3",
+		"HOOK_LEVEL_LABEL": "high_tension",
+	})
+	if err != nil {
+		t.Fatalf("Render(title, wechat-title-expert) error = %v", err)
+	}
+	if spec.Name != "wechat-title-expert" {
+		t.Fatalf("spec.Name = %q", spec.Name)
+	}
+	if !strings.Contains(rendered, "这篇文章复盘了一个公众号标题实验") {
+		t.Fatalf("rendered prompt missing article content: %q", rendered)
+	}
+	if !strings.Contains(rendered, "strict JSON only") || !strings.Contains(rendered, "不要输出 Markdown") {
+		t.Fatalf("rendered prompt missing JSON-only instruction: %q", rendered)
+	}
+	if !strings.Contains(rendered, `"article_summary"`) || !strings.Contains(rendered, `"weighted_score"`) {
+		t.Fatalf("rendered prompt missing expected JSON fields: %q", rendered)
+	}
+	if !containsString(spec.Variables, "HOOK_LEVEL") {
+		t.Fatalf("title prompt variables missing HOOK_LEVEL: %#v", spec.Variables)
+	}
+	if !containsString(spec.Variables, "HOOK_LEVEL_LABEL") {
+		t.Fatalf("title prompt variables missing HOOK_LEVEL_LABEL: %#v", spec.Variables)
+	}
+	for _, want := range []string{
+		"标题钩子力度：3（high_tension",
+		`"hook_level": 3`,
+		`"hook_level_label"`,
+		`"claim_strength"`,
+		`"evidence_basis"`,
+		`"risk_flags"`,
+		"Level 3",
+		"evidence_basis 必须非空",
+		"risk_flags 必须存在",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered prompt missing %q: %q", want, rendered)
+		}
+	}
+}
+
 func TestCatalogPrefersExplicitPromptDirOverBuiltin(t *testing.T) {
 	ResetDefaultCatalogForTests()
 	tmpDir := t.TempDir()
@@ -294,6 +384,15 @@ func TestBuiltinImagePromptsHaveConsistentUseCaseAndAspectMetadata(t *testing.T)
 func containsAspectRatio(ratios []string, target string) bool {
 	for _, ratio := range ratios {
 		if strings.EqualFold(strings.TrimSpace(ratio), strings.TrimSpace(target)) {
+			return true
+		}
+	}
+	return false
+}
+
+func containsString(items []string, target string) bool {
+	for _, item := range items {
+		if item == target {
 			return true
 		}
 	}

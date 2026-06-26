@@ -29,13 +29,13 @@ npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
 如果你已经有稳定可用的 Go 环境，也可以把第一步改成：
 
 ```bash
-go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v2.8.0
+go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v2.9.0
 ```
 
 如果以上都不适合，再改成固定版本安装脚本：
 
 ```bash
-curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.8.0/install.sh | bash
+curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v2.9.0/install.sh | bash
 export PATH="$HOME/.local/bin:$PATH"
 md2wechat skills read md2wechat --json
 npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
@@ -112,6 +112,37 @@ md2wechat convert article.md --title "新标题" --author "作者名" --digest "
 - 摘要最多 128 个字符
 
 创建草稿时如果摘要仍为空，会从正文 HTML 生成一个 120 字符兜底摘要。正文里的一级标题不会因为被拿来当标题来源就自动删除。
+
+### 标题建议
+
+如果需要根据文章内容生成一批公众号标题候选，使用：
+
+```bash
+md2wechat title suggest article.md --json
+```
+
+可选参数：
+
+```bash
+md2wechat title suggest article.md \
+  --target-reader "独立开发者" \
+  --count 10 \
+  --max-title-chars 25 \
+  --hook-level 2 \
+  --json
+```
+
+钩子力度可用 `--hook-level` 控制：
+
+```bash
+md2wechat title suggest article.md --json --hook-level 1
+md2wechat title suggest article.md --json --hook-level 2
+md2wechat title suggest article.md --json --hook-level 3
+```
+
+`1` = `restrained`，`2` = `punchy`，`3` = `high_tension`。Level 3 仍然受事实约束，返回的候选应包含证据依据和风险标记。
+
+该命令返回 `TITLE_SUGGEST_REQUEST_READY` 和 `status: action_required`，`data.prompt` 需要交给宿主 Agent 或外部模型执行。CLI 本身不调用模型、不写回 Markdown、不创建草稿，也不会自动替你确认最终标题。
 
 ### 确认层命令
 
